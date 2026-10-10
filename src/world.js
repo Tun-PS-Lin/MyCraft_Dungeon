@@ -1,31 +1,31 @@
 // The map: ground, raised paving stones, grass, fences, bushes, forest and the guide slab.
 import * as THREE from 'three';
-import { PLAZA, PROJECTS, TUNING } from './config.js';
+import { BOUNDS, HALL, STALLS, TUNING } from './config.js';
 import { rng, hash, noise, cv, fill, speck, toTex, tiles, M, B, Batch, boxGeo, glow, PAVER_TINTS, DIRT, GRASS } from './textures.js';
-import { collide, setHeightFn } from './collision.js';
+import { collide, inHallRect } from './collision.js';
 import { addLamp } from './lights.js';
 
 const HALF = 48, SIZE = HALF * 2;
-const GRASS_T = 0, COBBLE = 1, DIRT_T = 2;
+const GRASS_T = 0, COBBLE = 1, DIRT_T = 2, HALL_T = 3;
+const inBounds = (x, z, pad = 0) => x > BOUNDS.x0 - pad && x < BOUNDS.x1 + pad && z > BOUNDS.z0 - pad && z < BOUNDS.z1 + pad;
+// distance from a point to a line segment, for the diagonal road to the town hall
+const segDist = (x, z, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz))); return Math.hypot(x - ax - dx * t, z - az - dz * t); };
 const types = new Uint8Array(SIZE * SIZE), heights = new Float32Array(SIZE * SIZE);
 const idx = (x, z) => (Math.floor(z) + HALF) * SIZE + (Math.floor(x) + HALF);
 export const COBBLE_H = 0.09, GRASS_H = 0.1;
 
-export function heightAt(x, z) {
-  if (x < -HALF || x >= HALF || z < -HALF || z >= HALF) return 0;
-  return heights[idx(x, z)];
-}
-
 // Decide what each ground cell is. Roads form a cross with a wide oval middle,
 // roughened by noise so the edges break up into dirt and grass.
 function classify(x, z) {
-  const ax = Math.abs(x), az = Math.abs(z), inside = ax < PLAZA.x && az < PLAZA.z;
+  if (inHallRect(x, z)) return HALL_T;
+  const ax = Math.abs(x), az = Math.abs(z), inside = inBounds(x, z);
   const n = (noise(x * 0.33 + 9, z * 0.33 + 3) - 0.5) * 3.4, k = hash(x * 7 + 1, z * 13 + 5);
   let s;
   if (inside) {
-    s = Math.min(ax - 3.4, az - 3.0, (Math.hypot(x / 10.5, z / 7.5) - 1) * 6);
-    for (const p of PROJECTS) s = Math.min(s, Math.hypot(x - p.pos[0], z - (p.pos[1] + 2.2)) - 3.6);
-  } else if (ax < 8) s = ax - 3.2 + (az - PLAZA.z) * 0.22; // the road runs off the top and bottom of the map
+    s = Math.min(ax - 3.4, az - 3.0, (Math.hypot(x / 11.5, z / 7.5) - 1) * 6);
+    s = Math.min(s, segDist(x, z, 4, -3, HALL.doorX, HALL.z1 + 2) - 2.6, Math.hypot(x - HALL.doorX, z - (HALL.z1 + 3)) - 4.2);
+    for (const p of STALLS) s = Math.min(s, Math.hypot(x - p.pos[0], z - (p.pos[1] + 2.2)) - 3.6);
+  } else if (ax < 8 && !(z < 0 && x > HALL.x0 - 2)) s = ax - 3.2 + (z < 0 ? BOUNDS.z0 - z : z - BOUNDS.z1) * 0.22; // the road runs off the top and bottom of the map
   else s = 99;
   s += n;
   if (s < 0) return noise(x * 0.55 + 50, z * 0.55 + 20) > 0.76 ? DIRT_T : COBBLE;
@@ -36,14 +36,13 @@ function classify(x, z) {
 
 export function buildWorld(scene, renderer) {
   const r = rng(5), col = new THREE.Color();
-  const inSlabZone = (x, z) => Math.abs(x) < PLAZA.x + 2 && Math.abs(z) < PLAZA.z + 2;
+  const inSlabZone = (x, z) => inBounds(x, z, 2);
 
   for (let j = 0; j < SIZE; j++) for (let i = 0; i < SIZE; i++) {
     const x = i - HALF + 0.5, z = j - HALF + 0.5, t = classify(x, z);
     types[j * SIZE + i] = t;
-    heights[j * SIZE + i] = t === COBBLE ? COBBLE_H : t === GRASS_T && inSlabZone(x, z) ? GRASS_H : 0;
+    heights[j * SIZE + i] = t === GRASS_T && inSlabZone(x, z) ? GRASS_H : 0;
   }
-  setHeightFn(heightAt);
 
   /* flat ground: one plane with every cell painted into a single texture */
   {
@@ -51,7 +50,7 @@ export function buildWorld(scene, renderer) {
     for (let i = 0; i < 4; i++) { v.g.push(tiles.grass(60 + i)); v.f.push(tiles.grass(70 + i, true)); v.d.push(tiles.dirt(50 + i)); v.m.push(tiles.mortar(80 + i)); }
     const c = cv(SIZE * 16, SIZE * 16, (g) => {
       for (let j = 0; j < SIZE; j++) for (let i = 0; i < SIZE; i++) {
-        const t = types[j * SIZE + i], set = t === COBBLE ? v.m : t === DIRT_T ? v.d : r() < 0.08 ? v.f : v.g;
+        const t = types[j * SIZE + i], set = t === COBBLE || t === HALL_T ? v.m : t === DIRT_T ? v.d : r() < 0.08 ? v.f : v.g;
         g.drawImage(set[(r() * 4) | 0], i * 16, j * 16);
       }
     });
@@ -70,11 +69,12 @@ export function buildWorld(scene, renderer) {
   const wood = new Batch(M.tint), rocks = new Batch(M.tint), logs = new Batch(M.log), leaves = new Batch(M.leaves);
   const tint = () => col.set(PAVER_TINTS[(r() * PAVER_TINTS.length) | 0]).multiplyScalar(0.95 + r() * 0.1).clone();
   const stoneH = () => 0.055 + r() * 0.055; // keep this small: the road should read as cobbles, not rubble
-  const moundAt = (x, z) => (!inSlabZone(x, z) && Math.abs(x) > 5 && noise(x * 0.18 + 3, z * 0.18 + 8) > 0.63 ? 1 : 0);
+  const moundAt = (x, z) => (!inSlabZone(x, z) && !inHallRect(x, z, 3) && Math.abs(x) > 5 && noise(x * 0.18 + 3, z * 0.18 + 8) > 0.63 ? 1 : 0);
   const flowerCols = ['#f4e04d', '#f6f6f6', '#e9627a', '#c58cf0', '#ff9a3d'];
 
-  for (let z = -38.5; z < 32; z++) for (let x = -38.5; x < 39; x++) {
+  for (let z = -44.5; z < 34; z++) for (let x = -42.5; x < 46; x++) {
     const t = types[idx(x, z)];
+    if (t === HALL_T) continue;
     if (t === COBBLE) {
       if (Math.abs(x) < 3.2 && Math.abs(z) < 2.1) continue; // hidden under the guide slab
       const k = r();
@@ -104,28 +104,29 @@ export function buildWorld(scene, renderer) {
   };
   const bush = (x, z) => { leaves.add(x, 0.6, z, 1, 1, 1, leafTint()); if (r() < 0.4) leaves.add(x + (r() - 0.5) * 0.3, 1.4, z + (r() - 0.5) * 0.3, 0.75, 0.75, 0.75, leafTint()); };
   const edge = (x, z, alongX) => {
+    if (inHallRect(x, z, 1.2)) return; // the town hall stands on this stretch of the edge
     const gate = alongX && Math.abs(x) < 3.5;
     if (gate || noise(x * 0.22 + 70, z * 0.22 + 31) > 0.47) fence(x, z, alongX); else bush(x, z);
   };
-  for (let x = -PLAZA.x - 0.5; x <= PLAZA.x + 0.5; x++) { edge(x, -PLAZA.z - 0.5, true); edge(x, PLAZA.z + 0.5, true); }
-  for (let z = -PLAZA.z + 0.5; z < PLAZA.z; z++) { edge(-PLAZA.x - 0.5, z, false); edge(PLAZA.x + 0.5, z, false); }
+  for (let x = BOUNDS.x0 - 0.5; x <= BOUNDS.x1 + 0.5; x++) { edge(x, BOUNDS.z0 - 0.5, true); edge(x, BOUNDS.z1 + 0.5, true); }
+  for (let z = BOUNDS.z0 + 0.5; z < BOUNDS.z1; z++) { edge(BOUNDS.x0 - 0.5, z, false); edge(BOUNDS.x1 + 0.5, z, false); }
 
   /* loose stones and lantern posts inside the plaza */
-  [[-15.6, -2.6], [15.4, -3.2], [-15.2, 3.4], [15.6, 3.8], [5.4, -12.6], [-5.6, 12.4], [-15.4, -12.6], [15.5, 12.5]].forEach(([x, z]) => {
+  [[-19.6, -3.2], [23.4, -4.2], [-19.4, 10.4], [23.6, 3.8], [4.2, -12.8], [-8.6, 13.4], [8.4, 13.6], [22.5, 13.5]].forEach(([x, z]) => {
     const n = 2 + ((r() * 2) | 0);
     for (let i = 0; i < n; i++) { const s = 0.45 + r() * 0.4, ox = (r() - 0.5) * 0.9, oz = (r() - 0.5) * 0.9; rocks.add(x + ox, s / 2 + 0.1, z + oz, s, s, s, col.setHSL(0.08, 0.06, 0.36 + r() * 0.12).clone(), r()); }
     collide(x - 0.6, x + 0.6, z - 0.6, z + 0.6, 0.9);
   });
   const lampGlow = glow('#ffc76a');
-  [[-4.7, -13.1, 1], [4.7, -13.1, 1], [-16.1, -0.5, 0], [16.1, 0.5, 0], [-4.7, 13.1, 0], [4.7, 13.1, 0]].forEach(([x, z, lit]) => {
+  [[-3.9, -13.1, 1], [3.9, -13.1, 1], [-20.1, -1.5, 0], [24.1, 0.5, 0], [-5.2, 14.1, 0], [5.2, 14.1, 0]].forEach(([x, z, lit]) => {
     B(scene, 0.25, 2.3, 0.25, M.log, x, 1.15, z); B(scene, 0.44, 0.44, 0.44, lampGlow, x, 2.5, z, true); B(scene, 0.58, 0.1, 0.58, M.dark, x, 2.77, z);
     collide(x - 0.15, x + 0.15, z - 0.15, z + 0.15, 3);
-    addLamp(scene, x, 2.5, z + 0.4, lit ? 0.6 : 0, 1.5, 8);
+    addLamp(scene, x, 2.5, z + 0.4, lit ? 0.5 : 0, 1.5, 8);
   });
 
   /* forest. Trees are left out wherever they would stand between the camera and the player. */
   const dir = [Math.sin(TUNING.cameraYaw), Math.cos(TUNING.cameraYaw)];
-  const hides = (x, z) => { for (let s = 1.5; s <= 11.5; s += 0.5) { if (Math.abs(x - dir[0] * s) < PLAZA.x && Math.abs(z - dir[1] * s) < PLAZA.z) return true; } return false; };
+  const hides = (x, z) => { for (let s = 1.5; s <= 11.5; s += 0.5) { const px = x - dir[0] * s, pz = z - dir[1] * s; if (inBounds(px, pz) || inHallRect(px, pz)) return true; } return false; };
   const tree = (x, z, base) => {
     const h = 4 + ((r() * 3) | 0), tc = col.setHSL(0.185 + r() * 0.075, 0.5 + r() * 0.14, 0.37 + r() * 0.1).clone();
     const lc = () => tc.clone().offsetHSL(0, 0, (r() - 0.5) * 0.12);
@@ -135,14 +136,14 @@ export function buildWorld(scene, renderer) {
     for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) { if (dx && dz && r() < 0.4) continue; put(dx, 0, dz); }
     put(0, 1, 0); put(1, 1, 0); put(-1, 1, 0); put(0, 1, 1); put(0, 1, -1);
   };
-  for (let gx = -37; gx < 37; gx += 3.5) for (let gz = -36; gz < 28; gz += 3.5) {
+  for (let gx = -40; gx < 44; gx += 3.5) for (let gz = -42; gz < 30; gz += 3.5) {
     const x = Math.floor(gx + r() * 2.2) + 0.5, z = Math.floor(gz + r() * 2.2) + 0.5;
-    if (Math.abs(x) < PLAZA.x + 1.4 && Math.abs(z) < PLAZA.z + 1.4) continue;
+    if (inBounds(x, z, 1.4) || inHallRect(x, z, 3.5)) continue;
     if (Math.abs(x) < 4.6 || types[idx(x, z)] !== GRASS_T || hides(x, z) || r() < 0.1) continue;
     tree(x, z, moundAt(x, z));
   }
   // low bushes fill the near side where trees are not allowed
-  for (let i = 0; i < 90; i++) { const x = Math.floor(r() * 70 - 35) + 0.5, z = Math.floor(PLAZA.z + 2 + r() * 12) + 0.5; if (Math.abs(x) < 4.5 || types[idx(x, z)] !== GRASS_T) continue; leaves.add(x, moundAt(x, z) + 0.5, z, 1, 1, 1, leafTint()); }
+  for (let i = 0; i < 90; i++) { const x = Math.floor(r() * 80 - 38) + 0.5, z = Math.floor(BOUNDS.z1 + 2 + r() * 12) + 0.5; if (Math.abs(x) < 4.5 || types[idx(x, z)] !== GRASS_T) continue; leaves.add(x, moundAt(x, z) + 0.5, z, 1, 1, 1, leafTint()); }
 
   [big, half, small, turf, mounds, bits, wood, rocks, logs, leaves].forEach((b) => b.build(scene));
 

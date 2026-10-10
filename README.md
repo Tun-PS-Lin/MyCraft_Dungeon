@@ -1,6 +1,6 @@
 # Portfolio Village
 
-A small explorable 3D village that works as a portfolio. Walk up to a market stall and press **E** (or click it) to open a project.
+A small explorable 3D village that works as a portfolio. Walk up to a market stall and press **E** (or click it) to open a project, change outfit at the Outfits stall, and visit the town hall to meet the agents.
 
 Built with [Vite](https://vitejs.dev) and [three.js](https://threejs.org). No game engine, no backend.
 
@@ -25,19 +25,24 @@ npm run build    # production build in dist/
 | Move | W A S D or arrow keys | on-screen stick |
 | Run | hold Shift | push the stick to its edge |
 | Jump | Space | Jump button |
-| Open a stall | E when near it, or click it | Open button, or tap it |
+| Open a stall or talk to an agent | E when near, or click it | the yellow button, or tap it |
 | Close | Esc, E or the × button | × button |
 
-The three buttons in the top-right corner are sound on/off, day/night, and the menu. The day/night choice and the sound setting are remembered in the visitor's browser.
+The four buttons in the top-right corner are music, sound effects, day/night, and the menu. A fresh visit opens in day or night to match the visitor's clock; the button overrides it for that visit. Music and sound settings, the chosen outfit, explored stalls and the wolf are remembered in the visitor's browser.
+
+Picking a place in the menu makes the character walk there. Opening all five stalls unlocks a wolf companion.
 
 ## Change the content
 
 Everything you are likely to edit is in **`src/config.js`**:
 
-- `PROJECTS`: the name, description, link and map position of each stall. A project with an empty `url` shows "Link coming soon".
+- `STALLS`: the name, description, link and map position of each stall. A project with an empty `url` shows "Link coming soon".
+- `AGENTS`: the town hall agents: name, role, robe colours, which desk, and the line they say. Talking to an agent only shows its line; nothing real is triggered yet.
+- `ACHIEVEMENT`: the text on the badge.
+- `MUSIC_FILE` and `MUSIC_VOLUME`: the looping background track.
 - `CONTACT_EMAIL`: the address shown in the Contact popup.
 - `CREDIT` and `REPO_URL`: the small credit line at the bottom of the screen and where it links. With `REPO_URL` empty it is plain text.
-- `SOUND_FILES` and `AMBIENT_LOOP`: real sound files (see below).
+- `SOUND_FILES`: real sound-effect files (see below).
 - `TUNING`: walk and run speed, jump height, camera angle and distance, and how close you must be to a stall to open it.
 
 ## Add your own assets
@@ -53,7 +58,6 @@ export const SOUND_FILES = {
   step: ['step1.mp3', 'step2.mp3', 'step3.mp3'],
   jump: ['jump.mp3'],
 };
-export const AMBIENT_LOOP = 'forest.mp3';
 ```
 
 | Key | Used for | Suggested |
@@ -64,8 +68,12 @@ export const AMBIENT_LOOP = 'forest.mp3';
 | `near` | walking into range of a stall | a soft blip |
 | `menu` | menu opening and closing | one |
 | `cluck` | startled chicken | 2 to 3 variants |
-| `bird` | occasional bird call | 2 to 3 variants |
-| `AMBIENT_LOOP` | background birds, wind or music | a seamless 30 to 60 second loop |
+| `bird`, `cricket` | occasional bird call by day, cricket by night | 2 to 3 variants |
+| `villager` | an agent greeting you | 2 to 3 short grunts |
+| `bark` | the wolf | one |
+| `achieve` | achievement unlocked | a short jingle |
+
+Background music is `public/assets/sounds/background_music.mp3`. Replace the file, or point `MUSIC_FILE` at another one.
 
 ### Visuals
 
@@ -74,7 +82,7 @@ export const AMBIENT_LOOP = 'forest.mp3';
 | Popup picture for each project | `ART` in `src/ui.js` (swap the pixel drawing for an `<img>`) |
 | Block textures (16×16 PNG) | `src/textures.js` (replace a generated canvas with a loaded image) |
 | Stall models (`.glb`, e.g. from Blockbench) | `src/stalls.js` (load the model in place of that stall's builder) |
-| Character skin | the small pixel canvases at the top of `src/player.js` |
+| Outfits | add an entry to `OUTFITS` in `src/figures.js` (colours and a few style switches) |
 | Favicon | `public/favicon.svg` |
 | Social preview image (1200×630) | add to `public/` and reference it from `index.html` |
 
@@ -87,13 +95,18 @@ index.html          page markup (canvas, popup, menu, touch controls)
 src/config.js       content, links, sounds, tuning
 src/main.js         renderer, lights, input, camera, game loop
 src/world.js        ground, paving stones, fences, forest, guide slab
-src/stalls.js       the four stalls
-src/player.js       character model and animation
-src/critters.js     chickens
-src/collision.js    walls, steps and jumping onto things
+src/stalls.js       the five stalls
+src/hall.js         the town hall, its fading roof and the desks inside
+src/agents.js       the agents who walk and work in the hall
+src/figures.js      the blocky people: outfits, painting, posing
+src/player.js       the player's state and shadow
+src/critters.js     chickens and the wolf
+src/nav.js          path finding for walk-to
+src/ambience.js     fireflies and drifting leaves
+src/collision.js    the walkable area, steps and jumping onto things
 src/textures.js     pixel textures, materials, instancing helpers
-src/ui.js           labels, popup, menu
-src/audio.js        sound effects
+src/ui.js           labels, popup, menu, wardrobe, chat box, achievement badge
+src/audio.js        sound effects and music
 src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)
 src/style.css       interface styling
 scripts/build-preview.mjs   optional: bundles everything into one HTML file

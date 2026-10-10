@@ -1,8 +1,9 @@
-// The four market stalls. Each is built from boxes in its own local space
+// The market stalls. Each is built from boxes in its own local space
 // (front faces +z, toward the camera) and then placed from config.js.
 // To swap in a real model later, load a .glb in place of the builder for that id.
 import * as THREE from 'three';
-import { PROJECTS } from './config.js';
+import { STALLS } from './config.js';
+import { createFigure, OUTFITS } from './figures.js';
 import { B, M, wool, patterned, glow, flat, glass, emblem } from './textures.js';
 import { collide } from './collision.js';
 import { addLamp } from './lights.js';
@@ -20,27 +21,28 @@ function awning(g, mats, o = {}) {
   const n = o.n || 6, w = o.width || 5.7, sw = w / n, y = o.y || 3.15, st = o.step === undefined ? 0.26 : o.step, d = o.depth || 3.9, seg = d / 3;
   for (let i = 0; i < n; i++) {
     const m = mats[i % mats.length], x = -w / 2 + sw * (i + 0.5);
-    for (let k = 0; k < 3; k++) B(g, sw, 0.22, seg + 0.03, m, x, y + st * (2 - k), -d / 2 + seg * (k + 0.5));
-    const fh = i % 2 ? 0.26 : 0.46; B(g, sw, fh, 0.1, o.trim || m, x, y - 0.11 - fh / 2, d / 2 + 0.03);
-    if (o.sides && (i === 0 || i === n - 1)) for (let k = 0; k < 3; k++) B(g, 0.1, 0.3, seg, o.trim || m, i ? w / 2 : -w / 2, y + st * (2 - k) - 0.24, -d / 2 + seg * (k + 0.5));
+    const zo = o.zoff || 0; // slide the whole roof back or forward
+    for (let k = 0; k < 3; k++) B(g, sw, 0.22, seg + 0.03, m, x, y + st * (2 - k), zo - d / 2 + seg * (k + 0.5));
+    const fh = i % 2 ? 0.26 : 0.46; B(g, sw, fh, 0.1, o.trim || m, x, y - 0.11 - fh / 2, zo + d / 2 + 0.03);
+    if (o.sides && (i === 0 || i === n - 1)) for (let k = 0; k < 3; k++) B(g, 0.1, 0.3, seg, o.trim || m, i ? w / 2 : -w / 2, y + st * (2 - k) - 0.24, zo - d / 2 + seg * (k + 0.5));
   }
 }
-function crate(g, x, z, s = 1, y = 0.2) { B(g, s, s, s, M.crate, x, y + s / 2, z); }
+export function crate(g, x, z, s = 1, y = 0.2) { B(g, s, s, s, M.crate, x, y + s / 2, z); }
 function barrel(g, x, z) { B(g, 0.8, 1, 0.8, M.dark, x, 0.7, z); B(g, 0.86, 0.1, 0.86, flat('#3a2a1a'), x, 0.45, z); B(g, 0.86, 0.1, 0.86, flat('#3a2a1a'), x, 0.95, z); B(g, 0.7, 0.04, 0.7, M.planks, x, 1.22, z); }
 function chest(g, x, z, body, lid) { B(g, 0.95, 0.5, 0.65, flat(body), x, 0.45, z); B(g, 1, 0.24, 0.7, flat(lid), x, 0.82, z); B(g, 0.14, 0.2, 0.06, flat('#e4b93a'), x, 0.68, z + 0.36); }
 function lantern(g, x, z, h = 2.4) {
   B(g, 0.25, h, 0.25, M.log, x, h / 2, z); B(g, 0.44, 0.44, 0.44, glow('#ffc76a'), x, h + 0.2, z, true); B(g, 0.58, 0.1, 0.58, M.dark, x, h + 0.47, z);
-  return addLamp(g, x, h + 0.2, z + 0.45, 0.7, 1.5, 8);
+  return addLamp(g, x, h + 0.2, z + 0.45, 0.6, 1.5, 8);
 }
-function banner(g, x, y, z, w, h, color, mark) {
+export function banner(g, x, y, z, w, h, color, mark) {
   B(g, w + 0.16, 0.1, 0.1, M.dark, x, y + h / 2 + 0.05, z);
   B(g, w, h, 0.06, wool(color), x, y, z);
   B(g, w / 3, 0.18, 0.06, wool(color), x - w / 3, y - h / 2 - 0.09, z); B(g, w / 3, 0.18, 0.06, wool(color), x + w / 3, y - h / 2 - 0.09, z);
   const p = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.86, w * 0.86 * (16 / 12)), emblem(mark)); p.position.set(x, y, z + 0.035); g.add(p);
 }
 function fenceRun(g, x0, x1, z) { for (let x = x0; x <= x1 + 0.01; x += 1) { B(g, 0.2, 1.1, 0.2, M.dark, x, 0.75, z); if (x < x1) { B(g, 1, 0.13, 0.1, M.planks, x + 0.5, 0.65, z); B(g, 1, 0.13, 0.1, M.planks, x + 0.5, 1.05, z); } } }
-function showcase(g, x, y, z, color, s = 0.34) { B(g, s + 0.2, 0.12, s + 0.2, M.dark, x, y + 0.06, z); B(g, s, s, s, glow(color), x, y + 0.14 + s / 2, z, true); B(g, s + 0.24, s + 0.3, s + 0.24, glass, x, y + 0.12 + (s + 0.3) / 2, z, true); }
-function papers(g, x, y, z, n, w = 0.7, d = 0.9) { for (let k = 0; k < n; k++) B(g, w, 0.1, d, k === n - 1 ? M.paper : wool(k % 2 ? '#e4e0d2' : '#f6f3e8'), x + (k % 2 ? 0.03 : -0.02), y + 0.05 + k * 0.1, z); }
+export function showcase(g, x, y, z, color, s = 0.34) { B(g, s + 0.2, 0.12, s + 0.2, M.dark, x, y + 0.06, z); B(g, s, s, s, glow(color), x, y + 0.14 + s / 2, z, true); B(g, s + 0.24, s + 0.3, s + 0.24, glass, x, y + 0.12 + (s + 0.3) / 2, z, true); }
+export function papers(g, x, y, z, n, w = 0.7, d = 0.9) { for (let k = 0; k < n; k++) B(g, w, 0.1, d, k === n - 1 ? M.paper : wool(k % 2 ? '#e4e0d2' : '#f6f3e8'), x + (k % 2 ? 0.03 : -0.02), y + 0.05 + k * 0.1, z); }
 function counter(g, mat, cloth) { B(g, 4.7, 1, 1, mat, 0, 0.7, 1.2); if (cloth) B(g, 4.9, 0.1, 1.14, wool(cloth), 0, 1.25, 1.2); }
 
 /* ── one builder per stall ── */
@@ -117,17 +119,40 @@ const BUILD = {
     s.lamp = lantern(g, 3.5, 2.3);
     col(-4, -3, -0.6, 1.5, 1.4); col(3.9, 4.1, -2.3, 0.8, 1.3); col(3.3, 3.7, 2.1, 2.5, 3.2);
   },
+  // Pink tent with a clothes rail, a mirror and four mannequins wearing outfits you can pick.
+  outfits(g, s, col) {
+    // the roof only covers the clothes rail at the back, so the mannequins stand in the open
+    platform(g, 6.4, 4.4);
+    [[-2.85, 0.35, 3.05], [2.85, 0.35, 3.05], [-2.85, -1.85, 3.6], [2.85, -1.85, 3.6]].forEach(([x, z, h]) => B(g, 0.34, h, 0.34, M.log, x, h / 2, z));
+    awning(g, [wool('#c2317a'), wool('#8f2468')], { trim: wool('#e4b93a'), sides: true, width: 6.3, depth: 2.5, zoff: -0.85 });
+    B(g, 5.6, 0.05, 2.4, M.carpet, 0, 0.23, 0.9); B(g, 5.8, 0.04, 0.12, flat('#d9a93a'), 0, 0.24, 2.12);
+    B(g, 5.5, 2.5, 0.2, M.dark, 0, 1.45, -1.75); B(g, 5.2, 0.08, 0.08, flat('#d9a93a'), 0, 2.45, -1.45);
+    ['#2f66c4', '#e9e2cf', '#3d7d40', '#a3342e', '#7a4fc2', '#c98a2b', '#2a2a33'].forEach((c, i) => B(g, 0.5, 1.15, 0.12, wool(c), -2.1 + i * 0.7, 1.82, -1.45));
+    ['knight', 'scholar', 'performer', 'watch'].forEach((id, i) => {
+      const x = -1.95 + i * 1.3; B(g, 0.8, 0.3, 0.8, M.planks, x, 0.35, 1.05);
+      const f = createFigure(OUTFITS.find((o) => o.id === id)); f.group.scale.setScalar(0.82); f.group.position.set(x, 0.5, 1.05); f.pose(0, 0, i);
+      f.group.traverse((o) => { if (o.isMesh) o.castShadow = true; }); g.add(f.group);
+    });
+    // standing mirror
+    B(g, 1, 2.1, 0.14, M.planks, -3.55, 1.25, 1.1); B(g, 0.76, 1.8, 0.05, flat('#bfe6f5'), -3.55, 1.27, 1.19); B(g, 0.2, 0.3, 0.5, M.dark, -3.55, 0.3, 1.0);
+    chest(g, 3.5, 1.1, '#8f2468', '#c2317a'); crate(g, 3.5, -0.2, 0.8);
+    banner(g, -2.2, 2.2, 0.56, 0.8, 1.1, '#8f2468', 'hanger'); banner(g, 2.2, 2.2, 0.56, 0.8, 1.1, '#8f2468', 'hanger');
+    s.lamp = lantern(g, 3.7, 2.3);
+    col(-4.1, -3, 0.7, 1.4, 2.2); col(3, 4, -0.6, 1.5, 1.2); col(3.5, 3.9, 2.1, 2.5, 3.2);
+  },
 };
 
 export function buildStalls(scene) {
-  return PROJECTS.map((p) => {
+  return STALLS.map((p) => {
     const s = Object.assign({}, p), g = new THREE.Group();
     g.position.set(p.pos[0], 0.1, p.pos[1]); g.userData.id = p.id;
     const col = (x0, x1, z0, z1, h) => collide(p.pos[0] + x0, p.pos[0] + x1, p.pos[1] + z0, p.pos[1] + z1, h + 0.1);
     BUILD[p.id](g, s, col);
-    addLamp(g, 0, 2.5, 0.9, 0, 1.4, 6.5, '#ffc27a'); addLamp(g, 0, 2.2, 3.2, 0, 0.8, 7, '#ffc27a'); // the stall lights up at night
+    addLamp(g, 0, 2.4, 1.6, 0, 1.5, 7.5, '#ffc27a'); // the stall lights up at night
     // main footprint: blocks walking through, and is what "near the stall" is measured from
-    s.rect = { x0: p.pos[0] - 2.85, x1: p.pos[0] + 2.85, z0: p.pos[1] - 2.05, z1: p.pos[1] + 2.2 };
+    const hw = p.id === 'outfits' ? 3.15 : 2.85;
+    s.rect = { x0: p.pos[0] - hw, x1: p.pos[0] + hw, z0: p.pos[1] - 2.05, z1: p.pos[1] + 2.2 };
+    s.front = [p.pos[0], p.pos[1] + 3.3]; // where the walk-to feature stands the player
     collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 6);
     if (p.id === 'alacrity' || p.id === 'contact') collide(p.pos[0] - 4.1, p.pos[0] + 4.1, p.pos[1] - 2.4, p.pos[1] - 2.2, 1.4);
     scene.add(g); s.group = g; return s;

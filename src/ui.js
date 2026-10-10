@@ -1,10 +1,13 @@
-// Interface layer: stall labels, the E prompt, the project popup and the menu.
-// Plain DOM on top of the canvas so text stays crisp and links are real links.
-import { PROJECTS, CREDIT, REPO_URL } from './config.js';
+// Interface layer: labels, the E prompt, the project popup, the menu, the wardrobe,
+// the agent chat box and the achievement badge. Plain DOM on top of the canvas so
+// text stays crisp and links are real links.
+import { STALLS, AGENTS, HALL_LABEL, ACHIEVEMENT, CREDIT, REPO_URL } from './config.js';
 import { fill } from './textures.js';
-import { sound } from './audio.js';
+import { sound, music } from './audio.js';
+import { OUTFITS, drawSprite, drawFace } from './figures.js';
 
 const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 
 /* 32×32 pixel-art picture for each popup. Replace with <img> files later if you like. */
 const ART = {
@@ -38,16 +41,19 @@ const ART = {
   },
 };
 
-export function createUI(canvas) {
+// handlers: { goTo(id), pickOutfit(id), endWardrobe(keep), toggleTheme() -> bool }
+export function createUI(canvas, handlers) {
   const scrim = $('scrim'), side = $('side'), menuBtn = $('menuBtn'), menuScrim = $('menuScrim'), promptEl = $('prompt'), touchUI = $('touch'), tUse = $('tUse');
+  const ward = $('wardrobe'), chat = $('chat'), toastEl = $('toast');
   const isTouch = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   if (isTouch) touchUI.hidden = false;
-  let openId = null, nearId = null;
+  let openId = null, chatId = null, wardOpen = false, promptText = null;
   const menuOpen = () => side.classList.contains('open');
+  const focusGame = () => canvas.focus({ preventScroll: true });
 
-  /* popup */
+  /* project popup */
   function openCard(id) {
-    const p = PROJECTS.find((q) => q.id === id); if (!p) return;
+    const p = STALLS.find((q) => q.id === id); if (!p || p.kind !== 'project') return;
     closeMenu(true); openId = id;
     $('cardKicker').textContent = p.label; $('cardTitle').textContent = p.title; $('cardDesc').textContent = p.desc;
     const g = $('cardArt').getContext('2d'); g.clearRect(0, 0, 32, 32); ART[id](g);
@@ -61,9 +67,9 @@ export function createUI(canvas) {
       go.className = 'off'; go.removeAttribute('href'); go.setAttribute('aria-disabled', 'true');
       go.querySelector('span').textContent = 'Link coming soon'; go.querySelector('small').textContent = 'Project link not added yet';
     }
-    scrim.classList.add('show'); promptEl.hidden = true; $('cardClose').focus({ preventScroll: true }); sound.play('open');
+    scrim.classList.add('show'); $('cardClose').focus({ preventScroll: true }); sound.play('open');
   }
-  function closeCard() { if (!openId) return; openId = null; scrim.classList.remove('show'); sound.play('close'); canvas.focus({ preventScroll: true }); }
+  function closeCard() { if (!openId) return; openId = null; scrim.classList.remove('show'); sound.play('close'); focusGame(); }
   $('cardClose').onclick = closeCard;
   scrim.addEventListener('pointerdown', (e) => { if (e.target === scrim) closeCard(); });
   $('emailCopy').onclick = () => {
@@ -77,38 +83,96 @@ export function createUI(canvas) {
   function closeMenu(silent) { if (!menuOpen()) return; side.classList.remove('open'); menuBtn.classList.remove('open'); menuScrim.classList.remove('show'); menuBtn.setAttribute('aria-expanded', 'false'); menuBtn.setAttribute('aria-label', 'Open menu'); if (!silent) sound.play('menu'); }
   menuBtn.onclick = () => (menuOpen() ? closeMenu() : openMenu());
   menuScrim.addEventListener('pointerdown', () => closeMenu());
-  PROJECTS.forEach((p) => {
-    const b = document.createElement('button'); b.className = 'navbtn';
-    const sw = document.createElement('b'); sw.style.background = p.color; b.appendChild(sw); b.appendChild(document.createTextNode(p.title));
-    b.onclick = () => openCard(p.id); $(p.email ? 'navContact' : 'navProjects').appendChild(b);
-  });
+  const ticks = {};
+  const navItem = (id, title, color, list) => {
+    const b = el('button', 'navbtn'); const sw = el('b'); sw.style.background = color; b.appendChild(sw); b.appendChild(el('span', 'navname', title));
+    const t = el('i', 'tick'); t.setAttribute('aria-hidden', 'true'); b.appendChild(t); ticks[id] = b;
+    b.onclick = () => { closeMenu(true); focusGame(); handlers.goTo(id); }; $(list).appendChild(b);
+  };
+  STALLS.forEach((p) => navItem(p.id, p.title, p.color, p.email ? 'navContact' : p.kind === 'outfits' ? 'navVillage' : 'navProjects'));
+  navItem('hall', HALL_LABEL + ' (town hall)', '#8b8a86', 'navVillage'); ticks.hall.classList.add('noTick');
 
-  /* sound and day/night buttons */
-  const soundBtn = $('soundBtn'), themeBtn = $('themeBtn');
-  const paintSound = () => { const on = sound.isOn(); soundBtn.classList.toggle('alt', !on); soundBtn.setAttribute('aria-pressed', String(on)); soundBtn.setAttribute('aria-label', on ? 'Turn sound off' : 'Turn sound on'); };
-  soundBtn.onclick = () => { if (sound.toggle()) sound.play('menu'); paintSound(); soundBtn.blur(); }; paintSound();
-  let themeHandler = null;
+  /* top buttons */
+  const toggleBtn = (id, isOn, flip, onWord, offWord) => {
+    const b = $(id); const paint = () => { const v = isOn(); b.classList.toggle('alt', !v); b.setAttribute('aria-pressed', String(v)); b.setAttribute('aria-label', v ? offWord : onWord); };
+    b.onclick = () => { flip(); paint(); b.blur(); }; paint(); return b;
+  };
+  toggleBtn('soundBtn', sound.isOn, () => { if (sound.toggle()) sound.play('menu'); }, 'Turn sound on', 'Turn sound off');
+  const musicBtn = toggleBtn('musicBtn', music.isOn, () => { music.toggle(); sound.play('menu'); }, 'Turn music on', 'Turn music off'); if (!music.available) musicBtn.hidden = true;
+  const themeBtn = $('themeBtn');
   const setTheme = (dark) => { themeBtn.classList.toggle('alt', dark); themeBtn.setAttribute('aria-pressed', String(dark)); themeBtn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode'); };
-  themeBtn.onclick = () => { if (themeHandler) setTheme(themeHandler()); sound.play('menu'); themeBtn.blur(); };
+  themeBtn.onclick = () => { setTheme(handlers.toggleTheme()); sound.play('menu'); themeBtn.blur(); };
 
   /* credit line */
   const credit = $('credit');
-  if (REPO_URL) { const a = document.createElement('a'); a.href = REPO_URL; a.target = '_blank'; a.rel = 'noopener'; a.textContent = CREDIT; credit.appendChild(a); } else credit.textContent = CREDIT;
+  if (REPO_URL) { const a = el('a', '', CREDIT); a.href = REPO_URL; a.target = '_blank'; a.rel = 'noopener'; credit.appendChild(a); } else credit.textContent = CREDIT;
 
-  /* stall labels */
-  const labels = PROJECTS.map((p) => { const b = document.createElement('button'); b.className = 'lbl'; b.textContent = p.label; b.onclick = () => openCard(p.id); $('labels').appendChild(b); return b; });
+  /* labels: stalls, the town hall, and a name tag for each agent */
+  const labels = {};
+  const addLabel = (key, text, onClick) => { const b = el('button', 'lbl', text); b.onclick = onClick; $('labels').appendChild(b); labels[key] = b; };
+  STALLS.forEach((p) => addLabel(p.id, p.label, () => (p.kind === 'project' ? openCard(p.id) : handlers.goTo(p.id))));
+  addLabel('hall', HALL_LABEL, () => handlers.goTo('hall'));
+  AGENTS.forEach((a) => { const d = el('div', 'alab'); d.appendChild(el('strong', '', a.name)); const s = el('span', '', 'Working'); s.prepend(el('i')); d.appendChild(s); $('labels').appendChild(d); labels[a.id] = d; });
 
+  /* wardrobe */
+  const grid = $('wardGrid'), cards = {};
+  OUTFITS.forEach((o) => {
+    const b = el('button', 'wcard'); const c = document.createElement('canvas'); c.width = 16; c.height = 32; drawSprite(c.getContext('2d'), o);
+    b.appendChild(c); b.appendChild(el('span', 'wname', o.name)); b.appendChild(el('em', '', 'Selected'));
+    b.onclick = () => { select(o.id); handlers.pickOutfit(o.id); sound.play('near'); }; grid.appendChild(b); cards[o.id] = b;
+  });
+  const select = (id) => { for (const k in cards) { cards[k].classList.toggle('sel', k === id); cards[k].setAttribute('aria-pressed', String(k === id)); } };
+  function openWardrobe(current) { closeMenu(true); wardOpen = true; select(current); ward.classList.add('show'); sound.play('open'); cards[current].focus({ preventScroll: true }); }
+  function closeWardrobe(keep) { if (!wardOpen) return; wardOpen = false; ward.classList.remove('show'); sound.play('close'); handlers.endWardrobe(keep); focusGame(); }
+  $('wardDone').onclick = () => closeWardrobe(true); $('wardClose').onclick = () => closeWardrobe(false);
+
+  /* agent chat */
+  let typer = 0;
+  function openChat(a, design) {
+    closeMenu(true); chatId = a.id; $('chatName').textContent = a.name; $('chatRole').textContent = a.role;
+    drawFace($('chatFace').getContext('2d'), design); $('chatFace').style.background = a.color;
+    const out = $('chatText'); out.textContent = ''; clearInterval(typer); let i = 0;
+    typer = setInterval(() => { i += 2; out.textContent = a.line.slice(0, i); if (i >= a.line.length) clearInterval(typer); }, 28);
+    out.setAttribute('aria-label', a.line); chat.classList.add('show'); sound.play('villager');
+  }
+  function closeChat() { if (!chatId) return; chatId = null; clearInterval(typer); chat.classList.remove('show'); sound.play('close'); focusGame(); }
+  $('chatClose').onclick = closeChat;
+
+  /* achievement badge */
+  let toastT = 0;
+  function toast() {
+    const g = $('toastArt').getContext('2d'); g.clearRect(0, 0, 16, 16); WOLF_ICON(g);
+    $('toastTitle').textContent = ACHIEVEMENT.title; $('toastText').textContent = ACHIEVEMENT.text;
+    toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 6500);
+  }
+
+  const busy = () => !!openId || !!chatId || wardOpen || menuOpen();
   return {
-    isTouch, openCard, closeCard, openMenu, closeMenu, setTheme,
-    onThemeToggle(fn) { themeHandler = fn; },
-    openId: () => openId,
-    nearId: () => nearId,
-    paused: () => !!openId || menuOpen(),
-    escape() { if (openId) closeCard(); else closeMenu(); },
-    setNear(id) {
-      if (id !== nearId) { nearId = id; if (id) { sound.play('near'); $('promptText').textContent = 'Open ' + PROJECTS.find((p) => p.id === id).label; } }
-      const show = !!nearId && !openId && !menuOpen(); promptEl.hidden = !show || isTouch; tUse.hidden = !show;
+    isTouch, openCard, closeCard, openMenu, closeMenu, setTheme, openWardrobe, closeWardrobe, openChat, closeChat, toast,
+    openId: () => openId, chatId: () => chatId, wardrobeOpen: () => wardOpen,
+    paused: busy,
+    // closes whatever is open; returns true if something was
+    escape() { if (openId) closeCard(); else if (chatId) closeChat(); else if (wardOpen) closeWardrobe(false); else if (menuOpen()) closeMenu(); else return false; return true; },
+    // text is what E will do, or null for nothing in range
+    setPrompt(text) {
+      if (text !== promptText) { promptText = text; if (text) { sound.play('near'); $('promptText').textContent = text; tUse.textContent = text.split(' ')[0]; } }
+      const show = !!promptText && !busy(); promptEl.hidden = !show || isTouch; tUse.hidden = !show;
     },
-    placeLabel(i, sx, sy, id) { const el = labels[i]; el.style.transform = 'translate(-50%,-100%) translate(' + sx.toFixed(1) + 'px,' + Math.max(44, sy).toFixed(1) + 'px)'; el.classList.toggle('near', id === nearId); },
+    setProgress(visited, unlocked) {
+      const total = STALLS.length, n = STALLS.filter((p) => visited.has(p.id)).length;
+      STALLS.forEach((p) => ticks[p.id].classList.toggle('done', visited.has(p.id)));
+      $('progCount').textContent = n + ' of ' + total + ' stalls explored'; $('progBar').style.width = (n / total) * 100 + '%';
+      $('progHint').textContent = unlocked ? 'Wolf companion unlocked' : 'Open every stall to earn a companion';
+      $('progress').classList.toggle('won', unlocked);
+    },
+    placeLabel(key, sx, sy, near, alpha = 1) {
+      const e = labels[key]; if (alpha < 0.03) { if (!e.hidden) e.hidden = true; return; } if (e.hidden) e.hidden = false;
+      e.style.transform = 'translate(-50%,-100%) translate(' + sx.toFixed(1) + 'px,' + Math.max(44, sy).toFixed(1) + 'px)'; e.style.opacity = alpha.toFixed(2); e.classList.toggle('near', !!near);
+    },
   };
+}
+
+function WOLF_ICON(g) {
+  const f = (c, x, y, w, h) => fill(g, c, x, y, w, h), a = '#e9e6df', b = '#cfcac0', d = '#2a2623';
+  f(a, 3, 1, 3, 3); f(a, 10, 1, 3, 3); f(b, 4, 2, 1, 2); f(b, 11, 2, 1, 2); f(a, 3, 4, 10, 7); f(b, 5, 9, 6, 4); f(d, 5, 6, 2, 2); f(d, 9, 6, 2, 2); f(d, 7, 10, 2, 1); f('#c23b32', 4, 13, 8, 2); f('#e4b93a', 7, 14, 2, 1);
 }

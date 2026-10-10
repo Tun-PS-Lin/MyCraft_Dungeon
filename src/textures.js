@@ -172,3 +172,30 @@ export function emblem(name) {
   if (!emblemCache[name]) { const t = toTex(cv(12, 16, EMBLEMS[name]), false); emblemCache[name] = new THREE.MeshLambertMaterial({ map: t, transparent: true, alphaTest: 0.5 }); }
   return emblemCache[name];
 }
+
+/* ── town hall materials ── */
+const HALL_C = {
+  brick: cv(16, 16, (g) => {
+    const r = rng(31); speck(g, 16, 16, ['#8b8a86', '#7f7e7a', '#959490', '#74736f'], r);
+    g.fillStyle = '#55544f'; for (let y = 3; y < 16; y += 4) g.fillRect(0, y, 16, 1);
+    for (let row = 0; row < 4; row++) for (let x = row % 2 ? 4 : 0; x < 16; x += 8) g.fillRect(x, row * 4, 1, 3);
+  }),
+  slate: cv(16, 16, (g) => {
+    const r = rng(32); speck(g, 16, 16, ['#3f4757', '#394150', '#47505f'], r);
+    g.fillStyle = '#2a303c'; for (let y = 3; y < 16; y += 4) g.fillRect(0, y, 16, 1);
+    for (let row = 0; row < 4; row++) for (let x = row % 2 ? 3 : 7; x < 16; x += 8) g.fillRect(x, row * 4, 1, 3);
+  }),
+  tile: cv(16, 16, (g) => {
+    const r = rng(33); speck(g, 16, 16, ['#5a5961', '#53525a', '#615f68'], r);
+    g.fillStyle = '#3a3940'; g.fillRect(0, 0, 16, 1); g.fillRect(0, 0, 1, 16); g.fillRect(8, 8, 8, 1); g.fillRect(8, 0, 1, 8);
+  }),
+  carpet: cv(16, 16, (g) => speck(g, 16, 16, ['#a3232a', '#98202a', '#ad2a30', '#a3232a'], rng(34))),
+};
+for (const k in HALL_C) { T[k] = toTex(HALL_C[k]); M[k] = lam({ map: T[k] }); }
+
+Object.assign(EMBLEMS, {
+  hanger(g) { const w = '#fff3fa'; fill(g, w, 5, 2, 2, 1); fill(g, w, 6, 3, 1, 2); fill(g, w, 5, 5, 2, 1); fill(g, w, 4, 6, 4, 1); fill(g, w, 3, 7, 6, 1); fill(g, w, 2, 8, 8, 1); fill(g, w, 1, 9, 10, 1); fill(g, '#00000000', 3, 8, 6, 1); fill(g, w, 1, 10, 10, 1); },
+  tree(g) { const w = '#f4f1e6'; fill(g, w, 5, 2, 2, 12); fill(g, w, 3, 3, 1, 2); fill(g, w, 8, 3, 1, 2); fill(g, w, 4, 5, 1, 1); fill(g, w, 7, 5, 1, 1); fill(g, w, 2, 6, 1, 2); fill(g, w, 9, 6, 1, 2); fill(g, w, 3, 8, 2, 1); fill(g, w, 7, 8, 2, 1); fill(g, w, 3, 13, 6, 1); },
+  scale(g) { const w = '#f6e7b0'; fill(g, w, 5, 2, 2, 11); fill(g, w, 2, 4, 8, 1); fill(g, w, 2, 5, 1, 3); fill(g, w, 9, 5, 1, 3); fill(g, w, 1, 8, 3, 1); fill(g, w, 8, 8, 3, 1); fill(g, w, 3, 13, 6, 1); },
+  chip(g) { const w = '#d7ecff'; fill(g, w, 3, 4, 6, 8); fill(g, '#2f66c4', 4, 5, 4, 6); fill(g, w, 5, 7, 2, 2); for (const y of [5, 8, 10]) { fill(g, w, 1, y, 2, 1); fill(g, w, 9, y, 2, 1); } },
+});
