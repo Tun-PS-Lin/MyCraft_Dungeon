@@ -28,12 +28,15 @@ npm run build    # production build in dist/
 | Open a stall | E when near it, or click it | Open button, or tap it |
 | Close | Esc, E or the × button | × button |
 
+The three buttons in the top-right corner are sound on/off, day/night, and the menu. The day/night choice and the sound setting are remembered in the visitor's browser.
+
 ## Change the content
 
 Everything you are likely to edit is in **`src/config.js`**:
 
 - `PROJECTS`: the name, description, link and map position of each stall. A project with an empty `url` shows "Link coming soon".
 - `CONTACT_EMAIL`: the address shown in the Contact popup.
+- `CREDIT` and `REPO_URL`: the small credit line at the bottom of the screen and where it links. With `REPO_URL` empty it is plain text.
 - `SOUND_FILES` and `AMBIENT_LOOP`: real sound files (see below).
 - `TUNING`: walk and run speed, jump height, camera angle and distance, and how close you must be to a stall to open it.
 
@@ -91,6 +94,7 @@ src/collision.js    walls, steps and jumping onto things
 src/textures.js     pixel textures, materials, instancing helpers
 src/ui.js           labels, popup, menu
 src/audio.js        sound effects
+src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)
 src/style.css       interface styling
 scripts/build-preview.mjs   optional: bundles everything into one HTML file
 ```

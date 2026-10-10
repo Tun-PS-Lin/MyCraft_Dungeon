@@ -42,7 +42,7 @@ export function toTex(c, repeat) {
 export const DIRT = ['#8a5a36', '#7b4e2e', '#96633b', '#6f4528', '#845431'];
 export const GRASS = ['#5f8f33', '#53812c', '#6b9b39', '#4a7427', '#5f8f33'];
 export const MORTAR = ['#4a3a2a', '#40321f', '#54422f'];
-export const PAVER_TINTS = ['#a39382', '#93836f', '#ae9e8b', '#857565', '#9c8a72', '#8e867f', '#a8937a', '#9a7f68'];
+export const PAVER_TINTS = ['#a39382', '#998a78', '#a89886', '#948573', '#9f8e7a', '#97897c', '#a5927d'];
 
 export const tiles = {
   dirt: (seed) => cv(16, 16, (g) => {

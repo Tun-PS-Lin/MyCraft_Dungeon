@@ -8,6 +8,7 @@ import { createChickens } from './critters.js';
 import { blocked, groundAt, rectDistance } from './collision.js';
 import { createUI } from './ui.js';
 import { sound } from './audio.js';
+import { lamps, addLamp, MOOD } from './lights.js';
 
 const canvas = document.getElementById('world');
 
@@ -20,13 +21,13 @@ renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadow
 renderer.shadowMap.autoUpdate = false; // the world never moves, so its shadows are drawn once
 
 const scene = new THREE.Scene();
-const backdrop = new THREE.Color('#1c2a12').convertSRGBToLinear();
+const backdrop = MOOD.day.back.clone();
 scene.background = backdrop; scene.fog = new THREE.Fog(backdrop, 60, 96);
 const camera = new THREE.PerspectiveCamera(TUNING.cameraFov, 1, 1, 220);
 
 // Late-afternoon light: a warm low sun with cool sky fill.
-scene.add(new THREE.HemisphereLight('#b9c8ff', '#7a5a2c', 0.42));
-const sun = new THREE.DirectionalLight('#ffc67c', 1.22); sun.position.set(-30, 40, -16); sun.castShadow = true;
+const hemi = new THREE.HemisphereLight('#b9c8ff', '#7a5a2c', 0.42); scene.add(hemi);
+const sun = new THREE.DirectionalLight('#ffc67c', 1.22); // doubles as the moon at night, from the same direction sun.position.set(-30, 40, -16); sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 const sc = sun.shadow.camera; sc.left = -44; sc.right = 44; sc.top = 44; sc.bottom = -44; sc.near = 1; sc.far = 130;
 sc.updateProjectionMatrix(); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03; scene.add(sun);
@@ -38,6 +39,22 @@ const stallGroups = stalls.map((s) => s.group);
 const player = createPlayer(scene), P = player.state;
 const chickens = createChickens(scene);
 const ui = createUI(canvas);
+const torch = addLamp(scene, 0, 2, 0, 0, 0.85, 5.5, '#ffd9a0'); // a soft light that follows the player at night
+
+/* ── day and night ── */
+// `night` glides from 0 (day) to 1 (night); every light and the backdrop follow it.
+let night = 0, nightTarget = 0;
+try { if (localStorage.getItem('pv-theme') === 'dark') night = nightTarget = 1; } catch (e) { /* storage unavailable */ }
+ui.setTheme(nightTarget === 1);
+ui.onThemeToggle(() => { nightTarget = nightTarget ? 0 : 1; try { localStorage.setItem('pv-theme', nightTarget ? 'dark' : 'light'); } catch (e) { /* ignore */ } return nightTarget === 1; });
+const mix = (a, b, t) => a + (b - a) * t;
+function applyMood(time) {
+  const d = MOOD.day, n = MOOD.night, t = night * night * (3 - 2 * night);
+  hemi.color.copy(d.sky).lerp(n.sky, t); hemi.groundColor.copy(d.ground).lerp(n.ground, t); hemi.intensity = mix(d.hemi, n.hemi, t);
+  sun.color.copy(d.sun).lerp(n.sun, t); sun.intensity = mix(d.sunI, n.sunI, t);
+  backdrop.copy(d.back).lerp(n.back, t); scene.fog.color.copy(backdrop); renderer.toneMappingExposure = mix(d.exposure, n.exposure, t);
+  for (const l of lamps) l.light.intensity = mix(l.day, l.night, t) * (1 + Math.sin(time * 9 + l.seed) * 0.05 + Math.sin(time * 23 + l.seed * 2) * 0.035);
+}
 renderer.shadowMap.needsUpdate = true;
 
 /* ── input ── */
@@ -51,7 +68,7 @@ window.addEventListener('keydown', (e) => {
   if (k === 'Space' && !e.repeat) jumpQueued = true;
   keys[k] = true; sound.unlock();
 });
-window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+window.addEventListener('keyup', (e) => { keys[e.code] = false; if (e.code === 'Space' && !ui.paused()) e.preventDefault(); });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
 // click or tap a stall
@@ -119,8 +136,12 @@ function update(dt) {
 
   // nearest stall, measured to its edge so any side counts
   let best = null, bd = TUNING.interactRange;
-  for (const s of stalls) { const d = rectDistance(s.rect, P.x, P.z); if (d < bd) { bd = d; best = s.id; } s.lamp.intensity = 0.85 + Math.sin(time * 9 + s.pos[0]) * 0.06 + Math.sin(time * 23 + s.pos[1]) * 0.04; }
+  for (const s of stalls) { const d = rectDistance(s.rect, P.x, P.z); if (d < bd) { bd = d; best = s.id; } }
   ui.setNear(best);
+
+  if (night !== nightTarget) { night += Math.sign(nightTarget - night) * Math.min(Math.abs(nightTarget - night), dt / 1.6); }
+  torch.position.set(P.x, P.visY + 2.2, P.z + 0.6);
+  applyMood(time);
 
   chickens.update(dt, P, () => sound.play('cluck'));
   birdT -= dt; if (birdT < 0) { birdT = 4 + Math.random() * 7; if (sound.started()) sound.play('bird'); }

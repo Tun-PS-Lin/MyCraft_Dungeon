@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { PROJECTS } from './config.js';
 import { B, M, wool, patterned, glow, flat, glass, emblem } from './textures.js';
 import { collide } from './collision.js';
+import { addLamp } from './lights.js';
 
 const WHITE = '#f4f1e6';
 
@@ -29,7 +30,7 @@ function barrel(g, x, z) { B(g, 0.8, 1, 0.8, M.dark, x, 0.7, z); B(g, 0.86, 0.1,
 function chest(g, x, z, body, lid) { B(g, 0.95, 0.5, 0.65, flat(body), x, 0.45, z); B(g, 1, 0.24, 0.7, flat(lid), x, 0.82, z); B(g, 0.14, 0.2, 0.06, flat('#e4b93a'), x, 0.68, z + 0.36); }
 function lantern(g, x, z, h = 2.4) {
   B(g, 0.25, h, 0.25, M.log, x, h / 2, z); B(g, 0.44, 0.44, 0.44, glow('#ffc76a'), x, h + 0.2, z, true); B(g, 0.58, 0.1, 0.58, M.dark, x, h + 0.47, z);
-  const p = new THREE.PointLight('#ffb35a', 0.9, 9, 1.6); p.position.set(x, h + 0.2, z + 0.45); g.add(p); return p;
+  return addLamp(g, x, h + 0.2, z + 0.45, 0.7, 1.5, 8);
 }
 function banner(g, x, y, z, w, h, color, mark) {
   B(g, w + 0.16, 0.1, 0.1, M.dark, x, y + h / 2 + 0.05, z);
@@ -124,6 +125,7 @@ export function buildStalls(scene) {
     g.position.set(p.pos[0], 0.1, p.pos[1]); g.userData.id = p.id;
     const col = (x0, x1, z0, z1, h) => collide(p.pos[0] + x0, p.pos[0] + x1, p.pos[1] + z0, p.pos[1] + z1, h + 0.1);
     BUILD[p.id](g, s, col);
+    addLamp(g, 0, 2.5, 0.9, 0, 1.4, 6.5, '#ffc27a'); addLamp(g, 0, 2.2, 3.2, 0, 0.8, 7, '#ffc27a'); // the stall lights up at night
     // main footprint: blocks walking through, and is what "near the stall" is measured from
     s.rect = { x0: p.pos[0] - 2.85, x1: p.pos[0] + 2.85, z0: p.pos[1] - 2.05, z1: p.pos[1] + 2.2 };
     collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 6);

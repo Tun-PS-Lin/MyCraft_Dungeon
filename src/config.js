@@ -5,6 +5,10 @@
 
 export const CONTACT_EMAIL = 'tunpyaysonelin@gmail.com';
 
+// Small credit line at the bottom of the screen. Leave REPO_URL empty for plain text.
+export const CREDIT = 'Made by Tun. L';
+export const REPO_URL = '';
+
 // pos is [x, z] on the map. The camera looks from +z toward -z,
 // so negative z is the top of the screen and negative x is the left.
 export const PROJECTS = [
@@ -15,7 +19,7 @@ export const PROJECTS = [
     pos: [-10.5, -8.5],
     color: '#2f66c4',
     glow: '#62e4ff',
-    desc: 'An internal CRM to visualize and manage real estate projects, with an integrated AI voice assistant that learns the entire workflow over time.',
+    desc: 'An internal CRM to visualize and manage real estate projects, with an AI voice assistant that learns as you use it.',
     url: 'https://map.alacrityresearch.xyz',
     cta: 'Go to project',
     sub: 'Open project website',
@@ -27,7 +31,7 @@ export const PROJECTS = [
     pos: [10.5, -8.5],
     color: '#2f7a3c',
     glow: '#ffd84a',
-    desc: 'A media and market insights organization for Myanmar audiences and migrant workers in Thailand, built on data-driven editorial content and consumer research.',
+    desc: 'A media organization for Myanmar migrants in Thailand, expanding into data-driven market insights on this community.',
     url: 'https://mingalar.news',
     cta: 'Go to project',
     sub: 'Open project website',
@@ -39,8 +43,8 @@ export const PROJECTS = [
     pos: [-10.5, 8],
     color: '#c98a2b',
     glow: '#8fd0ff',
-    desc: 'A mathematical framework for how single-centre cities grow outward, joining three empirical models into one and testing it on Yangon from 1989 to 2014.',
-    url: '', // add the paper or project link here
+    desc: 'A mathematical framework for how cities grow outward, tested on Yangon.',
+    url: 'https://drive.google.com/file/d/12T6Tg6l2Z3MKGV9wCo5UdtmauGHceIt2/view?usp=sharing',
     cta: 'Go to project',
     sub: 'Open the paper',
   },
@@ -82,10 +86,11 @@ export const TUNING = {
   runSpeed: 7.6,
   jumpSpeed: 7.6,
   gravity: 22,
+  playerScale: 1.2,   // 1 is two blocks tall
   interactRange: 2.6, // how close to a stall (from any side) before E works
   cameraYaw: 0.16,    // radians; 0 looks straight up the map
-  cameraBack: 23,
-  cameraUp: 30,
+  cameraBack: 26,     // further back and lower gives a flatter, more tilted-up view
+  cameraUp: 27.5,
   cameraFov: 30,
 };
 

@@ -3,7 +3,7 @@
 import { PLAZA } from './config.js';
 
 export const boxes = [];
-export const RADIUS = 0.35;
+export const RADIUS = 0.4;
 export const STEP = 0.36;
 export const LIMIT = { x: PLAZA.x - 0.45, z: PLAZA.z - 0.45 };
 

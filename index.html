@@ -16,6 +16,14 @@
 <div id="labels"></div>
 
 <div id="menuScrim"></div>
+<button id="soundBtn" class="topbtn" aria-label="Turn sound off" aria-pressed="true">
+  <svg class="ic ic-on" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 4h2v4H1zM3 3h1v6H3zM4 2h1v8H4zM5 1h1v10H5zM7 4h1v4H7zM9 2h1v8H9z"/></svg>
+  <svg class="ic ic-off" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 4h2v4H1zM3 3h1v6H3zM4 2h1v8H4zM5 1h1v10H5zM7 4h1v1H7zM8 5h1v1H8zM9 6h1v1H9zM10 7h1v1h-1zM10 4h1v1h-1zM9 5h1v1H9zM8 6h1v1H8zM7 7h1v1H7z"/></svg>
+</button>
+<button id="themeBtn" class="topbtn" aria-label="Switch to dark mode" aria-pressed="false">
+  <svg class="ic ic-on" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 4h4v4H4zM5.5 0h1v2h-1zM5.5 10h1v2h-1zM0 5.5h2v1H0zM10 5.5h2v1h-2zM1.5 1.5h1.5v1.5H1.5zM9 1.5h1.5v1.5H9zM1.5 9h1.5v1.5H1.5zM9 9h1.5v1.5H9z"/></svg>
+  <svg class="ic ic-off" viewBox="0 0 12 12" aria-hidden="true"><path d="M5 1h3v1H5zM3 2h4v1H3zM2 3h4v1H2zM2 4h3v1H2zM1 5h4v2H1zM2 7h4v1H2zM2 8h5v1H2zM3 9h7v1H3zM5 10h4v1H5zM9 7h1v1H9zM8 8h2v1H8z"/></svg>
+</button>
 <button id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="side"><i></i><i></i><i></i></button>
 <nav id="side" aria-label="Projects and contact">
   <div class="side-head">Village map</div>
@@ -23,14 +31,14 @@
   <div id="navProjects" class="navlist"></div>
   <h2>Say hello</h2>
   <div id="navContact" class="navlist"></div>
-  <h2>Sound</h2>
-  <button class="navbtn" id="soundBtn" aria-pressed="true">Sound on</button>
   <div class="keys">
     <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>move</div>
     <div><kbd>Space</kbd>jump <kbd class="gap">Shift</kbd>run</div>
     <div><kbd>E</kbd>open a stall <kbd class="gap">Esc</kbd>close</div>
   </div>
 </nav>
+
+<div id="credit"></div>
 
 <div id="prompt" hidden><kbd>E</kbd><span id="promptText"></span></div>
 

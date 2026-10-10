@@ -1,6 +1,6 @@
 // Interface layer: stall labels, the E prompt, the project popup and the menu.
 // Plain DOM on top of the canvas so text stays crisp and links are real links.
-import { PROJECTS } from './config.js';
+import { PROJECTS, CREDIT, REPO_URL } from './config.js';
 import { fill } from './textures.js';
 import { sound } from './audio.js';
 
@@ -82,15 +82,25 @@ export function createUI(canvas) {
     const sw = document.createElement('b'); sw.style.background = p.color; b.appendChild(sw); b.appendChild(document.createTextNode(p.title));
     b.onclick = () => openCard(p.id); $(p.email ? 'navContact' : 'navProjects').appendChild(b);
   });
-  const soundBtn = $('soundBtn');
-  const paintSound = () => { soundBtn.textContent = sound.isOn() ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', String(sound.isOn())); };
-  soundBtn.onclick = () => { if (sound.toggle()) sound.play('menu'); paintSound(); }; paintSound();
+
+  /* sound and day/night buttons */
+  const soundBtn = $('soundBtn'), themeBtn = $('themeBtn');
+  const paintSound = () => { const on = sound.isOn(); soundBtn.classList.toggle('alt', !on); soundBtn.setAttribute('aria-pressed', String(on)); soundBtn.setAttribute('aria-label', on ? 'Turn sound off' : 'Turn sound on'); };
+  soundBtn.onclick = () => { if (sound.toggle()) sound.play('menu'); paintSound(); soundBtn.blur(); }; paintSound();
+  let themeHandler = null;
+  const setTheme = (dark) => { themeBtn.classList.toggle('alt', dark); themeBtn.setAttribute('aria-pressed', String(dark)); themeBtn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode'); };
+  themeBtn.onclick = () => { if (themeHandler) setTheme(themeHandler()); sound.play('menu'); themeBtn.blur(); };
+
+  /* credit line */
+  const credit = $('credit');
+  if (REPO_URL) { const a = document.createElement('a'); a.href = REPO_URL; a.target = '_blank'; a.rel = 'noopener'; a.textContent = CREDIT; credit.appendChild(a); } else credit.textContent = CREDIT;
 
   /* stall labels */
   const labels = PROJECTS.map((p) => { const b = document.createElement('button'); b.className = 'lbl'; b.textContent = p.label; b.onclick = () => openCard(p.id); $('labels').appendChild(b); return b; });
 
   return {
-    isTouch, openCard, closeCard, openMenu, closeMenu,
+    isTouch, openCard, closeCard, openMenu, closeMenu, setTheme,
+    onThemeToggle(fn) { themeHandler = fn; },
     openId: () => openId,
     nearId: () => nearId,
     paused: () => !!openId || menuOpen(),

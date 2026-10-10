@@ -3,12 +3,13 @@ import * as THREE from 'three';
 import { PLAZA, PROJECTS, TUNING } from './config.js';
 import { rng, hash, noise, cv, fill, speck, toTex, tiles, M, B, Batch, boxGeo, glow, PAVER_TINTS, DIRT, GRASS } from './textures.js';
 import { collide, setHeightFn } from './collision.js';
+import { addLamp } from './lights.js';
 
 const HALF = 48, SIZE = HALF * 2;
 const GRASS_T = 0, COBBLE = 1, DIRT_T = 2;
 const types = new Uint8Array(SIZE * SIZE), heights = new Float32Array(SIZE * SIZE);
 const idx = (x, z) => (Math.floor(z) + HALF) * SIZE + (Math.floor(x) + HALF);
-export const COBBLE_H = 0.15, GRASS_H = 0.16;
+export const COBBLE_H = 0.09, GRASS_H = 0.1;
 
 export function heightAt(x, z) {
   if (x < -HALF || x >= HALF || z < -HALF || z >= HALF) return 0;
@@ -55,20 +56,20 @@ export function buildWorld(scene, renderer) {
       }
     });
     const tex = toTex(c, false); tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE), new THREE.MeshLambertMaterial({ map: tex }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE, SIZE, SIZE), new THREE.MeshLambertMaterial({ map: tex }));
     m.rotation.x = -Math.PI / 2; m.receiveShadow = true; scene.add(m);
   }
 
   /* raised detail */
-  const big = new Batch(M.paver, boxGeo(0.94, 1, 0.94)), half = new Batch(M.paver, boxGeo(0.94, 1, 0.44)), small = new Batch(M.paver, boxGeo(0.44, 1, 0.44));
+  const big = new Batch(M.paver, boxGeo(0.96, 1, 0.96)), half = new Batch(M.paver, boxGeo(0.96, 1, 0.46)), small = new Batch(M.paver, boxGeo(0.46, 1, 0.46));
   const sideTex = toTex(cv(16, 16, (g) => { const q = rng(18); speck(g, 16, 16, DIRT, q); for (let x = 0; x < 16; x++) { const d = 3 + ((q() * 3) | 0); for (let y = 0; y < d; y++) fill(g, GRASS[(q() * GRASS.length) | 0], x, y, 1, 1); } }));
   const topM = new THREE.MeshLambertMaterial({ map: toTex(tiles.grass(60)) }), sideM = new THREE.MeshLambertMaterial({ map: sideTex }), dirtM = new THREE.MeshLambertMaterial({ map: toTex(tiles.dirt(50)) });
   const grassBlock = [sideM, sideM, topM, dirtM, sideM, sideM];
   const turf = new Batch(grassBlock), mounds = new Batch(grassBlock);
   const bits = new Batch(M.tint, null, false);   // grass tufts, flowers, pebbles: tinted, no shadows
   const wood = new Batch(M.tint), rocks = new Batch(M.tint), logs = new Batch(M.log), leaves = new Batch(M.leaves);
-  const tint = () => col.set(PAVER_TINTS[(r() * PAVER_TINTS.length) | 0]).multiplyScalar(0.9 + r() * 0.2).clone();
-  const stoneH = () => 0.09 + r() * 0.12;
+  const tint = () => col.set(PAVER_TINTS[(r() * PAVER_TINTS.length) | 0]).multiplyScalar(0.95 + r() * 0.1).clone();
+  const stoneH = () => 0.055 + r() * 0.055; // keep this small: the road should read as cobbles, not rubble
   const moundAt = (x, z) => (!inSlabZone(x, z) && Math.abs(x) > 5 && noise(x * 0.18 + 3, z * 0.18 + 8) > 0.63 ? 1 : 0);
   const flowerCols = ['#f4e04d', '#f6f6f6', '#e9627a', '#c58cf0', '#ff9a3d'];
 
@@ -81,9 +82,9 @@ export function buildWorld(scene, renderer) {
       else if (k < 0.5) {
         const turn = r() < 0.5;
         for (const o of [-0.25, 0.25]) { const h = stoneH(); half.add(x + (turn ? o : 0), h / 2, z + (turn ? 0 : o), 1, h, 1, tint(), turn ? Math.PI / 2 : 0); }
-      } else for (const ox of [-0.25, 0.25]) for (const oz of [-0.25, 0.25]) { if (r() < 0.05) continue; const h = stoneH() + (r() < 0.08 ? 0.08 : 0); small.add(x + ox, h / 2, z + oz, 1, h, 1, tint()); }
+      } else for (const ox of [-0.25, 0.25]) for (const oz of [-0.25, 0.25]) { if (r() < 0.05) continue; const h = stoneH() + (r() < 0.06 ? 0.03 : 0); small.add(x + ox, h / 2, z + oz, 1, h, 1, tint()); }
     } else if (t === DIRT_T) {
-      if (r() < 0.22) { const n = 1 + ((r() * 2) | 0); for (let i = 0; i < n; i++) { const h = 0.05 + r() * 0.06; small.add(x + (r() - 0.5) * 0.5, h / 2, z + (r() - 0.5) * 0.5, 0.7 + r() * 0.3, h, 0.7 + r() * 0.3, tint()); } }
+      if (r() < 0.22) { const n = 1 + ((r() * 2) | 0); for (let i = 0; i < n; i++) { const h = 0.03 + r() * 0.03; small.add(x + (r() - 0.5) * 0.5, h / 2, z + (r() - 0.5) * 0.5, 0.7 + r() * 0.3, h, 0.7 + r() * 0.3, tint()); } }
       if (r() < 0.12) bits.add(x + (r() - 0.5) * 0.7, 0.12, z + (r() - 0.5) * 0.7, 0.1, 0.24, 0.1, col.setHSL(0.24, 0.5, 0.36).clone());
     } else {
       const m = moundAt(x, z), base = m || heights[idx(x, z)];
@@ -119,12 +120,12 @@ export function buildWorld(scene, renderer) {
   [[-4.7, -13.1, 1], [4.7, -13.1, 1], [-16.1, -0.5, 0], [16.1, 0.5, 0], [-4.7, 13.1, 0], [4.7, 13.1, 0]].forEach(([x, z, lit]) => {
     B(scene, 0.25, 2.3, 0.25, M.log, x, 1.15, z); B(scene, 0.44, 0.44, 0.44, lampGlow, x, 2.5, z, true); B(scene, 0.58, 0.1, 0.58, M.dark, x, 2.77, z);
     collide(x - 0.15, x + 0.15, z - 0.15, z + 0.15, 3);
-    if (lit) { const p = new THREE.PointLight('#ffb35a', 0.8, 9, 1.6); p.position.set(x, 2.5, z + 0.4); scene.add(p); }
+    addLamp(scene, x, 2.5, z + 0.4, lit ? 0.6 : 0, 1.5, 8);
   });
 
   /* forest. Trees are left out wherever they would stand between the camera and the player. */
   const dir = [Math.sin(TUNING.cameraYaw), Math.cos(TUNING.cameraYaw)];
-  const hides = (x, z) => { for (let s = 1.5; s <= 10; s += 0.5) { if (Math.abs(x - dir[0] * s) < PLAZA.x && Math.abs(z - dir[1] * s) < PLAZA.z) return true; } return false; };
+  const hides = (x, z) => { for (let s = 1.5; s <= 11.5; s += 0.5) { if (Math.abs(x - dir[0] * s) < PLAZA.x && Math.abs(z - dir[1] * s) < PLAZA.z) return true; } return false; };
   const tree = (x, z, base) => {
     const h = 4 + ((r() * 3) | 0), tc = col.setHSL(0.185 + r() * 0.075, 0.5 + r() * 0.14, 0.37 + r() * 0.1).clone();
     const lc = () => tc.clone().offsetHSL(0, 0, (r() - 0.5) * 0.12);
@@ -170,8 +171,11 @@ export function buildWorld(scene, renderer) {
     };
     draw();
     if (document.fonts && document.fonts.load) document.fonts.load('700 40px "Pixelify Sans"').then(draw).catch(() => {});
-    const top = new THREE.Mesh(new THREE.PlaneGeometry(SLAB.w, SLAB.d), new THREE.MeshLambertMaterial({ map: tex }));
+    const top = new THREE.Mesh(new THREE.PlaneGeometry(SLAB.w, SLAB.d, 16, 10), new THREE.MeshLambertMaterial({ map: tex }));
     top.rotation.x = -Math.PI / 2; top.position.y = SLAB.y + SLAB.h + 0.004; top.receiveShadow = true; scene.add(top);
+    // glowing corner studs; at night they light the slab
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const x = sx * (SLAB.w / 2 - 0.2), z = sz * (SLAB.d / 2 - 0.2); B(scene, 0.22, 0.14, 0.22, lampGlow, x, SLAB.y + SLAB.h + 0.07, z, true); }
+    addLamp(scene, -1.7, 1.3, 0, 0, 1.0, 6); addLamp(scene, 1.7, 1.3, 0, 0, 1.0, 6);
     collide(-SLAB.w / 2, SLAB.w / 2, -SLAB.d / 2, SLAB.d / 2, SLAB.y + SLAB.h);
   }
 }

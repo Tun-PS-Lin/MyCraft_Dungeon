@@ -2,6 +2,7 @@
 // shoulder and hip, plus a soft blob shadow under the feet.
 import * as THREE from 'three';
 import { cv, fill, toTex } from './textures.js';
+import { TUNING } from './config.js';
 
 const PXU = 0.06; // one skin pixel in world units; the figure is 32 pixels tall
 const SK = '#d6a070', SK2 = '#c48d5f', HAIR = '#6b3f22', HAIR2 = '#5a331b', SHIRT = '#2f6fb5', SHIRT2 = '#275e9b', STRAP = '#5b3a1e', PANT = '#33415c', BOOT = '#4a2f1a';
@@ -32,9 +33,10 @@ export function createPlayer(scene) {
     armL: part(4, 12, 4, armM, 23, 6, -5), armR: part(4, 12, 4, armM, 23, -6, -5),
     legL: part(4, 12, 4, legM, 12, 2, -6), legR: part(4, 12, 4, legM, 12, -2, -6),
   };
+  group.scale.setScalar(TUNING.playerScale);
   scene.add(group);
 
-  const shadow = makeBlob(scene, 1.25);
+  const shadow = makeBlob(scene, 1.25 * TUNING.playerScale);
   const state = { x: 0, y: 0, z: 4.6, vy: 0, yaw: Math.PI, grounded: true, phase: 0, blend: 0, squash: 0, visY: 0 };
 
   // dt seconds, time seconds, flags from the movement step, ground height under the feet
