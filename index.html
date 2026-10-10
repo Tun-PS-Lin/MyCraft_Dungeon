@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>James's Portfolio Village</title>
+<meta name="description" content="A small explorable village. Walk up to a market stall to open one of James's projects.">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@500;700&display=swap">
+<link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+<!-- app:start -->
+<canvas id="world" aria-label="A small blocky village with four market stalls. Walk to a stall and press E to read about a project."></canvas>
+<div id="labels"></div>
+
+<div id="menuScrim"></div>
+<button id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="side"><i></i><i></i><i></i></button>
+<nav id="side" aria-label="Projects and contact">
+  <div class="side-head">Village map</div>
+  <h2>Projects</h2>
+  <div id="navProjects" class="navlist"></div>
+  <h2>Say hello</h2>
+  <div id="navContact" class="navlist"></div>
+  <h2>Sound</h2>
+  <button class="navbtn" id="soundBtn" aria-pressed="true">Sound on</button>
+  <div class="keys">
+    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>move</div>
+    <div><kbd>Space</kbd>jump <kbd class="gap">Shift</kbd>run</div>
+    <div><kbd>E</kbd>open a stall <kbd class="gap">Esc</kbd>close</div>
+  </div>
+</nav>
+
+<div id="prompt" hidden><kbd>E</kbd><span id="promptText"></span></div>
+
+<div id="scrim">
+  <div id="card" role="dialog" aria-modal="true" aria-labelledby="cardTitle">
+    <div class="card-top"><span class="card-spacer"></span><div id="cardKicker"></div><button class="xbtn" id="cardClose" aria-label="Close">×</button></div>
+    <canvas id="cardArt" width="32" height="32"></canvas>
+    <h1 id="cardTitle"></h1>
+    <p id="cardDesc"></p>
+    <div id="cardEmail" hidden><span id="emailText"></span><button id="emailCopy" type="button">Copy</button></div>
+    <a id="cardGo" target="_blank" rel="noopener"><span></span><small></small></a>
+  </div>
+</div>
+
+<div id="touch" hidden>
+  <div id="stick"><div id="knob"></div></div>
+  <button class="tbtn" id="tUse" hidden>Open</button>
+  <button class="tbtn" id="tJump">Jump</button>
+</div>
+<!-- app:end -->
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
