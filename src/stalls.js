@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { STALLS } from './config.js';
 import { createFigure, OUTFITS } from './figures.js';
-import { B, M, wool, patterned, glow, flat, glass, emblem } from './textures.js';
+import { B, M, wool, patterned, glow, flat, glass, emblem, bake } from './textures.js';
 import { collide } from './collision.js';
 import { addLamp } from './lights.js';
 
@@ -119,6 +119,29 @@ const BUILD = {
     s.lamp = lantern(g, 3.5, 2.3);
     col(-4, -3, -0.6, 1.5, 1.4); col(3.9, 4.1, -2.3, 0.8, 1.3); col(3.3, 3.7, 2.1, 2.5, 3.2);
   },
+  // Orange and slate tent with a glowing heat-map board and a small model city.
+  urbansim(g, s, col) {
+    platform(g); posts(g, 3.05, 3.6);
+    awning(g, [wool('#d2542f'), wool('#3a4250')], { trim: wool('#e4b93a'), sides: true });
+    counter(g, M.dark, '#3a4250');
+    B(g, 4.6, 2.7, 0.16, flat('#1b2030'), 0, 1.95, -1.68); B(g, 4.8, 0.14, 0.24, M.planks, 0, 3.32, -1.66); B(g, 4.8, 0.14, 0.24, M.planks, 0, 0.62, -1.66);
+    const heat = ['#2b6fd0', '#2fa0a8', '#57d47c', '#e4d23a', '#f08a2a', '#d8403a'];
+    for (let i = 0; i < 8; i++) for (let j = 0; j < 5; j++) {
+      const d = Math.hypot(i - 4.6, j - 1.8), k = Math.max(0, Math.min(5, Math.round(5 - d * 1.2 + (((i * 7 + j * 3) % 3) - 1) * 0.6)));
+      B(g, 0.46, 0.42, 0.06, glow(heat[k]), -1.75 + i * 0.5, 0.98 + j * 0.47, -1.57, true);
+    }
+    // a second, smaller board on the side that faces the camera when the stall points east
+    B(g, 0.14, 2.3, 2.9, flat('#1b2030'), -2.62, 1.75, 0);
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) { const d = Math.hypot(i - 2.6, j - 1.4), k = Math.max(0, Math.min(5, Math.round(5 - d * 1.5 + (((i * 5 + j * 3) % 3) - 1) * 0.6))); B(g, 0.06, 0.44, 0.46, glow(heat[k]), -2.71, 0.95 + j * 0.5, -1.05 + i * 0.52, true); }
+    // model city on the counter, coloured by the same scale
+    [[-1.7, 0.3, 1], [-1.35, 0.55, 3], [-1.0, 0.85, 5], [-0.65, 0.6, 4], [-1.35, 0.35, 2], [-1.0, 0.4, 2]].forEach(([x, h, k], i) => B(g, 0.28, h, 0.28, flat(heat[k]), x, 1.3 + h / 2, i > 3 ? 1.45 : 1.05));
+    B(g, 1.3, 0.05, 0.9, M.blueprint, 0.6, 1.33, 1.2); B(g, 0.2, 0.2, 0.9, wool('#f3ead2'), 1.6, 1.4, 1.2);
+    [0.14, 0.26, 0.2].forEach((h, i) => B(g, 0.2, h, 0.2, flat('#e4b93a'), 0.3 + i * 0.26, 1.36 + h / 2, 1.42));
+    chest(g, -3.5, 1.1, '#3a4250', '#566074'); crate(g, 3.45, 0.8); crate(g, 3.4, -0.3, 0.75);
+    banner(g, -1.95, 2.2, 2.02, 0.8, 1.1, '#d2542f', 'grid');
+    s.lamp = lantern(g, 3.5, 2.3);
+    col(-4, -3, 0.75, 1.45, 1.1); col(2.9, 4, -0.7, 1.35, 1.2); col(3.3, 3.7, 2.1, 2.5, 3.2);
+  },
   // Pink tent with a clothes rail, a mirror and four mannequins wearing outfits you can pick.
   outfits(g, s, col) {
     // the roof only covers the clothes rail at the back, so the mannequins stand in the open
@@ -131,7 +154,7 @@ const BUILD = {
     ['knight', 'scholar', 'performer', 'watch'].forEach((id, i) => {
       const x = -1.95 + i * 1.3; B(g, 0.8, 0.3, 0.8, M.planks, x, 0.35, 1.05);
       const f = createFigure(OUTFITS.find((o) => o.id === id)); f.group.scale.setScalar(0.82); f.group.position.set(x, 0.5, 1.05); f.pose(0, 0, i);
-      f.group.traverse((o) => { if (o.isMesh) o.castShadow = true; }); g.add(f.group);
+      f.group.traverse((o) => { if (o.isMesh) o.castShadow = true; }); f.group.userData.keep = true; g.add(f.group);
     });
     // standing mirror
     B(g, 1, 2.1, 0.14, M.planks, -3.55, 1.25, 1.1); B(g, 0.76, 1.8, 0.05, flat('#bfe6f5'), -3.55, 1.27, 1.19); B(g, 0.2, 0.3, 0.5, M.dark, -3.55, 0.3, 1.0);
@@ -142,19 +165,25 @@ const BUILD = {
   },
 };
 
+const TURN = { south: 0, east: Math.PI / 2, west: -Math.PI / 2 };
+
 export function buildStalls(scene) {
   return STALLS.map((p) => {
-    const s = Object.assign({}, p), g = new THREE.Group();
-    g.position.set(p.pos[0], 0.1, p.pos[1]); g.userData.id = p.id;
-    const col = (x0, x1, z0, z1, h) => collide(p.pos[0] + x0, p.pos[0] + x1, p.pos[1] + z0, p.pos[1] + z1, h + 0.1);
+    const s = Object.assign({}, p), g = new THREE.Group(), th = TURN[p.face || 'south'], sn = Math.sin(th), cs = Math.cos(th);
+    // stall-local (x, z) to map coordinates, for whichever way the stall faces
+    const world = (lx, lz) => [p.pos[0] + lx * cs + lz * sn, p.pos[1] - lx * sn + lz * cs];
+    const box = (x0, x1, z0, z1) => { const a = world(x0, z0), b = world(x1, z1); return { x0: Math.min(a[0], b[0]), x1: Math.max(a[0], b[0]), z0: Math.min(a[1], b[1]), z1: Math.max(a[1], b[1]) }; };
+    const col = (x0, x1, z0, z1, h) => { const r = box(x0, x1, z0, z1); collide(r.x0, r.x1, r.z0, r.z1, h + 0.1); };
+    g.position.set(p.pos[0], 0.1, p.pos[1]); g.rotation.y = th; g.userData.id = p.id;
     BUILD[p.id](g, s, col);
     addLamp(g, 0, 2.4, 1.6, 0, 1.5, 7.5, '#ffc27a'); // the stall lights up at night
     // main footprint: blocks walking through, and is what "near the stall" is measured from
     const hw = p.id === 'outfits' ? 3.15 : 2.85;
-    s.rect = { x0: p.pos[0] - hw, x1: p.pos[0] + hw, z0: p.pos[1] - 2.05, z1: p.pos[1] + 2.2 };
-    s.front = [p.pos[0], p.pos[1] + 3.3]; // where the walk-to feature stands the player
+    s.rect = box(-hw, hw, -2.05, 2.2);
     collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 6);
-    if (p.id === 'alacrity' || p.id === 'contact') collide(p.pos[0] - 4.1, p.pos[0] + 4.1, p.pos[1] - 2.4, p.pos[1] - 2.2, 1.4);
+    if (p.id === 'alacrity' || p.id === 'contact') col(-4.1, 4.1, -2.4, -2.2, 1.3);
+    s.front = world(0, 3.3); // where the walk-to feature stands the player
+    bake(g);
     scene.add(g); s.group = g; return s;
   });
 }

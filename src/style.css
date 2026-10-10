@@ -16,8 +16,9 @@
   --danger-lo:#7d1814;
   --forest:#1a2612;     /* page ground behind the canvas */
   --dim:rgba(6,9,14,.5);
-  --display:"Pixelify Sans","Courier New",ui-monospace,monospace;
-  --body:"Nunito","Segoe UI",system-ui,sans-serif;
+  --display:"Pixelify Sans","Noto Sans Myanmar","Courier New",ui-monospace,monospace;
+  --body:"Nunito","Noto Sans Myanmar","Segoe UI",system-ui,sans-serif;
+  --tb:52px;            /* top button size */
   --ease:cubic-bezier(.22,1,.36,1);
   --edge:16px;
 }
@@ -30,6 +31,14 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 /* stall name labels */
 #labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+/* language change: the words fade out, are rewritten, and fade back in */
+#labels,#credit,#prompt,#touch .tbtn{transition:opacity .28s ease}
+body.lang-swap #labels,body.lang-swap #side > *,body.lang-swap #prompt,body.lang-swap #card > *,body.lang-swap .chat-body,body.lang-swap .ward-panel > *,body.lang-swap #wardDone,body.lang-swap #toast > div,body.lang-swap #touch .tbtn{opacity:0!important;transition:opacity .28s ease!important}
+/* Burmese script must not be letter-spaced, and needs taller lines */
+:lang(my) body *{letter-spacing:0!important}
+:lang(my) .lbl,:lang(my) .side-head,:lang(my) #side h2,:lang(my) .navbtn,:lang(my) #cardKicker,:lang(my) #cardTitle,:lang(my) #cardGo span,:lang(my) #wardTitle,:lang(my) #wardDone,:lang(my) .wname,:lang(my) .wcard em,:lang(my) #toast small,:lang(my) #toast strong,:lang(my) #chatRole,:lang(my) .alab span,:lang(my) .status,:lang(my) #prompt,:lang(my) .tbtn,:lang(my) #emailCopy,:lang(my) #progCount{line-height:1.6}
+:lang(my) #cardDesc,:lang(my) #chatText,:lang(my) .keys,:lang(my) #progHint,:lang(my) #toast span{line-height:1.85}
+:lang(my) #cardTitle{font-size:clamp(22px,4vw,28px)}
 .lbl{position:absolute;left:0;top:0;background:none;border:0;padding:4px 8px;pointer-events:auto;white-space:nowrap;
   font-family:var(--display);font-weight:700;font-size:clamp(15px,1.7vw,24px);letter-spacing:.08em;text-transform:uppercase;
   color:var(--ink);text-shadow:2px 2px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;will-change:transform;transition:color .2s}
@@ -46,17 +55,20 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* menu: the button grows into the panel */
 #menuScrim{position:fixed;inset:0;z-index:6;background:var(--dim);opacity:0;visibility:hidden;transition:opacity .32s ease,visibility 0s .32s}
 #menuScrim.show{opacity:1;visibility:visible;transition:opacity .32s ease}
-#menuBtn{position:fixed;top:calc(var(--edge) + env(safe-area-inset-top,0px));right:var(--edge);width:52px;height:52px;z-index:8;padding:0;
+#menuBtn{position:fixed;top:calc(var(--edge) + env(safe-area-inset-top,0px));right:var(--edge);width:var(--tb);height:var(--tb);box-sizing:border-box;z-index:8;padding:0;
   background:var(--night);border:4px solid var(--frame);box-shadow:inset 0 0 0 3px var(--frame-dark);
   display:grid;place-content:center;gap:5px;transition:background-color .25s,border-color .25s,box-shadow .25s}
 /* sound and day/night buttons, to the left of the menu button */
-.topbtn{position:fixed;top:calc(var(--edge) + env(safe-area-inset-top,0px));width:52px;height:52px;z-index:5;padding:0;
+.topbtn{position:fixed;top:calc(var(--edge) + env(safe-area-inset-top,0px));width:var(--tb);height:var(--tb);box-sizing:border-box;z-index:5;padding:0;
   background:var(--night);border:4px solid var(--frame);box-shadow:inset 0 0 0 3px var(--frame-dark);display:grid;place-items:center;color:var(--ink);transition:color .2s,transform .15s}
 .topbtn:hover{color:var(--gold)}
 .topbtn:active{transform:translateY(2px)}
-#themeBtn{right:calc(var(--edge) + 60px)}
-#soundBtn{right:calc(var(--edge) + 120px)}
-#musicBtn{right:calc(var(--edge) + 180px)}
+#themeBtn{right:calc(var(--edge) + (var(--tb) + 8px))}
+#soundBtn{right:calc(var(--edge) + 2 * (var(--tb) + 8px))}
+#musicBtn{right:calc(var(--edge) + 3 * (var(--tb) + 8px))}
+#langBtn{right:calc(var(--edge) + 4 * (var(--tb) + 8px))}
+#langBtn .ic{width:auto;height:auto;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.04em;line-height:1}
+#langBtn .ic-off{font-size:15px;letter-spacing:0}
 .topbtn .ic{grid-area:1/1;width:26px;height:26px;fill:currentColor;shape-rendering:crispEdges;transition:opacity .35s ease,transform .5s var(--ease)}
 .topbtn .ic-off{opacity:0;transform:rotate(-90deg) scale(.5)}
 .topbtn.alt .ic-on{opacity:0;transform:rotate(90deg) scale(.5)}
@@ -73,7 +85,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   width:min(330px,calc(100vw - 2 * var(--edge)));max-height:calc(100% - 2 * var(--edge) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;
   background:var(--night);border:4px solid var(--frame);box-shadow:inset 0 0 0 3px var(--frame-dark);padding:14px 20px 20px;
   display:flex;flex-direction:column;gap:10px;
-  clip-path:inset(0 0 calc(100% - 52px) calc(100% - 52px));opacity:0;visibility:hidden;
+  clip-path:inset(0 0 calc(100% - var(--tb)) calc(100% - var(--tb)));opacity:0;visibility:hidden;
   transition:clip-path .36s var(--ease),opacity .14s ease .22s,visibility 0s .36s}
 #side.open{clip-path:inset(0 0 0 0);opacity:1;visibility:visible;transition:clip-path .44s var(--ease),opacity .1s ease}
 #side > *{opacity:0;transform:translateY(-8px);transition:opacity .16s ease,transform .2s ease}
@@ -120,7 +132,7 @@ kbd.gap{margin-left:8px}
   padding:calc(var(--edge) + env(safe-area-inset-top,0px)) clamp(16px,4vw,64px) calc(var(--edge) + env(safe-area-inset-bottom,0px));
   opacity:0;visibility:hidden;transition:opacity .26s ease,visibility 0s .3s}
 #scrim.show{opacity:1;visibility:visible;transition:opacity .3s ease}
-#card{position:relative;box-sizing:border-box;width:min(440px,100%);max-height:100%;overflow:auto;background:var(--night);border:4px solid var(--frame);
+#card{position:relative;box-sizing:border-box;width:min(540px,100%);max-height:100%;overflow:auto;background:var(--night);border:4px solid var(--frame);
   box-shadow:0 0 0 4px var(--frame-dark),0 0 0 8px var(--frame),0 24px 60px rgba(0,0,0,.6);margin:8px;
   padding:20px 26px 28px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;
   opacity:0;transform:translateY(22px) scale(.95);transition:opacity .2s ease,transform .26s ease-in}
@@ -131,9 +143,10 @@ kbd.gap{margin-left:8px}
 .xbtn{width:40px;height:40px;flex:none;background:var(--night-2);border:3px solid var(--frame);display:grid;place-content:center;font-family:var(--display);font-size:24px;line-height:1;padding:0 0 2px;
   transition:background-color .15s,border-color .15s,color .15s,transform .15s}
 .xbtn:hover{background:var(--danger);border-color:var(--danger-lo);color:#fff;transform:scale(1.06)}
-#cardArt{width:168px;height:168px;image-rendering:pixelated;filter:drop-shadow(0 10px 0 rgba(0,0,0,.35))}
+#cardArt{width:112px;height:112px;flex:none;image-rendering:pixelated;filter:drop-shadow(0 7px 0 rgba(0,0,0,.35))}
+#cardImg{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;object-position:top center;border:3px solid var(--frame);box-shadow:0 0 0 3px var(--frame-dark);background:var(--night-2);box-sizing:border-box}
 #cardTitle{font-family:var(--display);font-weight:700;font-size:clamp(26px,5vw,34px);line-height:1.08;letter-spacing:.05em;text-transform:uppercase;margin:0;text-wrap:balance;text-shadow:3px 3px 0 #000}
-#cardDesc{font-size:17px;line-height:1.55;margin:0;max-width:34ch}
+#cardDesc{font-size:17px;line-height:1.55;margin:0;max-width:42ch}
 #cardEmail{display:flex;align-items:center;gap:10px;max-width:100%;background:var(--night-2);border:3px solid var(--frame);padding:8px 8px 8px 12px}
 #emailText{font-size:15px;font-weight:700;min-width:0;overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
 #emailCopy{flex:none;background:var(--night);border:2px solid var(--frame);padding:4px 10px;font-family:var(--display);font-size:14px;letter-spacing:.06em;text-transform:uppercase}
@@ -205,6 +218,10 @@ kbd.gap{margin-left:8px}
   font-family:var(--display);font-size:15px;letter-spacing:.06em;text-transform:uppercase;touch-action:none}
 #tJump{bottom:calc(28px + env(safe-area-inset-bottom,0px))}
 #tUse{bottom:calc(112px + env(safe-area-inset-bottom,0px));background:var(--gold);color:var(--night);border-color:#000}
+body:not(.touch) .touch-only,body.touch .desk-only{display:none}
+@media (max-width:480px){:root{--tb:44px;--edge:12px}#menuBtn i{width:20px}.topbtn .ic{width:22px;height:22px}#langBtn .ic{font-size:14px}#langBtn .ic-off{font-size:12px}
+  #stick{left:14px;width:112px;height:112px}.tbtn{right:14px;width:64px;height:64px;font-size:13px}#tUse{bottom:calc(102px + env(safe-area-inset-bottom,0px))}
+  #cardArt{width:80px;height:80px}#card{padding:14px 16px 20px;gap:12px}#cardDesc{font-size:15px}}
 @media (max-width:700px){
   #scrim{justify-content:center}
   #toast{top:calc(var(--edge) + 64px + env(safe-area-inset-top,0px))}

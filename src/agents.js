@@ -52,7 +52,7 @@ export function createAgents(scene) {
       }
       n.blend += ((moving ? 1 : 0) - n.blend) * Math.min(1, dt * 10); if (moving) n.phase += dt * 7.5;
       n.fig.pose(Math.sin(n.phase) * 0.6 * n.blend, 0, time + n.x, n.sit, talkingTo === n.id ? 0 : 1);
-      n.fig.group.position.set(n.x, HALL.floor - n.sit * 0.2 + Math.abs(Math.sin(n.phase)) * 0.04 * n.blend, n.z); n.fig.group.rotation.y = n.yaw;
+      n.fig.group.position.set(n.x, HALL.floor - n.sit * 0.24 + Math.abs(Math.sin(n.phase)) * 0.04 * n.blend, n.z); n.fig.group.rotation.y = n.yaw;
       n.blob.position.set(n.x, HALL.floor + 0.04, n.z); n.blob.material.opacity = 0.4;
     }
   }

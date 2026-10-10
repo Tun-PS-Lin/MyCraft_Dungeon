@@ -2,8 +2,8 @@
 // config.js (SOUND_FILES) and they replace the placeholders automatically.
 // Music is a separate looping track with its own on/off switch.
 import { SOUND_FILES, MUSIC_FILE, MUSIC_VOLUME } from './config.js';
+import { BASE } from './base.js';
 
-const BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) || './';
 const read = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v !== 'off'; } catch (e) { return d; } };
 const write = (k, v) => { try { localStorage.setItem(k, v ? 'on' : 'off'); } catch (e) { /* ignore */ } };
 

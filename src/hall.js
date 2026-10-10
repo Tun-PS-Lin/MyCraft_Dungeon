@@ -1,8 +1,9 @@
-// The town hall: a stone building whose roof and near walls fade away when the
-// player walks in, showing the agents' desks inside.
+// The town hall: a stone hall with a steep timber roof. Its doorway glows like a
+// portal; when the player walks in, the roof and the near walls fade away to show
+// the agents' desks inside.
 import * as THREE from 'three';
 import { HALL, AGENTS } from './config.js';
-import { B, M, T, wool, glow, flat, emblem } from './textures.js';
+import { B, M, T, wool, glow, flat, emblem, lin, bake } from './textures.js';
 import { collide } from './collision.js';
 import { addLamp } from './lights.js';
 import { banner, papers, crate } from './stalls.js';
@@ -11,94 +12,164 @@ const { x0, x1, z0, z1, doorX, doorW, floor, wallH } = HALL;
 const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
 
 // Where each desk stands, and the short route an agent takes from the carpet to its seat.
-const DESK_AT = { nw: [cx - 5.2, z0 + 3.6], ne: [cx + 5.2, z0 + 3.6], sw: [cx - 5.2, z1 - 4], se: [cx + 5.2, z1 - 4] };
-export const CARPET = { hz: cz, hx: [x0 + 2.2, x1 - 2.2], vx: doorX, vz: [z0 + 2.2, z1 - 1.8] };
+const DESK_AT = { nw: [x0 + 4.3, z0 + 4.8], ne: [x1 - 4.3, z0 + 4.8], sw: [x0 + 4.3, z1 - 4.4], se: [x1 - 4.3, z1 - 4.4] };
+export const CARPET = { hz: cz, hx: [x0 + 2.6, x1 - 2.8], vx: doorX, vz: [z0 + 3, z1 - 1.8] };
 export function deskOf(agent) {
   const [x, z] = DESK_AT[agent.desk], side = x < cx ? 1 : -1;
-  return { x, z, seat: [x, z - 0.2], side: [x + side * 2.6, z - 0.2], access: [x + side * 2.6, cz] };
+  return { x, z, seat: [x, z - 0.15], side: [x + side * 2.05, z - 0.15], access: [x + side * 2.05, cz] };
 }
 
+// A bookcase: a wooden frame with books only on its open face.
+function bookcase(g, x, y, z, len, h, face = 'z') {
+  if (face === 'z') { B(g, len, h, 0.55, M.dark, x, y + h / 2, z); B(g, len - 0.3, h - 0.4, 0.06, M.books, x, y + h / 2 - 0.02, z + 0.27); B(g, len + 0.16, 0.12, 0.66, M.planks, x, y + h + 0.06, z); }
+  else { B(g, 0.55, h, len, M.dark, x, y + h / 2, z); B(g, 0.06, h - 0.4, len - 0.3, M.books, x + 0.27, y + h / 2 - 0.02, z); B(g, 0.66, 0.12, len + 0.16, M.planks, x, y + h + 0.06, z); }
+}
+const candle = (g, x, y, z) => { B(g, 0.14, 0.26, 0.14, flat('#f4f1e6'), x, y + 0.13, z); B(g, 0.16, 0.18, 0.16, glow('#ffc76a'), x, y + 0.35, z); };
+
+// desk tops are at y = 0.94 and run from x = -1.1 to 1.1, z = 0.3 to 1.0
 const DESK_PROPS = {
-  bobby(g) { papers(g, -1.1, 1.08, 0.8, 4, 0.6, 0.7); papers(g, -0.3, 1.08, 0.8, 2, 0.6, 0.7); B(g, 0.9, 0.3, 0.6, flat('#2b2b2f'), 0.9, 1.23, 0.8); B(g, 0.7, 0.4, 0.3, flat('#3a3a40'), 0.9, 1.58, 0.7); B(g, 0.8, 0.12, 0.12, wool('#d8d0bc'), 0.9, 1.45, 1.05); },
-  friday(g, a) { B(g, 0.9, 0.7, 0.08, glow('#3aa7ff'), 0.6, 1.5, 0.75); B(g, 1, 0.8, 0.06, flat('#1b2a4a'), 0.6, 1.5, 0.7); B(g, 0.3, 0.14, 0.3, flat('#26262e'), 0.6, 1.12, 0.75); B(g, 0.5, 0.1, 0.7, flat('#2f66c4'), -0.9, 1.13, 0.8); B(g, 0.46, 0.1, 0.66, flat('#f1efe6'), -0.88, 1.23, 0.8); B(g, 0.22, 0.22, 0.22, glow(a.trim), -0.2, 1.2, 0.9); },
-  sally(g) { B(g, 1.7, 0.05, 0.8, M.blueprint, -0.5, 1.1, 0.8); [[0.6, 0.5], [0.95, 0.8], [1.3, 0.4]].forEach(([x, h], i) => B(g, 0.26, h, 0.26, flat(i % 2 ? '#c5ccd8' : '#98a2b3'), x, 1.08 + h / 2, 0.8)); B(g, 1.6, 1.1, 0.08, wool('#e8d3a0'), 0, 2.3, -1.2); B(g, 0.5, 0.3, 0.1, flat('#3d7d40'), -0.3, 2.4, -1.15); B(g, 0.4, 0.4, 0.1, flat('#2f66c4'), 0.35, 2.15, -1.15); },
-  edwin(g, a) { [[-1.1, 0.14], [-0.9, 0.28], [-1.3, 0.2]].forEach(([x, h]) => B(g, 0.2, h, 0.2, flat('#e4b93a'), x, 1.08 + h / 2, 0.85)); B(g, 0.08, 0.5, 0.08, flat('#e4b93a'), 0.1, 1.33, 0.8); B(g, 0.7, 0.06, 0.06, flat('#e4b93a'), 0.1, 1.58, 0.8); B(g, 0.22, 0.05, 0.22, flat('#e4b93a'), -0.22, 1.4, 0.8); B(g, 0.22, 0.05, 0.22, flat('#e4b93a'), 0.42, 1.44, 0.8); B(g, 0.6, 0.1, 0.8, flat('#3a2a50'), 1.1, 1.13, 0.8); B(g, 1.4, 0.9, 0.08, flat('#1f2333'), 0, 2.3, -1.2); [0.3, 0.5, 0.4, 0.7].forEach((h, i) => B(g, 0.18, h, 0.1, glow(i === 3 ? '#57d47c' : a.trim), -0.45 + i * 0.3, 1.95 + h / 2, -1.14)); },
+  bobby(g) { papers(g, -0.75, 0.94, 0.65, 4, 0.5, 0.56); papers(g, -0.15, 0.94, 0.65, 2, 0.5, 0.56); B(g, 0.7, 0.24, 0.5, flat('#2b2b2f'), 0.65, 1.06, 0.65); B(g, 0.55, 0.32, 0.26, flat('#3a3a40'), 0.65, 1.34, 0.56); B(g, 0.62, 0.1, 0.1, wool('#d8d0bc'), 0.65, 1.24, 0.86); },
+  friday(g, a) { B(g, 0.8, 0.6, 0.05, flat('#1b2a4a'), 0.45, 1.3, 0.56); B(g, 0.7, 0.5, 0.05, glow('#3aa7ff'), 0.45, 1.3, 0.6); B(g, 0.24, 0.1, 0.24, flat('#26262e'), 0.45, 0.99, 0.6); B(g, 0.42, 0.08, 0.56, flat('#2f66c4'), -0.7, 0.98, 0.65); B(g, 0.38, 0.08, 0.52, flat('#f1efe6'), -0.68, 1.06, 0.65); B(g, 0.18, 0.18, 0.18, glow(a.trim), -0.15, 1.03, 0.8); },
+  sally(g) { B(g, 1.2, 0.04, 0.6, M.blueprint, -0.35, 0.96, 0.65); [[0.5, 0.36], [0.76, 0.6], [1.0, 0.3]].forEach(([x, h], i) => B(g, 0.2, h, 0.2, flat(i % 2 ? '#c5ccd8' : '#98a2b3'), x, 0.94 + h / 2, 0.65)); B(g, 0.16, 0.16, 0.6, wool('#f3ead2'), -0.95, 1.03, 0.65); },
+  edwin(g, a) { [[-0.85, 0.12], [-0.68, 0.24], [-1.0, 0.18]].forEach(([x, h]) => B(g, 0.16, h, 0.16, flat('#e4b93a'), x, 0.94 + h / 2, 0.72)); B(g, 0.06, 0.42, 0.06, flat('#e4b93a'), 0.05, 1.15, 0.65); B(g, 0.56, 0.05, 0.05, flat('#e4b93a'), 0.05, 1.36, 0.65); B(g, 0.18, 0.04, 0.18, flat('#e4b93a'), -0.2, 1.22, 0.65); B(g, 0.18, 0.04, 0.18, flat('#e4b93a'), 0.3, 1.25, 0.65); B(g, 0.46, 0.08, 0.6, flat('#3a2a50'), 0.8, 0.98, 0.65); [0.24, 0.4, 0.32, 0.56].forEach((h, i) => B(g, 0.14, h, 0.06, glow(i === 3 ? '#57d47c' : a.trim), -0.36 + i * 0.24, 1.75 + h / 2, -0.9)); },
 };
 const DESK_MARK = { bobby: 'news', friday: 'chip', sally: 'house', edwin: 'scale' };
 
 function buildDesk(parent, a) {
   const { x, z } = deskOf(a), g = new THREE.Group(); g.position.set(x, floor, z);
-  B(g, 4.6, 0.04, 3.6, wool(a.color), 0, 0.03, 0); B(g, 4.2, 0.05, 3.2, wool(a.robe), 0, 0.035, 0);
-  B(g, 3.4, 1, 0.9, M.planks, 0, 0.5, 0.8); B(g, 3.6, 0.08, 1, wool(a.color), 0, 1.04, 0.8);
-  B(g, 3.4, 1.6, 0.5, M.books, 0, 0.8, -1.4); B(g, 3.6, 0.1, 0.6, M.dark, 0, 1.65, -1.4);
-  B(g, 0.26, 3, 0.26, M.log, -1.85, 1.5, -1.5); B(g, 0.26, 3, 0.26, M.log, 1.85, 1.5, -1.5);
-  for (let i = 0; i < 4; i++) { const m = wool(i % 2 ? '#f4f1e6' : a.color); B(g, 1, 0.2, 1.3, m, -1.5 + i, 3.05, -1.05); B(g, 1, i % 2 ? 0.22 : 0.4, 0.08, m, -1.5 + i, 2.95 - (i % 2 ? 0.11 : 0.2), -0.4); }
-  B(g, 0.5, 0.5, 0.5, M.dark, 0, 0.25, -0.2);
-  banner(g, 0, 0.55, 1.3, 0.7, 0.75, a.color, DESK_MARK[a.id]);
-  B(g, 0.2, 0.5, 0.2, M.log, 1.55, 1.3, 1.0); B(g, 0.28, 0.28, 0.28, glow('#ffc76a'), 1.55, 1.68, 1.0);
-  crate(g, -2.2, -1.2, 0.7, 0);
+  B(g, 3.5, 0.04, 2.9, wool(a.color), 0, 0.03, -0.05); B(g, 3.1, 0.05, 2.5, wool(a.robe), 0, 0.035, -0.05);
+  B(g, 2.4, 0.9, 0.7, M.planks, 0, 0.45, 0.65); B(g, 2.56, 0.06, 0.8, wool(a.color), 0, 0.93, 0.65);
+  bookcase(g, 0, 0, -1.2, 2.4, 1.5);
+  B(g, 0.2, 2.7, 0.2, M.log, -1.32, 1.35, -1.3); B(g, 0.2, 2.7, 0.2, M.log, 1.32, 1.35, -1.3);
+  for (let i = 0; i < 3; i++) { const m = wool(i % 2 ? '#f4f1e6' : a.color); B(g, 0.96, 0.16, 1, m, -0.96 + i * 0.96, 2.74, -0.95); B(g, 0.96, i % 2 ? 0.2 : 0.34, 0.07, m, -0.96 + i * 0.96, 2.66 - (i % 2 ? 0.1 : 0.17), -0.44); }
+  B(g, 0.45, 0.45, 0.45, M.dark, 0, 0.225, -0.15);
+  banner(g, 0, 0.48, 1.03, 0.6, 0.62, a.color, DESK_MARK[a.id]);
+  B(g, 0.14, 0.34, 0.14, M.log, 1.02, 1.11, 0.9); B(g, 0.2, 0.2, 0.2, glow('#ffc76a'), 1.02, 1.38, 0.9);
   DESK_PROPS[a.id](g, a);
-  parent.add(g); collide(x - 2, x + 2, z - 1.75, z + 1.3, 4);
-  addLamp(parent, x, floor + 2.4, z + 1.7, 1.25, 1.45, 8, '#ffc27a');
+  parent.add(g); collide(x - 1.4, x + 1.4, z - 1.5, z + 1.05, 4);
+  addLamp(parent, x, floor + 2.2, z + 1.4, 1.2, 1.45, 8, '#ffc27a');
 }
 
 export function buildHall(scene) {
-  const fadeMats = [], fade = new THREE.Group(), inner = new THREE.Group();
+  const fadeMats = [], fade = new THREE.Group(), inner = new THREE.Group(), solid = new THREE.Group();
   const fm = (m) => { const c = m.clone(); fadeMats.push(c); return c; };
-  const brickF = fm(M.brick), slateF = fm(M.slate), darkF = fm(M.dark), logF = fm(M.log), paneF = fm(glow('#ffc35a')), clothF = fm(wool('#234a9e')), markF = fm(emblem('tree'));
+  const brickF = fm(M.brick), stoneF = fm(M.stone), roofF = fm(M.roof), darkF = fm(M.dark), logF = fm(M.log), plankF = fm(M.planks), paneF = fm(glow('#ffc35a')), clothF = fm(wool('#234a9e')), markF = fm(emblem('tree')), leafF = fm(flat('#4f9a44')), bloomF = fm(flat('#e9627a'));
   const stub = 1.4, up = wallH - stub, upY = stub + up / 2;
+  const lw = doorX - doorW / 2 - x0, rw = x1 - (doorX + doorW / 2), lx = x0 + lw / 2, rx = x1 - rw / 2, front = z1 - 0.5;
 
-  /* walls that always stand */
-  B(scene, w, wallH, 1, M.brick, cx, wallH / 2, z0 + 0.5);
-  B(scene, 1, wallH, d - 2, M.brick, x0 + 0.5, wallH / 2, cz);
-  const lw = doorX - doorW / 2 - x0, rw = x1 - (doorX + doorW / 2), lx = x0 + lw / 2, rx = x1 - rw / 2;
-  B(scene, 1, stub, d - 2, M.brick, x1 - 0.5, stub / 2, cz); B(scene, lw, stub, 1, M.brick, lx, stub / 2, z1 - 0.5); B(scene, rw, stub, 1, M.brick, rx, stub / 2, z1 - 0.5);
-  /* the cut-away: upper front and side walls, timber frame, windows, roof */
-  B(fade, 1, up, d - 2, brickF, x1 - 0.5, upY, cz); B(fade, lw, up, 1, brickF, lx, upY, z1 - 0.5); B(fade, rw, up, 1, brickF, rx, upY, z1 - 0.5);
-  B(fade, doorW, wallH - 4.6, 1, brickF, doorX, 4.6 + (wallH - 4.6) / 2, z1 - 0.5);
-  [x0 + 0.4, doorX - doorW / 2 - 0.3, doorX + doorW / 2 + 0.3, x1 - 0.4].forEach((x) => B(fade, 0.6, wallH, 0.35, logF, x, wallH / 2, z1 + 0.12));
-  B(fade, w + 0.4, 0.5, 0.45, darkF, cx, wallH - 0.25, z1 + 0.14); B(fade, doorW + 1.3, 0.5, 0.45, darkF, doorX, 4.75, z1 + 0.14);
-  [lx, rx - 1.6, rx + 1.6].forEach((x) => { B(fade, 1.5, 2, 0.08, paneF, x, 3.4, z1 + 0.03, true); B(fade, 1.7, 0.16, 0.14, darkF, x, 3.4, z1 + 0.08); B(fade, 0.16, 2.2, 0.14, darkF, x, 3.4, z1 + 0.08); B(fade, 1.9, 0.2, 0.2, darkF, x, 4.5, z1 + 0.1); B(fade, 1.9, 0.2, 0.2, darkF, x, 2.3, z1 + 0.1); });
-  [doorX - doorW / 2 - 1.5, doorX + doorW / 2 + 1.5].forEach((x) => { B(fade, 0.9, 1.5, 0.07, clothF, x, 3.6, z1 + 0.34); const p = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 1), markF); p.position.set(x, 3.6, z1 + 0.38); fade.add(p); B(fade, 1.1, 0.12, 0.12, darkF, x, 4.4, z1 + 0.34); });
-  for (let k = 0; k < 4; k++) B(fade, w + 2 - k * 0.4, 0.5, d + 2 - k * 3.4, slateF, cx, wallH + 0.25 + k * 0.5, cz);
-  B(fade, w + 2.4, 0.3, 0.6, darkF, cx, wallH + 2.15, cz);
-  scene.add(fade);
+  /* walls that always stand: the back and left walls, and low stubs of the others */
+  B(solid, w, wallH, 1, M.brick, cx, wallH / 2, z0 + 0.5); B(solid, 1, wallH, d - 2, M.brick, x0 + 0.5, wallH / 2, cz);
+  B(solid, 1, stub, d - 2, M.brick, x1 - 0.5, stub / 2, cz); B(solid, lw, stub, 1, M.brick, lx, stub / 2, front); B(solid, rw, stub, 1, M.brick, rx, stub / 2, front);
+  B(solid, w + 0.5, 0.5, 0.4, M.stone, cx, 0.25, z0 - 0.15); B(solid, 0.4, 0.5, d + 0.4, M.stone, x0 - 0.15, 0.25, cz);
 
-  /* steps and door lanterns */
-  B(scene, doorW + 1.4, 0.4, 1.7, M.stone, doorX, 0.2, z1 + 0.25); B(scene, doorW + 2.2, 0.2, 0.9, M.stone, doorX, 0.1, z1 + 1.5);
+  /* the cut-away: upper front and right walls */
+  B(fade, 1, up, d - 2, brickF, x1 - 0.5, upY, cz); B(fade, lw, up, 1, brickF, lx, upY, front); B(fade, rw, up, 1, brickF, rx, upY, front);
+  B(fade, doorW, wallH - 4.7, 1, brickF, doorX, 4.7 + (wallH - 4.7) / 2, front);
+  B(fade, lw + 0.3, 0.5, 0.4, stoneF, lx - 0.15, 0.25, z1 + 0.15); B(fade, rw + 0.3, 0.5, 0.4, stoneF, rx + 0.15, 0.25, z1 + 0.15); B(fade, 0.4, 0.5, d + 0.4, stoneF, x1 + 0.15, 0.25, cz);
+  // buttress pillars at the corners and beside the door, each with a stone cap
+  [x0 + 0.3, doorX - doorW / 2 - 0.65, doorX + doorW / 2 + 0.65, x1 - 0.3].forEach((x, i) => {
+    const big = i === 0 || i === 3, s = big ? 1.5 : 1.2, h = wallH + (big ? 0.9 : 0.2);
+    B(fade, s, h, s, brickF, x, h / 2, z1 + 0.05); B(fade, s + 0.3, 0.3, s + 0.3, stoneF, x, h + 0.15, z1 + 0.05); B(fade, s + 0.3, 0.5, s + 0.3, stoneF, x, 0.25, z1 + 0.05);
+    if (big) B(fade, s - 0.5, 0.5, s - 0.5, stoneF, x, h + 0.55, z1 + 0.05);
+  });
+  // stone arch over the door
+  B(fade, doorW + 1.5, 0.6, 1.3, stoneF, doorX, 4.75, z1 - 0.3); B(fade, doorW + 0.5, 0.4, 1.36, brickF, doorX, 5.25, z1 - 0.3); B(fade, 0.9, 0.9, 1.44, stoneF, doorX, 4.95, z1 - 0.3);
+  for (const s of [-1, 1]) B(fade, 0.5, 0.5, 1.3, stoneF, doorX + s * (doorW / 2 - 0.25), 4.2, z1 - 0.3);
+  // timber band under the eaves
+  B(fade, w + 0.6, 0.45, 0.4, darkF, cx, wallH - 0.22, z1 + 0.16);
+  // windows with shutters and flower boxes (none behind the right-hand banner)
+  [lx - 0.4, rx + 2.2].forEach((x) => {
+    B(fade, 1.5, 2, 0.08, paneF, x, 3.3, z1 + 0.03, true); B(fade, 1.7, 0.14, 0.14, darkF, x, 3.3, z1 + 0.08); B(fade, 0.14, 2.1, 0.14, darkF, x, 3.3, z1 + 0.08);
+    B(fade, 1.9, 0.22, 0.24, stoneF, x, 4.42, z1 + 0.1); B(fade, 1.9, 0.22, 0.3, stoneF, x, 2.18, z1 + 0.12);
+    for (const s of [-1, 1]) B(fade, 0.5, 2, 0.1, plankF, x + s * 1.05, 3.3, z1 + 0.08);
+    B(fade, 1.7, 0.3, 0.36, plankF, x, 1.9, z1 + 0.22); B(fade, 1.5, 0.26, 0.3, leafF, x, 2.12, z1 + 0.22); for (const s of [-0.5, 0, 0.5]) B(fade, 0.16, 0.14, 0.16, bloomF, x + s, 2.3, z1 + 0.24);
+  });
+  // banners either side of the door
+  [doorX - doorW / 2 - 1.75, doorX + doorW / 2 + 1.75].forEach((x) => { B(fade, 0.9, 1.6, 0.07, clothF, x, 3.5, z1 + 0.34); const p = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 1), markF); p.position.set(x, 3.55, z1 + 0.38); fade.add(p); B(fade, 1.1, 0.12, 0.3, darkF, x, 4.36, z1 + 0.26); });
+  // steep roof: stepped timber with a stone-edged gable facing the square
+  const N = 12, half = w / 2 + 1.1, rise = 0.62;
+  for (let k = 0; k < N; k++) {
+    const hw = half * (1 - k / N), y = wallH + rise * (k + 0.5);
+    B(fade, hw * 2, rise, d + 1.2, roofF, cx, y, cz);
+    B(fade, hw * 2 + 0.5, rise, 1.3, brickF, cx, y, z1 + 0.25); B(fade, hw * 2 + 0.5, rise, 1.3, brickF, cx, y, z0 - 0.25);
+    if (k > 0 && k < 8) B(fade, Math.max(0.6, hw * 2 - 3.2), rise, 0.16, k % 3 ? plankF : darkF, cx, y, z1 + 0.94);
+  }
+  B(fade, 1.5, 0.5, d + 2.4, brickF, cx, wallH + rise * N + 0.25, cz); B(fade, 2.1, 0.3, 1.7, stoneF, cx, wallH + rise * N + 0.6, z1 + 0.25);
+  for (const s of [-1, 1]) B(fade, 0.7, 1.1, 0.1, paneF, cx + s * 1.5, wallH + rise * 3.4, z1 + 1.03, true);
+  B(fade, 0.3, rise * 6, 0.2, darkF, cx, wallH + rise * 4, z1 + 1.0);
+  // chimney, above the fireplace on the left wall
+  B(fade, 1.7, 7.5, 1.7, brickF, x0 + 2.2, wallH + 3.4, cz); B(fade, 2.1, 0.4, 2.1, stoneF, x0 + 2.2, wallH + 7.3, cz); B(fade, 1.1, 0.4, 1.1, darkF, x0 + 2.2, wallH + 7.7, cz);
+
+  /* the portal: a faint yellow glow filling the doorway */
+  const portalMat = new THREE.MeshBasicMaterial({ color: lin('#ffdf7e'), transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide });
+  const coreMat = new THREE.MeshBasicMaterial({ color: lin('#fff3c4'), transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  const portal = new THREE.Mesh(new THREE.PlaneGeometry(doorW, 4.2), portalMat); portal.position.set(doorX, floor + 2.05, z1 - 0.3); scene.add(portal);
+  const core = new THREE.Mesh(new THREE.PlaneGeometry(doorW - 1.2, 3.4), coreMat); core.position.set(doorX, floor + 1.7, z1 - 0.36); scene.add(core);
+  const spill = addLamp(scene, doorX, 2.4, z1 + 1.6, 1.0, 1.9, 9, '#ffd27a');
+
+  /* steps, door lanterns, and a few things outside */
+  B(solid, doorW + 1.4, 0.4, 1.7, M.stone, doorX, 0.2, z1 + 0.25); B(solid, doorW + 2.2, 0.2, 0.9, M.stone, doorX, 0.1, z1 + 1.5);
   collide(doorX - doorW / 2 - 0.7, doorX + doorW / 2 + 0.7, z1 - 0.6, z1 + 1.1, 0.4); collide(doorX - doorW / 2 - 1.1, doorX + doorW / 2 + 1.1, z1 + 1.1, z1 + 1.95, 0.2);
-  [doorX - doorW / 2 - 1.6, doorX + doorW / 2 + 1.6].forEach((x) => { B(scene, 0.25, 2.3, 0.25, M.log, x, 1.15, z1 + 1.4); B(scene, 0.44, 0.44, 0.44, glow('#ffc76a'), x, 2.5, z1 + 1.4, true); B(scene, 0.58, 0.1, 0.58, M.dark, x, 2.77, z1 + 1.4); collide(x - 0.15, x + 0.15, z1 + 1.25, z1 + 1.55, 3); });
-  addLamp(scene, doorX, 2.6, z1 + 1.8, 0.5, 1.7, 9);
+  [doorX - doorW / 2 - 1.9, doorX + doorW / 2 + 1.9].forEach((x) => { B(solid, 0.25, 2.3, 0.25, M.log, x, 1.15, z1 + 1.9); B(solid, 0.44, 0.44, 0.44, glow('#ffc76a'), x, 2.5, z1 + 1.9, true); B(solid, 0.58, 0.1, 0.58, M.dark, x, 2.77, z1 + 1.9); collide(x - 0.15, x + 0.15, z1 + 1.75, z1 + 2.05, 3); });
+  crate(solid, x0 + 2.2, z1 + 1.1, 1, 0); crate(solid, x0 + 3.1, z1 + 0.9, 0.7, 0); collide(x0 + 1.7, x0 + 3.5, z1 + 0.5, z1 + 1.6, 1);
+  B(solid, 0.8, 1, 0.8, M.dark, x1 - 2.4, 0.5, z1 + 1.1); B(solid, 0.86, 0.1, 0.86, flat('#3a2a1a'), x1 - 2.4, 0.3, z1 + 1.1); B(solid, 0.86, 0.1, 0.86, flat('#3a2a1a'), x1 - 2.4, 0.75, z1 + 1.1); collide(x1 - 2.8, x1 - 2, z1 + 0.7, z1 + 1.5, 1);
+  bake(solid); scene.add(solid);
+  bake(fade); scene.add(fade);
 
   /* inside. Nothing in here takes the baked sun shadow, so the candles can light it. */
-  const tile = T.tile.clone(); tile.needsUpdate = true; tile.repeat.set(w - 2, d - 2);
-  const fl = new THREE.Mesh(new THREE.PlaneGeometry(w - 2, d - 2, w - 2, d - 2), new THREE.MeshLambertMaterial({ map: tile })); fl.rotation.x = -Math.PI / 2; fl.position.set(cx, floor, cz); inner.add(fl);
-  const gold = flat('#d9a93a');
-  B(inner, w - 4, 0.05, 2.2, M.carpet, cx, floor + 0.03, cz); B(inner, 2.2, 0.05, d - 2.4, M.carpet, doorX, floor + 0.03, cz - 0.2);
-  for (const s of [-1, 1]) { B(inner, w - 4, 0.055, 0.14, gold, cx, floor + 0.033, cz + s * 0.95); B(inner, 0.14, 0.055, d - 2.4, gold, doorX + s * 0.95, floor + 0.033, cz - 0.2); }
-  B(inner, 2.06, 0.06, 2.06, M.carpet, doorX, floor + 0.034, cz);
+  const iw = w - 2, id = d - 2, wx = x0 + 1, nz = z0 + 1; // inner faces of the left and back walls
+  const tile = T.tile.clone(); tile.needsUpdate = true; tile.repeat.set(iw, id);
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(iw, id, iw, id), new THREE.MeshLambertMaterial({ map: tile })); fl.rotation.x = -Math.PI / 2; fl.position.set(cx, floor, cz); inner.add(fl);
+  const gold = flat('#d9a93a'), F = floor;
+  B(inner, iw - 2.2, 0.05, 2.2, M.carpet, cx - 0.1, F + 0.03, cz); B(inner, 2.2, 0.05, id - 1.6, M.carpet, doorX, F + 0.03, cz + 0.2);
+  for (const s of [-1, 1]) { B(inner, iw - 2.2, 0.055, 0.14, gold, cx - 0.1, F + 0.033, cz + s * 0.95); B(inner, 0.14, 0.055, id - 1.6, gold, doorX + s * 0.95, F + 0.033, cz + 0.2); }
+  B(inner, 2.06, 0.06, 2.06, M.carpet, doorX, F + 0.034, cz); B(inner, 1, 0.065, 1, gold, doorX, F + 0.034, cz); B(inner, 0.72, 0.07, 0.72, M.carpet, doorX, F + 0.034, cz);
+  // dark inlaid squares in the floor of each quarter
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const x = cx + sx * 3.4, z = cz + sz * 3.6; B(inner, 1.4, 0.03, 1.4, flat('#34333a'), x, F + 0.016, z); B(inner, 0.9, 0.035, 0.9, flat('#6a6871'), x, F + 0.018, z); B(inner, 0.3, 0.04, 0.3, gold, x, F + 0.02, z); }
   AGENTS.forEach((a) => buildDesk(inner, a));
-  // bookshelves, banners and candles along the far walls
-  for (let x = x0 + 2.8; x < x1 - 2; x += 4.6) { if (Math.abs(x + 1.5 - doorX) < 1.6) continue; B(inner, 3, 3.4, 0.6, M.books, x + 1.5, floor + 1.7, z0 + 1.3); B(inner, 3.2, 0.14, 0.7, M.dark, x + 1.5, floor + 3.45, z0 + 1.3); }
-  for (let x = x0 + 5.75; x < x1 - 3; x += 4.6) banner(inner, x + 0.85, floor + 3.6, z0 + 1.06, 0.9, 1.5, '#8a2026', 'tree');
-  banner(inner, doorX, floor + 3.9, z0 + 1.06, 1.3, 2, '#234a9e', 'tree');
-  for (let z = z0 + 3.5; z < z1 - 3; z += 4.4) { B(inner, 0.6, 3.4, 3, M.books, x0 + 1.3, floor + 1.7, z + 0.5); B(inner, 0.7, 0.14, 3.2, M.dark, x0 + 1.3, floor + 3.45, z + 0.5); }
-  [[x0 + 1.6, z1 - 1.6], [x1 - 1.6, z1 - 1.6], [x1 - 1.6, z0 + 1.7], [doorX - 2.6, z0 + 1.7], [doorX + 2.6, z0 + 1.7], [x1 - 1.6, cz]].forEach(([x, z]) => { B(inner, 0.6, 0.7, 0.6, M.stone, x, floor + 0.35, z); B(inner, 0.16, 0.3, 0.16, flat('#f4f1e6'), x, floor + 0.85, z); B(inner, 0.2, 0.22, 0.2, glow('#ffc76a'), x, floor + 1.1, z); collide(x - 0.3, x + 0.3, z - 0.3, z + 0.3, 1.2); });
-  [[x0 + 1.7, cz + 2.6], [x0 + 1.7, cz - 2.6], [x1 - 1.7, cz + 3]].forEach(([x, z]) => { B(inner, 0.6, 0.5, 0.6, M.dark, x, floor + 0.25, z); B(inner, 0.8, 0.8, 0.8, flat('#3f8a3a'), x, floor + 0.9, z); B(inner, 0.5, 0.5, 0.5, flat('#4f9a44'), x + 0.1, floor + 1.45, z); collide(x - 0.4, x + 0.4, z - 0.4, z + 0.4, 1.5); });
-  addLamp(scene, cx, floor + 3.6, cz, 1.3, 1.5, 11, '#ffc27a');
+
+  // back wall: bookcases, the big banner between two statues, torches
+  [x0 + 3.2, x0 + 6.6, x1 - 6.6, x1 - 3.2].forEach((x) => bookcase(inner, x, F, nz + 0.3, 3, 3.5));
+  banner(inner, doorX, F + 4.1, nz + 0.06, 1.6, 2.4, '#234a9e', 'tree');
+  for (const s of [-1, 1]) {
+    const x = doorX + s * 2.1;
+    B(inner, 0.9, 0.8, 0.9, M.stone, x, F + 0.4, nz + 0.6); B(inner, 0.5, 0.9, 0.3, flat('#8f8f96'), x, F + 1.25, nz + 0.6); B(inner, 0.36, 0.36, 0.36, flat('#9a9aa2'), x, F + 1.88, nz + 0.6); B(inner, 0.14, 0.8, 0.2, flat('#8f8f96'), x - 0.32, F + 1.3, nz + 0.6); B(inner, 0.14, 0.8, 0.2, flat('#8f8f96'), x + 0.32, F + 1.3, nz + 0.6);
+    collide(x - 0.45, x + 0.45, nz + 0.15, nz + 1.05, 2.5);
+    banner(inner, doorX + s * 4.9, F + 4.4, nz + 0.06, 0.9, 1.4, '#8a2026', 'tree');
+    B(inner, 0.16, 0.5, 0.16, M.log, doorX + s * 1.15, F + 3.1, nz + 0.12); B(inner, 0.24, 0.24, 0.24, glow('#ffc76a'), doorX + s * 1.15, F + 3.46, nz + 0.16);
+  }
+  // left wall: a fireplace in the middle with bookcases either side
+  B(inner, 1, 2.9, 3.6, M.brick, wx + 0.5, F + 1.45, cz); B(inner, 0.5, 1.5, 2, flat('#141418'), wx + 0.82, F + 0.75, cz); B(inner, 1.3, 0.24, 4, M.stone, wx + 0.62, F + 3.0, cz); B(inner, 1.2, 0.2, 3.8, M.stone, wx + 0.6, F + 0.1, cz);
+  B(inner, 0.4, 0.22, 1.3, M.log, wx + 0.9, F + 0.3, cz); B(inner, 0.3, 0.4, 0.5, glow('#ff8a2a'), wx + 0.92, F + 0.6, cz - 0.25); B(inner, 0.3, 0.6, 0.4, glow('#ffc24a'), wx + 0.92, F + 0.7, cz + 0.2); B(inner, 0.26, 0.3, 0.3, glow('#ffe08a'), wx + 0.94, F + 0.56, cz + 0.02);
+  candle(inner, wx + 0.7, F + 3.12, cz - 1.4); candle(inner, wx + 0.7, F + 3.12, cz + 1.4); B(inner, 0.08, 0.9, 1.2, wool('#e8d3a0'), wx + 1.04, F + 2.1, cz);
+  collide(wx, wx + 1.15, cz - 1.9, cz + 1.9, 3);
+  addLamp(scene, wx + 2, F + 1.3, cz, 1.3, 1.6, 8, '#ff9a4a');
+  bookcase(inner, wx + 0.3, F, cz - 4.2, 2.6, 3.5, 'x'); bookcase(inner, wx + 0.3, F, cz + 4.2, 2.6, 3.5, 'x');
+  // right side: low things only, so nothing hides the room from the camera
+  const ex = x1 - 1.75;
+  B(inner, 1, 0.9, 1, M.stone, ex, F + 0.45, cz); B(inner, 1.2, 0.14, 1.2, M.stone, ex, F + 0.97, cz); B(inner, 0.6, 0.6, 0.6, glow('#62c8ff'), ex, F + 1.5, cz); B(inner, 0.82, 0.06, 0.82, gold, ex, F + 1.14, cz); collide(ex - 0.6, ex + 0.6, cz - 0.6, cz + 0.6, 2);
+  crate(inner, ex, cz + 3.6, 1, F); crate(inner, ex + 0.1, cz + 4.6, 0.7, F); B(inner, 0.8, 1, 0.8, M.dark, ex, F + 0.5, cz - 3.6); B(inner, 0.86, 0.1, 0.86, flat('#3a2a1a'), ex, F + 0.3, cz - 3.6); B(inner, 0.86, 0.1, 0.86, flat('#3a2a1a'), ex, F + 0.75, cz - 3.6);
+  collide(ex - 0.55, ex + 0.55, cz + 3.05, cz + 5, 1.1); collide(ex - 0.45, ex + 0.45, cz - 4.05, cz - 3.15, 1.1);
+  // benches inside the front wall, plants in the corners, candle stands along the carpets
+  for (const s of [-1, 1]) { const x = doorX + s * 4.6; B(inner, 2.6, 0.16, 0.6, M.planks, x, F + 0.5, z1 - 1.75); B(inner, 0.18, 0.44, 0.5, M.dark, x - 1.1, F + 0.22, z1 - 1.75); B(inner, 0.18, 0.44, 0.5, M.dark, x + 1.1, F + 0.22, z1 - 1.75); collide(x - 1.3, x + 1.3, z1 - 2.05, z1 - 1.45, 1); }
+  [[wx + 0.75, nz + 0.75], [x1 - 1.75, nz + 0.75], [wx + 0.75, z1 - 1.75], [x1 - 1.75, z1 - 1.75]].forEach(([x, z]) => { B(inner, 0.6, 0.5, 0.6, M.dark, x, F + 0.25, z); B(inner, 0.8, 0.8, 0.8, flat('#3f8a3a'), x, F + 0.9, z); B(inner, 0.5, 0.5, 0.5, flat('#4f9a44'), x + 0.1, F + 1.45, z - 0.05); collide(x - 0.4, x + 0.4, z - 0.4, z + 0.4, 1.5); });
+  [[doorX - 1.9, z1 - 1.7], [doorX + 1.9, z1 - 1.7], [doorX - 1.9, cz - 1.9], [doorX + 1.9, cz - 1.9], [doorX - 1.9, cz + 1.9], [doorX + 1.9, cz + 1.9], [doorX - 1.9, nz + 2.4], [doorX + 1.9, nz + 2.4]].forEach(([x, z]) => { B(inner, 0.5, 0.16, 0.5, M.stone, x, F + 0.08, z); B(inner, 0.16, 1.1, 0.16, flat('#3a3a40'), x, F + 0.7, z); B(inner, 0.4, 0.08, 0.4, flat('#3a3a40'), x, F + 1.28, z); candle(inner, x, F + 1.32, z); collide(x - 0.22, x + 0.22, z - 0.22, z + 0.22, 1.6); });
+  addLamp(scene, cx, F + 3.6, cz, 1.3, 1.5, 12, '#ffc27a');
   inner.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
-  scene.add(inner);
+  bake(inner); scene.add(inner);
 
   let open = 0; // 0 = roof on, 1 = fully cut away
   return {
-    labelAt: [doorX, wallH + 1.2, z1],
-    entrance: [doorX, z1 - 3],
+    labelAt: [doorX, wallH + 2.2, z1],
+    entrance: [doorX, z1 - 3.4],
     openness: () => open,
-    update(dt, inside) {
+    update(dt, inside, time) {
       open += Math.sign((inside ? 1 : 0) - open) * Math.min(Math.abs((inside ? 1 : 0) - open), dt / 0.7);
       const o = 1 - open * open * (3 - 2 * open);
       for (const m of fadeMats) { m.opacity = o; m.transparent = o < 0.995; m.depthWrite = o > 0.5; }
       fade.visible = o > 0.02;
+      const pulse = 0.5 + Math.sin(time * 1.7) * 0.5;
+      portalMat.opacity = (0.68 + pulse * 0.1) * o; coreMat.opacity = (0.16 + (1 - pulse) * 0.16) * o; portal.visible = core.visible = o > 0.02;
     },
   };
 }

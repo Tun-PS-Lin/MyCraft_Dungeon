@@ -2,12 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>James's Portfolio Village</title>
 <meta name="description" content="A small explorable village. Walk up to a market stall to open one of James's projects, or visit the town hall to meet the agents.">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+
+<!-- Link preview (the card shown when the site is pasted into Telegram, LinkedIn, etc.).
+     1. Save your screenshot as public/og-image.jpg (1200 x 630 pixels).
+     2. Replace https://YOUR-SITE below with your real address, in both places. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="James's Portfolio Village">
+<meta property="og:description" content="A small explorable village. Walk up to a market stall to open a project, or visit the town hall to meet the agents.">
+<meta property="og:url" content="https://YOUR-SITE/">
+<meta property="og:image" content="https://YOUR-SITE/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@500;700&family=Noto+Sans+Myanmar:wght@500;700&display=swap">
 <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
@@ -16,6 +29,7 @@
 <div id="labels"></div>
 
 <div id="menuScrim"></div>
+<button id="langBtn" class="topbtn" aria-label="ဗမာစာသို့ ပြောင်းရန်" aria-pressed="false"><span class="ic ic-on">EN</span><span class="ic ic-off" lang="my">မြန်</span></button>
 <button id="musicBtn" class="topbtn" aria-label="Turn music off" aria-pressed="true">
   <svg class="ic ic-on" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 1h7v2H5v6H4zM10 3h1v5h-1zM1 8h4v3H1zM2 7h3v1H2zM7 7h4v3H7zM8 6h3v1H8z"/></svg>
   <svg class="ic ic-off" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 1h7v2H5v6H4zM10 3h1v5h-1zM1 8h4v3H1zM2 7h3v1H2zM7 7h4v3H7zM8 6h3v1H8z" opacity=".45"/><path d="M1 1h1v1H1zM2 2h1v1H2zM3 3h1v1H3zM4 4h1v1H4zM5 5h1v1H5zM6 6h1v1H6zM7 7h1v1H7zM8 8h1v1H8zM9 9h1v1H9zM10 10h1v1h-1z"/></svg>
@@ -30,24 +44,25 @@
 </button>
 <button id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="side"><i></i><i></i><i></i></button>
 <nav id="side" aria-label="Places in the village">
-  <div class="side-head">Village map</div>
+  <div class="side-head" data-t="mapTitle"></div>
   <div id="progress"><div id="progCount"></div><div class="bar"><div id="progBar"></div></div><div id="progHint"></div></div>
-  <h2>Projects</h2>
+  <h2 data-t="projects"></h2>
   <div id="navProjects" class="navlist"></div>
-  <h2>Village</h2>
+  <h2 data-t="village"></h2>
   <div id="navVillage" class="navlist"></div>
-  <h2>Say hello</h2>
+  <h2 data-t="hello"></h2>
   <div id="navContact" class="navlist"></div>
   <div class="keys">
-    <div>Pick a place and the character walks there.</div>
-    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>move <kbd class="gap">Shift</kbd>run <kbd class="gap">Space</kbd>jump</div>
-    <div><kbd>E</kbd>open or talk <kbd class="gap">Esc</kbd>close</div>
+    <div data-t="menuHint"></div>
+    <div class="desk-only"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span data-t="kMove"></span> <kbd class="gap">Shift</kbd><span data-t="kRun"></span> <kbd class="gap">Space</kbd><span data-t="kJump"></span></div>
+    <div class="desk-only"><kbd>E</kbd><span data-t="kOpen"></span> <kbd class="gap">Esc</kbd><span data-t="kClose"></span></div>
+    <div data-t="kZoom"></div>
   </div>
 </nav>
 
 <div id="toast" role="status" aria-live="polite">
   <canvas id="toastArt" width="16" height="16"></canvas>
-  <div><small>Achievement unlocked</small><strong id="toastTitle"></strong><span id="toastText"></span></div>
+  <div><small data-t="achievement"></small><strong id="toastTitle"></strong><span id="toastText"></span></div>
 </div>
 
 <div id="credit"></div>
@@ -56,25 +71,26 @@
 <div id="chat" role="dialog" aria-labelledby="chatName">
   <canvas id="chatFace" width="8" height="8"></canvas>
   <div class="chat-body">
-    <div class="chat-head"><strong id="chatName"></strong><span id="chatRole"></span><span class="status"><i></i>Working</span></div>
+    <div class="chat-head"><strong id="chatName"></strong><span id="chatRole"></span><span class="status"><i></i><b data-t="working"></b></span></div>
     <p id="chatText"></p>
-    <small class="chat-hint">Press E or Esc to close</small>
+    <small class="chat-hint" id="chatHint"></small>
   </div>
   <button class="xbtn" id="chatClose" aria-label="Close">×</button>
 </div>
 
 <div id="wardrobe" role="dialog" aria-labelledby="wardTitle">
   <div class="ward-panel">
-    <div class="ward-head"><strong id="wardTitle">Outfits</strong><button class="xbtn" id="wardClose" aria-label="Close without changing">×</button></div>
+    <div class="ward-head"><strong id="wardTitle" data-t="outfits"></strong><button class="xbtn" id="wardClose" aria-label="Close without changing">×</button></div>
     <div id="wardGrid"></div>
   </div>
-  <button id="wardDone">Done</button>
+  <button id="wardDone" data-t="done"></button>
 </div>
 
 <div id="scrim">
   <div id="card" role="dialog" aria-modal="true" aria-labelledby="cardTitle">
     <div class="card-top"><span class="card-spacer"></span><div id="cardKicker"></div><button class="xbtn" id="cardClose" aria-label="Close">×</button></div>
     <canvas id="cardArt" width="32" height="32"></canvas>
+    <img id="cardImg" alt="" hidden>
     <h1 id="cardTitle"></h1>
     <p id="cardDesc"></p>
     <div id="cardEmail" hidden><span id="emailText"></span><button id="emailCopy" type="button">Copy</button></div>
@@ -84,8 +100,8 @@
 
 <div id="touch" hidden>
   <div id="stick"><div id="knob"></div></div>
-  <button class="tbtn" id="tUse" hidden>Open</button>
-  <button class="tbtn" id="tJump">Jump</button>
+  <button class="tbtn" id="tUse" hidden></button>
+  <button class="tbtn" id="tJump"></button>
 </div>
 <!-- app:end -->
 <script type="module" src="./src/main.js"></script>

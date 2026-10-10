@@ -14,7 +14,7 @@ const body = html.split('<!-- app:start -->')[1].split('<!-- app:end -->')[0];
 const title = html.match(/<title>.*<\/title>/)[0];
 const css = fs.readFileSync(path.join(root, 'src/style.css'), 'utf8');
 fs.writeFileSync(out, `${title}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@500;700&display=swap">
+${html.match(/<link rel="stylesheet" href="https:\/\/fonts[^>]+>/)[0]}
 <style>
 ${css}</style>
 ${body}

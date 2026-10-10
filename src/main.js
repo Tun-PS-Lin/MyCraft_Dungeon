@@ -1,7 +1,7 @@
 // Entry point: builds the scene, reads input and runs the game loop.
 import * as THREE from 'three';
 import { STALLS, TUNING, HALL, FLOOR } from './config.js';
-import { buildWorld } from './world.js';
+import { buildWorld, refreshSlab } from './world.js';
 import { buildStalls } from './stalls.js';
 import { buildHall } from './hall.js';
 import { createAgents } from './agents.js';
@@ -12,14 +12,19 @@ import { blocked, groundAt, floorAt, rectDistance, insideHall } from './collisio
 import { findPath } from './nav.js';
 import { createUI } from './ui.js';
 import { sound } from './audio.js';
+import { tr } from './i18n.js';
 import { lamps, addLamp, MOOD } from './lights.js';
+import { cv } from './textures.js';
 
 const canvas = document.getElementById('world');
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } } };
 
 /* ── renderer, scene, light ── */
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+// Phones get a lighter setup: no multisampling, a lower pixel ratio and a smaller shadow map.
+const phone = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !phone, powerPreference: 'high-performance' });
+let pixelRatio = Math.min(window.devicePixelRatio || 1, phone ? 1.5 : 2);
+renderer.setPixelRatio(pixelRatio);
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
@@ -37,12 +42,12 @@ const camera = new THREE.PerspectiveCamera(TUNING.cameraFov, 1, 1, 230);
 const hemi = new THREE.HemisphereLight('#b9c8ff', '#7a5a2c', 0.42);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight('#ffc67c', 1.22);
-sun.position.set(-30 + 2, 40, -16 - 4);
-sun.target.position.set(2, 0, -4);
+sun.position.set(-30 + 2, 40, -16 - 7);
+sun.target.position.set(2, 0, -7);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
 const sc = sun.shadow.camera;
-sc.left = -50; sc.right = 50; sc.top = 50; sc.bottom = -50; sc.near = 1; sc.far = 140;
+sc.left = -52; sc.right = 52; sc.top = 52; sc.bottom = -52; sc.near = 1; sc.far = 150;
 sc.updateProjectionMatrix();
 sun.shadow.bias = -0.0006;
 sun.shadow.normalBias = 0.03;
@@ -77,6 +82,7 @@ const ui = createUI(canvas, {
   goTo,
   pickOutfit: (id) => player.setOutfit(id, false),
   endWardrobe: (keep) => { player.setOutfit(keep ? player.outfit() : wardrobePrev, true); },
+  languageChanged: () => refreshSlab(),
   toggleTheme: () => { nightTarget = nightTarget ? 0 : 1; try { sessionStorage.setItem('pv-theme', nightTarget ? 'dark' : 'light'); } catch (e) { /* ignore */ } return nightTarget === 1; },
 });
 ui.setProgress(visited, wolfUnlocked);
@@ -91,7 +97,22 @@ function talkTo(n) { auto = null; ui.openChat(n, n.design); }
 
 /* ── walk-to: the menu sends the character somewhere on foot ── */
 let auto = null; // { path: [[x, z], ...], then: fn }
-function walkTo(x, z, then) { const path = findPath(P.x, P.z, x, z); if (!path || !path.length) { if (then) then(); return; } auto = { path, then }; }
+function walkTo(x, z, then) { const path = findPath(P.x, P.z, x, z); if (!path || !path.length) { if (then) then(); return false; } auto = { path, then }; return true; }
+
+// tap (or click) the ground to walk there; a ring marks the spot
+const marker = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, map: new THREE.CanvasTexture(cv(64, 64, (g) => { g.strokeStyle = '#ffd24a'; g.lineWidth = 7; g.strokeRect(10, 10, 44, 44); g.fillStyle = '#ffd24a'; g.fillRect(28, 28, 8, 8); })) }));
+marker.rotation.x = -Math.PI / 2; marker.renderOrder = 3; scene.add(marker);
+let markerLife = 0;
+const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitPoint = new THREE.Vector3();
+function tapGround() {
+  // the ray is already aimed by pick(); try the hall floor first when the roof is off, then the square
+  for (const y of hall.openness() > 0.5 ? [HALL.floor, FLOOR] : [FLOOR]) {
+    ground.constant = -y; if (!ray.ray.intersectPlane(ground, hitPoint)) continue;
+    if (floorAt(hitPoint.x, hitPoint.z) !== y) continue;
+    if (walkTo(hitPoint.x, hitPoint.z)) { const end = auto.path[auto.path.length - 1]; marker.position.set(end[0], floorAt(end[0], end[1]) + 0.06, end[1]); markerLife = 1; sound.play('near'); }
+    return;
+  }
+}
 function goTo(id) {
   if (id === 'hall') { walkTo(hall.entrance[0], hall.entrance[1]); return; }
   const s = stalls.find((q) => q.id === id); if (!s) return;
@@ -142,14 +163,28 @@ function pick(e) {
   return null;
 }
 let down = null, hoverT = 0;
-canvas.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; sound.unlock(); });
+// zoom: mouse wheel, two-finger pinch, or the + and - keys. The camera angle never changes.
+let zoom = TUNING.zoomStart, zoomTarget = TUNING.zoomStart;
+const setZoom = (z) => { zoomTarget = Math.max(TUNING.zoomMin, Math.min(TUNING.zoomMax, z)); };
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (!ui.paused()) setZoom(zoomTarget * Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0016)); }, { passive: false });
+window.addEventListener('keydown', (e) => { if (ui.paused()) return; if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(zoomTarget - 0.06); if (e.code === 'Minus' || e.code === 'NumpadSubtract') setZoom(zoomTarget + 0.06); });
+const touches = new Map(); let pinch = 0;
+const spread = () => { const p = [...touches.values()]; return Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]); };
+const lift = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch = 0; };
+canvas.addEventListener('pointercancel', lift); canvas.addEventListener('pointerleave', lift);
+canvas.addEventListener('pointerdown', (e) => {
+  sound.unlock(); touches.set(e.pointerId, [e.clientX, e.clientY]);
+  if (touches.size === 2) { pinch = spread(); down = null; } else down = [e.clientX, e.clientY];
+});
 canvas.addEventListener('pointerup', (e) => {
-  if (!down) return; const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]); down = null; if (moved >= 8 || ui.paused()) return;
-  const hit = pick(e); if (!hit) return;
-  if (hit.agent) { if (Math.hypot(P.x - hit.agent.x, P.z - hit.agent.z) < TUNING.talkRange * 1.7) talkTo(hit.agent); }
+  lift(e); if (!down) return; const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]); down = null; if (moved >= 8 || ui.paused()) return;
+  const hit = pick(e); if (!hit) { tapGround(); return; }
+  if (hit.agent) { const n = hit.agent; if (Math.hypot(P.x - n.x, P.z - n.z) < TUNING.talkRange * 1.7) talkTo(n); else walkTo(n.x, n.z + 1.3); }
   else if (hit.stall.kind === 'outfits') goTo('outfits'); else openStall(hit.stall);
 });
-canvas.addEventListener('pointermove', (e) => { if (e.pointerType !== 'mouse') return; const n = performance.now(); if (n - hoverT < 60) return; hoverT = n; canvas.style.cursor = pick(e) ? 'pointer' : 'default'; });
+canvas.addEventListener('pointermove', (e) => {
+  if (touches.has(e.pointerId)) { touches.set(e.pointerId, [e.clientX, e.clientY]); if (touches.size === 2 && pinch) { const s = spread(); if (s > 0) setZoom(zoomTarget * (pinch / s)); pinch = s; return; } }
+  if (e.pointerType !== 'mouse') return; const n = performance.now(); if (n - hoverT < 60) return; hoverT = n; canvas.style.cursor = pick(e) ? 'pointer' : 'default'; });
 
 // on-screen stick and buttons for phones
 {
@@ -213,7 +248,7 @@ function update(dt) {
   if (P.grounded && moving && Math.floor(P.phase / Math.PI) !== before) sound.play('step');
 
   // town hall: the roof lifts away while the player is inside
-  hall.update(dt, insideHall(P.x, P.z) || (Math.abs(P.x - HALL.doorX) < HALL.doorW / 2 && P.z < HALL.z1 + 0.2));
+  hall.update(dt, insideHall(P.x, P.z) || (Math.abs(P.x - HALL.doorX) < HALL.doorW / 2 && P.z < HALL.z1 + 0.2), time);
   const indoors = hall.openness();
   if (night !== nightTarget) night += Math.sign(nightTarget - night) * Math.min(Math.abs(nightTarget - night), dt / 1.6);
   torch.position.set(P.x, P.visY + 2.2, P.z + 0.6);
@@ -222,8 +257,9 @@ function update(dt) {
 
   // camera
   closeUp += Math.sign((ui.wardrobeOpen() ? 1 : 0) - closeUp) * Math.min(Math.abs((ui.wardrobeOpen() ? 1 : 0) - closeUp), dt / 0.7);
-  focus.x += (P.x - focus.x) * Math.min(1, dt * 5); focus.z += (P.z - 1.5 - focus.z) * Math.min(1, dt * 5); focus.y += (P.visY * 0.5 - focus.y) * Math.min(1, dt * 3);
-  camPos.copy(CAM).multiplyScalar(camScale).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
+  zoom += (zoomTarget - zoom) * Math.min(1, dt * 7);
+  focus.x += (P.x - focus.x) * Math.min(1, dt * 5); focus.z += (P.z - 1.5 * zoom - focus.z) * Math.min(1, dt * 5); focus.y += (P.visY * 0.5 - focus.y) * Math.min(1, dt * 3);
+  camPos.copy(CAM).multiplyScalar(camScale * zoom).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
   if (closeUp > 0) {
     const wide = camera.aspect >= 1, dist = wide ? 8 : 13, e = ease(closeUp), shift = wide ? 2.1 : 0;
     closePos.set(P.x + sinY * dist + cosY * shift, P.visY + 2.2, P.z + cosY * dist - sinY * shift);
@@ -236,11 +272,11 @@ function update(dt) {
   // what E would do right now: the nearest stall (measured to its edge) or agent
   near = null; let bd = TUNING.interactRange, nearKey = null;
   for (const s of stalls) {
-    if (s.kind === 'outfits' && P.z < s.pos[1] - 1) continue; // the wardrobe camera needs you at the front
-    const d = rectDistance(s.rect, P.x, P.z); if (d < bd) { bd = d; nearKey = s.id; near = { text: s.kind === 'outfits' ? 'Change outfit' : 'Open ' + s.label, act: () => (s.kind === 'outfits' ? goTo('outfits') : openStall(s)) }; }
+    const d = rectDistance(s.rect, P.x, P.z); if (d < bd) { bd = d; nearKey = s.id; near = s.kind === 'outfits' ? { key: 'changeOutfit', act: () => goTo('outfits') } : { key: 'open', vars: { name: tr(s, 'label') }, act: () => openStall(s) }; }
   }
-  if (indoors > 0.5) { const n = agents.nearest(P); if (n) { nearKey = n.id; near = { text: 'Talk to ' + n.name, act: () => talkTo(n) }; } }
-  ui.setPrompt(auto ? null : near && near.text);
+  if (indoors > 0.5) { const n = agents.nearest(P); if (n) { nearKey = n.id; near = { key: 'talkTo', vars: { name: n.name }, act: () => talkTo(n) }; } }
+  if (auto || !near) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
+  if (markerLife > 0) { markerLife = auto ? Math.max(0.35, markerLife - dt * 0.8) : markerLife - dt * 3; marker.material.opacity = Math.max(0, markerLife) * 0.9; marker.scale.setScalar(0.8 + Math.sin(time * 6) * 0.08); marker.rotation.z = time * 1.2; }
   if (pendingReward && !ui.paused()) { pendingReward = false; wolfUnlocked = true; store.set('pv-wolf', 'yes'); wolf.activate(P); ui.setProgress(visited, true); ui.toast(); sound.play('achieve'); setTimeout(() => sound.play('bark'), 700); }
 
   agents.update(dt, time, P, ui.chatId());
@@ -256,8 +292,11 @@ function update(dt) {
   place('hall', hall.labelAt[0], hall.labelAt[1], hall.labelAt[2], false, 1 - indoors);
   for (const n of agents.list) place(n.id, n.x, HALL.floor + 2.5 - n.sit * 0.3, n.z, n.id === nearKey, indoors);
 }
+// If the first few seconds run slowly, render at a lower resolution from then on.
+let probe = { frames: 0, time: 0 };
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt);
+  const raw = (now - last) / 1000, dt = Math.min(0.05, raw); last = now; update(dt);
+  if (probe && document.visibilityState === 'visible') { probe.frames++; if (probe.frames > 30) probe.time += raw; if (probe.frames === 150) { if (probe.time / 120 > 1 / 42 && pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.5); renderer.setPixelRatio(pixelRatio); resize(); probe = { frames: 0, time: 0 }; } else probe = null; } }
   if (bakeFrames > 0) { bakeFrames--; renderer.shadowMap.needsUpdate = true; }
   renderer.render(scene, camera); requestAnimationFrame(frame);
 }

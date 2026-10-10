@@ -199,3 +199,50 @@ Object.assign(EMBLEMS, {
   scale(g) { const w = '#f6e7b0'; fill(g, w, 5, 2, 2, 11); fill(g, w, 2, 4, 8, 1); fill(g, w, 2, 5, 1, 3); fill(g, w, 9, 5, 1, 3); fill(g, w, 1, 8, 3, 1); fill(g, w, 8, 8, 3, 1); fill(g, w, 3, 13, 6, 1); },
   chip(g) { const w = '#d7ecff'; fill(g, w, 3, 4, 6, 8); fill(g, '#2f66c4', 4, 5, 4, 6); fill(g, w, 5, 7, 2, 2); for (const y of [5, 8, 10]) { fill(g, w, 1, y, 2, 1); fill(g, w, 9, y, 2, 1); } },
 });
+
+/* ── town hall roof ── */
+T.roof = toTex(cv(16, 16, (g) => {
+  const r = rng(35); speck(g, 16, 16, ['#a8552c', '#9c4e28', '#b35d31', '#a8552c'], r);
+  g.fillStyle = '#6f3519'; for (let y = 3; y < 16; y += 4) g.fillRect(0, y, 16, 1);
+  for (let row = 0; row < 4; row++) for (let x = row % 2 ? 5 : 11; x < 16; x += 9) g.fillRect(x, row * 4, 1, 3);
+}));
+M.roof = lam({ map: T.roof });
+
+// Merge every plain mesh under a group into one mesh per material. A stall goes from
+// about eighty draw calls to about fifteen, which matters most on phones. Anything
+// under a child marked userData.keep (the mannequins) is left alone.
+export function bake(group) {
+  group.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(group.matrixWorld).invert(), buckets = new Map(), gone = [];
+  const visit = (o) => {
+    if (o.userData.keep) return;
+    if (o.isMesh && !o.isInstancedMesh && !Array.isArray(o.material) && o.geometry.index) {
+      const key = o.material.uuid + (o.castShadow ? 'c' : '-') + (o.receiveShadow ? 'r' : '-');
+      if (!buckets.has(key)) buckets.set(key, []); buckets.get(key).push(o); gone.push(o); return;
+    }
+    for (const c of o.children.slice()) visit(c);
+  };
+  for (const c of group.children.slice()) visit(c);
+  const m4 = new THREE.Matrix4(), n3 = new THREE.Matrix3(), v = new THREE.Vector3();
+  buckets.forEach((list) => {
+    let vc = 0, ic = 0; for (const o of list) { vc += o.geometry.attributes.position.count; ic += o.geometry.index.count; }
+    const pos = new Float32Array(vc * 3), nor = new Float32Array(vc * 3), uv = new Float32Array(vc * 2), idx = new (vc > 65535 ? Uint32Array : Uint16Array)(ic);
+    let vo = 0, io = 0;
+    for (const o of list) {
+      m4.multiplyMatrices(inv, o.matrixWorld); n3.getNormalMatrix(m4);
+      const g = o.geometry, p = g.attributes.position, n = g.attributes.normal, u = g.attributes.uv, ix = g.index;
+      for (let i = 0; i < p.count; i++) {
+        const k = (vo + i) * 3;
+        v.fromBufferAttribute(p, i).applyMatrix4(m4); pos[k] = v.x; pos[k + 1] = v.y; pos[k + 2] = v.z;
+        v.fromBufferAttribute(n, i).applyMatrix3(n3).normalize(); nor[k] = v.x; nor[k + 1] = v.y; nor[k + 2] = v.z;
+        uv[(vo + i) * 2] = u.getX(i); uv[(vo + i) * 2 + 1] = u.getY(i);
+      }
+      for (let i = 0; i < ix.count; i++) idx[io + i] = ix.getX(i) + vo;
+      vo += p.count; io += ix.count;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    const mesh = new THREE.Mesh(geo, list[0].material); mesh.castShadow = list[0].castShadow; mesh.receiveShadow = list[0].receiveShadow; group.add(mesh);
+  });
+  for (const o of gone) o.parent.remove(o);
+}

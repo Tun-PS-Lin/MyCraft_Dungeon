@@ -1,6 +1,7 @@
 // The map: ground, raised paving stones, grass, fences, bushes, forest and the guide slab.
 import * as THREE from 'three';
-import { BOUNDS, HALL, STALLS, TUNING } from './config.js';
+import { BOUNDS, HALL, STALLS, TUNING, frontOf } from './config.js';
+import { t } from './i18n.js';
 import { rng, hash, noise, cv, fill, speck, toTex, tiles, M, B, Batch, boxGeo, glow, PAVER_TINTS, DIRT, GRASS } from './textures.js';
 import { collide, inHallRect } from './collision.js';
 import { addLamp } from './lights.js';
@@ -22,9 +23,9 @@ function classify(x, z) {
   const n = (noise(x * 0.33 + 9, z * 0.33 + 3) - 0.5) * 3.4, k = hash(x * 7 + 1, z * 13 + 5);
   let s;
   if (inside) {
-    s = Math.min(ax - 3.4, az - 3.0, (Math.hypot(x / 11.5, z / 7.5) - 1) * 6);
+    s = Math.min(ax - 3.4, az - 3.0, (Math.hypot(x / 12.5, z / 8) - 1) * 6, Math.abs(x + 12.6) - 1.8 + (z < -3 ? 9 : 0), Math.abs(x - 16.6) - 1.8 + (z < -3 ? 9 : 0));
     s = Math.min(s, segDist(x, z, 4, -3, HALL.doorX, HALL.z1 + 2) - 2.6, Math.hypot(x - HALL.doorX, z - (HALL.z1 + 3)) - 4.2);
-    for (const p of STALLS) s = Math.min(s, Math.hypot(x - p.pos[0], z - (p.pos[1] + 2.2)) - 3.6);
+    for (const p of STALLS) { const f = frontOf(p, 2.4); s = Math.min(s, Math.hypot(x - f[0], z - f[1]) - 3.7); }
   } else if (ax < 8 && !(z < 0 && x > HALL.x0 - 2)) s = ax - 3.2 + (z < 0 ? BOUNDS.z0 - z : z - BOUNDS.z1) * 0.22; // the road runs off the top and bottom of the map
   else s = 99;
   s += n;
@@ -33,6 +34,10 @@ function classify(x, z) {
   if (!inside && noise(x * 0.3 + 40, z * 0.3 + 7) > 0.74) return DIRT_T;
   return GRASS_T;
 }
+
+let redrawSlab = () => {};
+// repaint the guide slab after the language changes
+export const refreshSlab = () => redrawSlab();
 
 export function buildWorld(scene, renderer) {
   const r = rng(5), col = new THREE.Color();
@@ -112,16 +117,16 @@ export function buildWorld(scene, renderer) {
   for (let z = BOUNDS.z0 + 0.5; z < BOUNDS.z1; z++) { edge(BOUNDS.x0 - 0.5, z, false); edge(BOUNDS.x1 + 0.5, z, false); }
 
   /* loose stones and lantern posts inside the plaza */
-  [[-19.6, -3.2], [23.4, -4.2], [-19.4, 10.4], [23.6, 3.8], [4.2, -12.8], [-8.6, 13.4], [8.4, 13.6], [22.5, 13.5]].forEach(([x, z]) => {
+  [[-19.8, -4.6], [4.4, -12.8], [23.8, -6], [-9, 15], [8.4, 15], [-12.4, -13], [-11.5, 15]].forEach(([x, z]) => {
     const n = 2 + ((r() * 2) | 0);
     for (let i = 0; i < n; i++) { const s = 0.45 + r() * 0.4, ox = (r() - 0.5) * 0.9, oz = (r() - 0.5) * 0.9; rocks.add(x + ox, s / 2 + 0.1, z + oz, s, s, s, col.setHSL(0.08, 0.06, 0.36 + r() * 0.12).clone(), r()); }
     collide(x - 0.6, x + 0.6, z - 0.6, z + 0.6, 0.9);
   });
   const lampGlow = glow('#ffc76a');
-  [[-3.9, -13.1, 1], [3.9, -13.1, 1], [-20.1, -1.5, 0], [24.1, 0.5, 0], [-5.2, 14.1, 0], [5.2, 14.1, 0]].forEach(([x, z, lit]) => {
+  [[-3.9, -13.1, 1, 1], [3.9, -13.1, 1, 1], [-12.4, 6, 0, 1], [16.5, 5.8, 0, 1], [-5.2, 15.1, 0, 0], [5.2, 15.1, 0, 0]].forEach(([x, z, lit, lamp]) => {
     B(scene, 0.25, 2.3, 0.25, M.log, x, 1.15, z); B(scene, 0.44, 0.44, 0.44, lampGlow, x, 2.5, z, true); B(scene, 0.58, 0.1, 0.58, M.dark, x, 2.77, z);
     collide(x - 0.15, x + 0.15, z - 0.15, z + 0.15, 3);
-    addLamp(scene, x, 2.5, z + 0.4, lit ? 0.5 : 0, 1.5, 8);
+    if (lamp) addLamp(scene, x, 2.5, z + 0.4, lit ? 0.5 : 0, 1.5, 8);
   });
 
   /* forest. Trees are left out wherever they would stand between the camera and the player. */
@@ -158,25 +163,26 @@ export function buildWorld(scene, renderer) {
       for (let j = 0; j < 51; j++) for (let i = 0; i < 78; i++) { x.fillStyle = ['#b3aca3', '#aaa39a', '#bcb5ac', '#a19a92'][(q() * 4) | 0]; x.fillRect(i * 8, j * 8, 8, 8); }
       x.strokeStyle = '#7b746b'; x.lineWidth = 6; x.strokeRect(19, 19, 586, 370); x.strokeStyle = '#d3ccc2'; x.lineWidth = 2; x.strokeRect(25, 25, 586, 370);
       const ink = '#46413b', hi = '#d6cfc5'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      const text = (s, px, cx, cy) => { x.font = '700 ' + px + 'px "Pixelify Sans","Courier New",monospace'; x.fillStyle = hi; x.fillText(s, cx + 2, cy + 2); x.fillStyle = ink; x.fillText(s, cx, cy); };
+      const text = (s, px, cx, cy) => { x.font = '700 ' + px + 'px "Pixelify Sans","Noto Sans Myanmar","Courier New",monospace'; x.fillStyle = hi; x.fillText(s, cx + 2, cy + 2); x.fillStyle = ink; x.fillText(s, cx, cy); };
       const key = (cx, cy, l, arrow) => {
         x.fillStyle = hi; x.fillRect(cx - 23, cy - 23, 50, 50); x.fillStyle = ink; x.fillRect(cx - 25, cy - 25, 50, 50); x.fillStyle = '#b8b1a7'; x.fillRect(cx - 21, cy - 21, 42, 42);
         if (l) text(l, 30, cx, cy + 1);
         else { x.save(); x.translate(cx, cy); x.rotate(arrow); x.fillStyle = ink; x.fillRect(-3, -4, 6, 16); x.beginPath(); x.moveTo(-12, -2); x.lineTo(0, -14); x.lineTo(12, -2); x.fill(); x.restore(); }
       };
-      text('MOVEMENT GUIDE', 52, 312, 76);
-      key(182, 146, 'W'); key(126, 204, 'A'); key(182, 204, 'S'); key(238, 204, 'D'); text('OR', 26, 312, 206);
+      const my = t('slabTitle') !== 'MOVEMENT GUIDE';
+      text(t('slabTitle'), my ? 44 : 52, 312, 76);
+      key(182, 146, 'W'); key(126, 204, 'A'); key(182, 204, 'S'); key(238, 204, 'D'); text(t('slabOr'), 26, 312, 206);
       key(442, 146, null, 0); key(386, 204, null, -Math.PI / 2); key(442, 204, null, Math.PI); key(498, 204, null, Math.PI / 2);
-      text('WASD OR ARROWS TO MOVE', 32, 312, 286); text('SPACE JUMP   SHIFT RUN   E OPEN', 25, 312, 340);
+      text(t('slabMove'), my ? 24 : 32, 312, 286); text(t('slabKeys'), my ? 23 : 25, 312, 340);
       tex.needsUpdate = true;
     };
-    draw();
-    if (document.fonts && document.fonts.load) document.fonts.load('700 40px "Pixelify Sans"').then(draw).catch(() => {});
+    draw(); redrawSlab = draw;
+    if (document.fonts && document.fonts.load) { document.fonts.load('700 40px "Pixelify Sans"').then(draw).catch(() => {}); document.fonts.load('700 40px "Noto Sans Myanmar"', 'မြန်').then(draw).catch(() => {}); }
     const top = new THREE.Mesh(new THREE.PlaneGeometry(SLAB.w, SLAB.d, 16, 10), new THREE.MeshLambertMaterial({ map: tex }));
     top.rotation.x = -Math.PI / 2; top.position.y = SLAB.y + SLAB.h + 0.004; top.receiveShadow = true; scene.add(top);
     // glowing corner studs; at night they light the slab
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const x = sx * (SLAB.w / 2 - 0.2), z = sz * (SLAB.d / 2 - 0.2); B(scene, 0.22, 0.14, 0.22, lampGlow, x, SLAB.y + SLAB.h + 0.07, z, true); }
-    addLamp(scene, -1.7, 1.3, 0, 0, 1.0, 6); addLamp(scene, 1.7, 1.3, 0, 0, 1.0, 6);
+    addLamp(scene, 0, 1.5, 0.4, 0, 1.3, 7);
     collide(-SLAB.w / 2, SLAB.w / 2, -SLAB.d / 2, SLAB.d / 2, SLAB.y + SLAB.h);
   }
 }
