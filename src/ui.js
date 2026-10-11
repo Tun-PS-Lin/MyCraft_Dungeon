@@ -168,7 +168,7 @@ export function createUI(canvas, handlers) {
 
   /* agent board, laid out like a character-select screen: pick an agent on the right,
      and the left side shows them large with what they do, when they last ran and a call button */
-  const board = $('board'); let boardOpen = false, boardPick = AGENTS[0].id, boardTick = 0, logSig = '';
+  const board = $('board'); let boardOpen = false, boardPick = AGENTS[0].id, boardTick = 0, logSig = '', lastShown = '';
   const sprite = (id) => { const c = document.createElement('canvas'); c.width = SPRITE.w; c.height = SPRITE.h; drawSprite(c.getContext('2d'), handlers.agentDesign(id)); return c; };
   const bcard = {};
   AGENTS.forEach((a) => {
@@ -192,7 +192,7 @@ export function createUI(canvas, handlers) {
     }
     const st = $('boardState'); st.textContent = t(s.status); st.className = 'bstate ' + s.status;
     $('boardWhere').textContent = whereText(s.where);
-    const [when, result] = lastText(s.last), lastEl = $('boardLast'); if (lastEl.dataset.v !== when + result) { lastEl.dataset.v = when + result; lastEl.textContent = when; if (result) lastEl.appendChild(el('small', '', result)); }
+    const [when, result] = lastText(s.last), lastEl = $('boardLast'); if (lastShown !== a.id + when + result || full) { lastShown = a.id + when + result; lastEl.textContent = when; if (result) lastEl.appendChild(el('small', '', result)); }
     const call = $('boardCall'); call.disabled = s.status === 'coming' || s.status === 'here'; call.textContent = s.status === 'coming' ? t('called') : s.status === 'here' ? t('isHere') : t('call');
     // activity log, newest first
     const log = handlers.agentLog(), sig = log.length ? log[0].time + log[0].id + log[0].text + log.length : '';

@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const out = process.argv[2] || path.join(root, 'preview.html');
 const shim = path.join(root, 'scripts', '.three-global.cjs');
 fs.writeFileSync(shim, 'module.exports = window.THREE;');
-const r = await build({ entryPoints: [path.join(root, 'src/main.js')], bundle: true, format: 'iife', write: false, minify: true, alias: { three: shim }, logLevel: 'error', define: { 'import.meta.env': 'undefined' } });
+const r = await build({ entryPoints: [path.join(root, 'src/main.js')], bundle: true, format: 'iife', write: false, minifyWhitespace: true, minifySyntax: true, alias: { three: shim }, logLevel: 'error', define: { 'import.meta.env': 'undefined' } });
 fs.unlinkSync(shim);
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const body = html.split('<!-- app:start -->')[1].split('<!-- app:end -->')[0];
