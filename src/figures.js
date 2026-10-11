@@ -49,9 +49,11 @@ const PAINT = {
     fill(g, '#ffffff', 1, 4, 2, 1); fill(g, '#ffffff', 5, 4, 2, 1); fill(g, eye, 2, 4, 1, 1); fill(g, eye, 5, 4, 1, 1);
     if (D.glasses) { fill(g, '#1d1d1d', 1, 3, 2, 1); fill(g, '#1d1d1d', 5, 3, 2, 1); fill(g, '#1d1d1d', 3, 4, 2, 1); }
     if (D.brow) fill(g, D.brow, 1, 3, 6, 1);
+    if (D.lashes) { fill(g, '#2a1c14', 1, 3, 1, 1); fill(g, '#2a1c14', 6, 3, 1, 1); fill(g, '#c4606a', 3, 6, 2, 1); }
     fill(g, dk(s, 0.88), 3, 5, 2, 1);
     if (D.beard) { fill(g, D.beard, 1, 6, 6, 2); fill(g, D.beard, 0, 5, 1, 3); fill(g, D.beard, 7, 5, 1, 3); fill(g, dk(D.beard, 0.6), 3, 6, 2, 1); }
-    else fill(g, dk(s, 0.62), 3, 6, 2, 1);
+    else if (!D.lashes) fill(g, dk(s, 0.62), 3, 6, 2, 1);
+    if (D.moustache) { fill(g, D.moustache, 2, 6, 4, 1); fill(g, D.moustache, 1, 7, 1, 1); fill(g, D.moustache, 6, 7, 1, 1); }
   },
   side(g, D) {
     if (D.hairStyle === 'hood' || D.hairStyle === 'long') { fill(g, D.hair, 0, 0, 8, 8); return; }
@@ -106,7 +108,15 @@ const GEAR = {
   pads: (D) => [['armL', 4.9, 1.9, 4.9, D.top2, 0, 0.3, 0], ['armR', 4.9, 1.9, 4.9, D.top2, 0, 0.3, 0], ['armL', 3, 0.8, 3, D.trim, 0, 1.5, 0], ['armR', 3, 0.8, 3, D.trim, 0, 1.5, 0]],
   gloves: (D) => [['armL', 4.6, 1.6, 4.6, D.boots, 0, -8.4, 0], ['armR', 4.6, 1.6, 4.6, D.boots, 0, -8.4, 0]],
   boots: (D) => [['legL', 4.7, 1.4, 4.7, dk(D.boots, 1.35), 0, -8.3, 0], ['legR', 4.7, 1.4, 4.7, dk(D.boots, 1.35), 0, -8.3, 0], ['legL', 4, 1.7, 1.2, D.boots, 0, -11.1, 2.5], ['legR', 4, 1.7, 1.2, D.boots, 0, -11.1, 2.5]],
+  satchel: () => [['body', 3.4, 3.4, 1.7, '#7a5530', -3, -5.4, 2.7], ['body', 3.6, 1, 1.8, LEATHER, -3, -4, 2.7], ['body', 1, 2.4, 1, '#f6f3e8', -2.4, -3.4, 2.6], ['body', 1.2, 9, 0.5, LEATHER, -1.2, 1, 2.3, 0, false, 0.5]],
+  tablet: () => [['body', 3, 2.3, 0.5, '#1b2a4a', 2.5, -5.4, 2.6], ['body', 2.5, 1.8, 0.55, '#62c8ff', 2.5, -5.4, 2.62, 0, true]],
+  tie: (D) => [['body', 2, 1.5, 0.6, D.trim, 0, 4.8, 2.3], ['body', 1.5, 5.4, 0.5, D.trim, 0, 1.6, 2.3]],
+  watch: () => [['body', 3.4, 0.6, 0.45, GOLD, 1.9, -1.2, 2.3], ['body', 1.3, 1.3, 0.5, GOLD, 3.2, -2.2, 2.3]],
+  coat: (D) => [['body', 2.2, 3.4, 0.5, D.top, -2.1, 3.9, 2.3], ['body', 2.2, 3.4, 0.5, D.top, 2.1, 3.9, 2.3], ['body', 8.9, 1.2, 4.9, D.top, 0, -5.4, 0]],
   // hats
+  newscap: (D) => [['head', 9.2, 2, 9.2, D.cap || '#5a4630', 0, 7.5, -0.2], ['head', 7, 0.8, 3, D.cap || '#5a4630', 0, 6.7, 5.2], ['head', 1.4, 0.9, 1.4, dk(D.cap || '#5a4630', 0.7), 0, 8.8, 0]],
+  headset: () => [['head', 9, 1, 1.6, '#1d2333', 0, 8.4, 0], ['head', 1.3, 2.8, 2.8, '#1d2333', 4.6, 4.2, 0], ['head', 1.3, 2.8, 2.8, '#1d2333', -4.6, 4.2, 0], ['head', 0.7, 0.7, 4, '#1d2333', 4.9, 2.4, 2], ['head', 1, 1, 1, '#62e4ff', 4.9, 2.4, 4.2, 0, true]],
+  tophat: (D) => [['head', 10.4, 0.8, 10.4, '#1b1b22', 0, 8.3, 0], ['head', 7.2, 4.6, 7.2, '#1b1b22', 0, 11, 0], ['head', 7.5, 1.1, 7.5, D.trim, 0, 9.3, 0]],
   wizard: (D) => [['head', 11, 1, 11, D.top2, 0, 8.4, 0], ['head', 7, 2.4, 7, D.top, 0, 10, 0], ['head', 7.3, 0.9, 7.3, D.trim, 0, 9.3, 0], ['head', 5, 2.4, 5, D.top, 0, 12.2, -0.4], ['head', 3, 2.4, 3, D.top, 0, 14.4, -1], ['head', 1.6, 1.6, 1.6, D.trim, 0, 16, -1.6]],
   straw: (D) => [['head', 13, 0.8, 13, '#e2c15a', 0, 8.3, 0], ['head', 7.4, 2.6, 7.4, '#d9b54a', 0, 9.9, 0], ['head', 7.7, 0.8, 7.7, D.trim, 0, 9.1, 0]],
   fedora: () => [['head', 11.4, 0.8, 11.4, '#7a5530', 0, 8.3, 0], ['head', 8, 2.6, 8, '#8a6238', 0, 9.9, 0], ['head', 8.3, 0.8, 8.3, '#3a2a1a', 0, 9.1, 0]],
@@ -128,6 +138,7 @@ const HAIR = {
 };
 function gearBoxes(D) {
   const out = [];
+  if (D.moustache) out.push(['head', 5, 1.1, 0.8, D.moustache, 0, 1.6, 4.3]);
   if (HAIR[D.hairStyle]) out.push(...HAIR[D.hairStyle](D));
   if (D.beard) out.push(['head', 6.4, 3, 1, D.beard, 0, 1.3, 4.3]);
   for (const k of D.gear || []) if (GEAR[k]) out.push(...GEAR[k](D));
@@ -175,6 +186,15 @@ export function drawSprite(ctx, D) {
   if (has('bandana')) { f(D.trim, 4, 1, 8, 2); f(D.trim, 12, 2, 1, 3); }
   if (has('turban')) { f(D.top2, 3, -1, 10, 3); f(D.top2, 5, -2, 6, 1); f(D.top, 7, 0, 2, 1); }
   if (has('headband')) f('#c23b32', 4, 1, 8, 1);
+  if (has('newscap')) { f(D.cap || '#5a4630', 3, -1, 10, 2); f(D.cap || '#5a4630', 4, 1, 8, 1); }
+  if (has('headset')) { f('#1d2333', 4, -1, 8, 1); f('#1d2333', 3, 2, 1, 4); f('#1d2333', 12, 2, 1, 4); f('#62e4ff', 11, 6, 1, 1); }
+  if (has('tophat')) { f('#1b1b22', 2, -1, 12, 1); f('#1b1b22', 4, -6, 8, 5); f(D.trim, 4, -2, 8, 1); }
+  if (has('tie')) { f(D.trim, 7, 8, 2, 2); f(D.trim, 7, 10, 2, 5); }
+  if (has('satchel')) { f('#7a5530', 4, 18, 3, 3); f(LEATHER, 4, 17, 3, 1); for (let i = 0; i < 8; i++) f(LEATHER, 5 + i, 9 + i, 1, 1); }
+  if (has('tablet')) { f('#1b2a4a', 9, 18, 3, 3); f('#62c8ff', 10, 19, 1, 1); }
+  if (has('watch')) { f(GOLD, 9, 14, 3, 1); f(GOLD, 11, 15, 1, 1); }
+  if (has('coat')) { f(D.top, 4, 8, 2, 4); f(D.top, 10, 8, 2, 4); }
+  if (D.moustache) f(D.moustache, 6, 6, 4, 1);
 }
 // Head and shoulders on a 16×16 canvas (used for the chat portrait).
 export function drawFace(ctx, D) {
@@ -211,9 +231,11 @@ export function createFigure(design, opts = {}) {
     for (const k in SIZE) { ctx[k].clearRect(0, 0, SIZE[k][0], SIZE[k][1]); PAINT[k](ctx[k], D); tex[k].needsUpdate = true; }
     noseMat.color.copy(lin(dk(D.skin, 0.9)));
     for (const m of gear) { m.parent.remove(m); m.geometry.dispose(); }
-    gear = gearBoxes(D).map(([p, w, h, d, c, x, y, z, tilt, glows]) => {
+    // slimmer arms for some figures
+    for (const [arm, side] of [[parts.armL, 1], [parts.armR, -1]]) { arm.children[0].scale.x = D.slim ? 0.75 : 1; arm.position.x = side * (D.slim ? 5.5 : 6) * PXU; }
+    gear = gearBoxes(D).map(([p, w, h, d, c, x, y, z, tilt, glows, roll]) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w * PXU, h * PXU, d * PXU), glows ? lit(c) : plain(c));
-      m.position.set(x * PXU, y * PXU, z * PXU); if (tilt) m.rotation.x = tilt; m.castShadow = !!opts.shadows; m.receiveShadow = false; if (opts.tag) m.userData.agent = opts.tag;
+      m.position.set(x * PXU, y * PXU, z * PXU); if (tilt) m.rotation.x = tilt; if (roll) m.rotation.z = roll; m.castShadow = !!opts.shadows; m.receiveShadow = false; if (opts.tag) m.userData.agent = opts.tag;
       parts[p].add(m); return m;
     });
   };

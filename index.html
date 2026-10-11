@@ -9,6 +9,7 @@
 <!-- keep the browser's own bars and tab light, whatever the visitor's system setting -->
 <meta name="color-scheme" content="light">
 <meta name="theme-color" content="#f4f1e6">
+<!-- Safari colours its tab bar from the page background, so html and body are light too (see style.css) -->
 
 <!-- Link preview (the card shown when the site is pasted into Telegram, LinkedIn, etc.).
      The picture is public/og-image.jpg (1200 x 630 pixels).
@@ -88,8 +89,16 @@
 <div id="board" role="dialog" aria-labelledby="boardTitle">
   <div class="board-panel">
     <div class="board-head"><strong id="boardTitle" data-t="boardTitle"></strong><button class="xbtn" id="boardClose" aria-label="Close">×</button></div>
-    <p class="board-hint" data-t="boardHint"></p>
-    <div class="board-body"><div id="boardList"></div><div id="boardDetail"></div></div>
+    <div class="board-body">
+      <div id="boardHero"></div>
+      <div class="board-side">
+        <p class="board-hint" data-t="boardHint"></p>
+        <div id="boardGrid"></div>
+        <h3 data-t="activity"></h3>
+        <ol id="boardLog"></ol>
+        <small class="board-note" data-t="sampleLog"></small>
+      </div>
+    </div>
   </div>
 </div>
 

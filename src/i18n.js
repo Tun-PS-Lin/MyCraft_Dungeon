@@ -5,9 +5,9 @@ import { LANGUAGE_TOGGLE } from './config.js';
 const UI = {
   en: {
     introSub: 'Portfolio village', settings: 'Settings',
-    break: 'On a break', coming: 'On the way', here: 'At the board', openBoard: 'Open the agent board', boardTitle: 'Agent board', boardHint: 'Pick an agent to see what they do. Agents out in the village can be called back.',
-    schedule: 'Runs', delivers: 'Delivers', where: 'Right now', whereDesk: 'At the desk', whereHall: 'In the town hall', whereOut: 'Out in the village', whereWay: 'Walking over', whereHere: 'Waiting at the board',
-    call: 'Call to the board', called: 'On the way', isHere: 'Already here', boardTalk: 'Walk up to an agent and press E to try their demo.', boardTalkTouch: 'Walk up to an agent and tap Talk to try their demo.',
+    break: 'On a break', coming: 'On the way', here: 'At the table', lastRun: 'Last run', activity: 'Activity', sampleLog: 'Sample activity, generated in your browser.', today: 'Today', yesterday: 'Yesterday', notYet: 'Nothing yet this visit', minsAgo: '{n} min ago', justNow: 'Just now', openBoard: 'Open the agent board', boardTitle: 'Agent board', boardHint: 'Pick an agent to see what they do and what they last did.',
+    schedule: 'Runs', delivers: 'Delivers', where: 'Right now', whereDesk: 'At the desk', whereHall: 'In the town hall', whereOut: 'Out in the village', whereWay: 'Walking over', whereHere: 'Waiting at the meeting table', whereStall: 'Over at {name}',
+    call: 'Call to the meeting table', called: 'On the way', isHere: 'At the table', boardTalk: 'Walk up to an agent and press E to try their demo.', boardTalkTouch: 'Walk up to an agent and tap Talk to try their demo.',
     demoNote: 'Demo with sample data. Nothing real is triggered.',
     mapTitle: 'Village map', projects: 'Projects', village: 'Village', hello: 'Say hello', townHall: '{name} (town hall)',
     progress: '{n} of {t} stalls explored', progHint: 'Open every stall to earn a companion', progWon: 'Wolf companion unlocked',

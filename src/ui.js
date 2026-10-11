@@ -53,7 +53,7 @@ const ART = {
 };
 
 // handlers: { goTo(id), pickOutfit(id), endWardrobe(keep), toggleTheme() -> bool, languageChanged(),
-//             agentState(id) -> { status, where }, callAgent(id), agentDesign(id) }
+//             agentState(id) -> { status, where, last }, agentLog() -> [...], callAgent(id), agentDesign(id) }
 export function createUI(canvas, handlers) {
   const scrim = $('scrim'), side = $('side'), menuBtn = $('menuBtn'), menuScrim = $('menuScrim'), promptEl = $('prompt'), touchUI = $('touch'), tUse = $('tUse');
   const ward = $('wardrobe'), chat = $('chat'), toastEl = $('toast');
@@ -166,33 +166,46 @@ export function createUI(canvas, handlers) {
   function closeChat() { if (!chatAgent) return; chatAgent = null; clearInterval(typer); demoStop(); demoStop = () => {}; chat.classList.remove('show'); sound.play('close'); focusGame(); }
   $('chatClose').onclick = closeChat;
 
-  /* agent board: who is who, where they are, and a button to call one over */
-  const board = $('board'); let boardOpen = false, boardPick = AGENTS[0].id, boardTick = 0;
-  const brow = {};
+  /* agent board, laid out like a character-select screen: pick an agent on the right,
+     and the left side shows them large with what they do, when they last ran and a call button */
+  const board = $('board'); let boardOpen = false, boardPick = AGENTS[0].id, boardTick = 0, logSig = '';
+  const sprite = (id) => { const c = document.createElement('canvas'); c.width = SPRITE.w; c.height = SPRITE.h; drawSprite(c.getContext('2d'), handlers.agentDesign(id)); return c; };
+  const bcard = {};
   AGENTS.forEach((a) => {
-    const b = el('button', 'brow'), c = document.createElement('canvas'); c.width = 16; c.height = 16; c.style.background = a.color; drawFace(c.getContext('2d'), handlers.agentDesign(a.id));
-    const txt = el('span'); txt.appendChild(el('strong', '', a.name)); const st = el('em'); txt.appendChild(st); b.append(c, txt); b.style.setProperty('--accent', a.color);
-    b.onclick = () => { boardPick = a.id; sound.play('near'); paintBoard(true); }; $('boardList').appendChild(b); brow[a.id] = { b, st, c };
+    const b = el('button', 'bcard'), st = el('span'); b.append(sprite(a.id), el('strong', '', a.name), st, el('em'));
+    b.onclick = () => { boardPick = a.id; sound.play('near'); paintBoard(true); }; $('boardGrid').appendChild(b); bcard[a.id] = { b, st };
   });
+  const whereText = (w) => t(w.key, w);
+  const lastText = (l) => (l.real ? [l.when, l.result] : l.none ? [t('notYet'), ''] : l.at ? [t(l.days ? 'yesterday' : 'today') + ' ' + l.at, l.result] : [l.mins < 1 ? t('justNow') : t('minsAgo', { n: l.mins }), l.result.charAt(0).toUpperCase() + l.result.slice(1)]);
   function paintBoard(full) {
-    AGENTS.forEach((a) => { const s = handlers.agentState(a.id); brow[a.id].st.textContent = t(s.status); brow[a.id].st.className = s.status; brow[a.id].b.classList.toggle('on', a.id === boardPick); });
-    const a = AGENTS.find((q) => q.id === boardPick), s = handlers.agentState(a.id), d = $('boardDetail');
+    AGENTS.forEach((a) => { const s = handlers.agentState(a.id), c = bcard[a.id]; c.st.textContent = t(s.status); c.st.className = s.status; c.b.classList.toggle('on', a.id === boardPick); c.b.setAttribute('aria-pressed', String(a.id === boardPick)); c.b.lastChild.textContent = t('selected'); });
+    const a = AGENTS.find((q) => q.id === boardPick), s = handlers.agentState(a.id), d = $('boardHero');
     if (full) {
       d.textContent = ''; d.style.setProperty('--accent', a.color);
-      const head = el('div', 'bhead'), c = document.createElement('canvas'); c.width = 16; c.height = 16; c.style.background = a.color; drawFace(c.getContext('2d'), handlers.agentDesign(a.id));
-      const name = el('div'); name.append(el('strong', '', a.name), el('span', '', tr(a, 'role'))); head.append(c, name); d.appendChild(head);
-      d.appendChild(el('p', 'babout', a.about || tr(a, 'line')));
-      const facts = el('dl', 'bfacts'); [['schedule', a.schedule], ['delivers', a.delivers], ['where', '']].forEach(([k, v]) => { if (k !== 'where' && !v) return; facts.appendChild(el('dt', '', t(k))); const dd = el('dd', '', v); if (k === 'where') dd.id = 'boardWhere'; facts.appendChild(dd); });
+      const state = el('span', 'bstate'); state.id = 'boardState';
+      d.append(sprite(a.id), el('strong', '', a.name), el('span', 'brole', tr(a, 'role')), state, el('p', 'babout', a.about || tr(a, 'line')));
+      const facts = el('dl', 'bfacts');
+      [['schedule', a.schedule], ['delivers', a.delivers], ['lastRun', null, 'boardLast'], ['where', null, 'boardWhere']].forEach(([k, v, id]) => { if (!id && !v) return; facts.appendChild(el('dt', '', t(k))); const dd = el('dd', '', v || ''); if (id) dd.id = id; facts.appendChild(dd); });
       d.appendChild(facts);
       const call = el('button', 'dbtn'); call.id = 'boardCall'; call.onclick = () => { handlers.callAgent(a.id); sound.play('villager'); paintBoard(false); }; d.appendChild(call);
       d.appendChild(el('p', 'bnote', t(isTouch ? 'boardTalkTouch' : 'boardTalk')));
     }
-    const w = $('boardWhere'), call = $('boardCall'); if (w) w.textContent = t(s.where);
-    if (call) { const busyNow = s.status === 'coming' || s.status === 'here'; call.disabled = busyNow; call.textContent = s.status === 'coming' ? t('called') : s.status === 'here' ? t('isHere') : t('call'); }
+    const st = $('boardState'); st.textContent = t(s.status); st.className = 'bstate ' + s.status;
+    $('boardWhere').textContent = whereText(s.where);
+    const [when, result] = lastText(s.last), lastEl = $('boardLast'); if (lastEl.dataset.v !== when + result) { lastEl.dataset.v = when + result; lastEl.textContent = when; if (result) lastEl.appendChild(el('small', '', result)); }
+    const call = $('boardCall'); call.disabled = s.status === 'coming' || s.status === 'here'; call.textContent = s.status === 'coming' ? t('called') : s.status === 'here' ? t('isHere') : t('call');
+    // activity log, newest first
+    const log = handlers.agentLog(), sig = log.length ? log[0].time + log[0].id + log[0].text + log.length : '';
+    if (sig !== logSig || full) { logSig = sig; const ol = $('boardLog'); ol.textContent = ''; log.slice(0, 6).forEach((e) => { const li = el('li'); li.style.setProperty('--c', e.color); const tm = el('time', '', e.time), body = el('span'); body.append(el('b', '', e.name), document.createTextNode(' ' + e.text)); li.append(tm, body); ol.appendChild(li); }); }
   }
-  function openBoard() { closeMenu(true); boardOpen = true; paintBoard(true); board.classList.add('show'); sound.play('open'); clearInterval(boardTick); boardTick = setInterval(() => paintBoard(false), 400); brow[boardPick].b.focus({ preventScroll: true }); }
+  function openBoard() { closeMenu(true); boardOpen = true; paintBoard(true); board.classList.add('show'); sound.play('open'); clearInterval(boardTick); boardTick = setInterval(() => paintBoard(false), 400); bcard[boardPick].b.focus({ preventScroll: true }); }
   function closeBoard() { if (!boardOpen) return; boardOpen = false; clearInterval(boardTick); board.classList.remove('show'); sound.play('close'); focusGame(); }
   $('boardClose').onclick = closeBoard; board.addEventListener('pointerdown', (e) => { if (e.target === board) closeBoard(); });
+
+  /* speech bubbles: a short line over an agent's head for a few seconds */
+  const bubbleUntil = {};
+  AGENTS.forEach((a) => { const b = el('div', 'bubble'); b.hidden = true; $('labels').appendChild(b); labels['say:' + a.id] = b; bubbleUntil[a.id] = 0; });
+  function say(id, text) { labels['say:' + id].textContent = text; bubbleUntil[id] = performance.now() + 4200; }
 
   /* achievement badge */
   let toastT = 0;
@@ -243,7 +256,7 @@ export function createUI(canvas, handlers) {
 
   const busy = () => !!openId || !!chatAgent || wardOpen || boardOpen || menuOpen();
   return {
-    isTouch, endIntro, openCard, closeCard, openMenu, closeMenu, setTheme, openWardrobe, closeWardrobe, openChat, closeChat, openBoard, closeBoard, toast,
+    isTouch, endIntro, openCard, closeCard, openMenu, closeMenu, setTheme, openWardrobe, closeWardrobe, openChat, closeChat, openBoard, closeBoard, toast, say,
     openId: () => openId, chatId: () => (chatAgent ? chatAgent.id : null), wardrobeOpen: () => wardOpen, boardOpen: () => boardOpen,
     // the small status line under an agent's name tag
     setAgentStatus(id, key) { if (agentState[id] === key) return; agentState[id] = key; agentStatus[id].textContent = t(key); labels[id].classList.toggle('away', key !== 'working'); },
@@ -258,8 +271,9 @@ export function createUI(canvas, handlers) {
     },
     setProgress(visited, unlocked) { progress = { visited, unlocked }; paintProgress(); },
     placeLabel(key, sx, sy, near, alpha = 1) {
+      if (key.startsWith('say:') && performance.now() > bubbleUntil[key.slice(4)]) alpha = 0;
       const e = labels[key]; if (alpha < 0.03) { if (!e.hidden) e.hidden = true; return; } if (e.hidden) e.hidden = false;
-      e.style.transform = 'translate(-50%,-100%) translate(' + sx.toFixed(1) + 'px,' + Math.max(44, sy).toFixed(1) + 'px)'; e.style.opacity = (alpha * (near || labelText[key] === undefined ? 1 : 0.72)).toFixed(2); e.classList.toggle('near', !!near);
+      e.style.transform = 'translate(-50%,-100%) translate(' + sx.toFixed(1) + 'px,' + Math.max(44, sy).toFixed(1) + 'px)'; e.style.opacity = (alpha * (near || labelText[key] === undefined ? 1 : 0.72)).toFixed(2); if (key === 'hall') e.hidden = true; // the hall now carries its own carved sign e.classList.toggle('near', !!near);
     },
   };
 }

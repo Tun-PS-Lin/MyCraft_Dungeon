@@ -15,7 +15,7 @@ import { sound } from './audio.js';
 import { t, tr } from './i18n.js';
 import { lamps, addLamp, MOOD } from './lights.js';
 import { cv } from './textures.js';
-import { drawFace } from './figures.js';
+import { drawSprite, SPRITE } from './figures.js';
 
 const canvas = document.getElementById('world');
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } } };
@@ -58,7 +58,7 @@ scene.add(sun, sun.target);
 buildWorld(scene, renderer);
 const stalls = buildStalls(scene);
 const hall = buildHall(scene);
-const agents = createAgents(scene, hall.board);
+const agents = createAgents(scene, hall);
 const player = createPlayer(scene), P = player.state;
 const chickens = createChickens(scene);
 const wolf = createWolf(scene, blocked);
@@ -84,7 +84,8 @@ const ui = createUI(canvas, {
   pickOutfit: (id) => player.setOutfit(id, false),
   endWardrobe: (keep) => { player.setOutfit(keep ? player.outfit() : wardrobePrev, true); },
   languageChanged: () => { refreshSlab(); boardSig = ''; },
-  agentState: (id) => { const n = agents.list.find((q) => q.id === id); return { status: agents.status(n), where: agents.where(n) }; },
+  agentState: (id) => { const n = agents.list.find((q) => q.id === id); return { status: agents.status(n), where: agents.where(n), last: agents.lastRun(n) }; },
+  agentLog: () => agents.log,
   agentDesign: (id) => agents.list.find((q) => q.id === id).design,
   callAgent: (id) => agents.call(id),
   toggleTheme: () => { nightTarget = nightTarget ? 0 : 1; try { sessionStorage.setItem('pv-theme', nightTarget ? 'dark' : 'light'); } catch (e) { /* ignore */ } return nightTarget === 1; },
@@ -100,13 +101,15 @@ function openStall(s) {
 function talkTo(n) { auto = null; ui.openChat(n, n.design); }
 
 /* ── the agent board in the hall: repainted whenever somebody's status changes ── */
-const faces = {}; for (const n of agents.list) { faces[n.id] = cv(16, 16, (g) => drawFace(g, n.design)); }
+const sprites = {}; for (const n of agents.list) { sprites[n.id] = cv(SPRITE.w, SPRITE.h, (g) => drawSprite(g, n.design)); }
 let boardSig = '';
+// each thing an agent does goes to the log on the board and, briefly, into a speech bubble
+agents.onEvent((e) => { if (e.bubble) ui.say(e.id, e.bubble); if (e.id === 'bobby') hall.setPapers(agents.list.find((n) => n.id === 'bobby').done); boardSig = ''; });
 function refreshBoard() {
   const sig = agents.list.map((n) => agents.status(n)).join();
   for (const n of agents.list) ui.setAgentStatus(n.id, agents.status(n));
   if (sig === boardSig) return; boardSig = sig;
-  hall.board.draw(agents.list.map((n) => ({ name: n.name, role: tr(n, 'role'), color: n.color, face: faces[n.id], status: t(agents.status(n)), live: !n.outside && n.task !== 'break' })));
+  hall.board.draw(agents.list.map((n) => ({ name: n.name, role: tr(n, 'role'), color: n.color, sprite: sprites[n.id], status: t(agents.status(n)), live: !n.outside && n.task !== 'break' })), agents.log);
 }
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardSig = ''; });
 function openBoard() { auto = null; ui.openBoard(); }
@@ -319,7 +322,7 @@ function update(dt) {
   const place = (key, x, y, z, isNear, alpha) => { v3.set(x, y, z).project(camera); ui.placeLabel(key, (v3.x * 0.5 + 0.5) * w, (-v3.y * 0.5 + 0.5) * h, isNear, v3.z > 1 ? 0 : alpha * hide); };
   for (const s of stalls) place(s.id, s.pos[0], 5.3, s.pos[1], s.id === nearKey, 1);
   place('hall', hall.labelAt[0], hall.labelAt[1], hall.labelAt[2], false, 1 - indoors);
-  for (const n of agents.list) place(n.id, n.x, n.y + 2.5 - n.sit * 0.3, n.z, n.id === nearKey, n.outside ? 1 : indoors);
+  for (const n of agents.list) { const a = n.outside ? 1 : indoors, top = n.y + 2.75 - n.sit * 0.3; place(n.id, n.x, top, n.z, n.id === nearKey, a); place('say:' + n.id, n.x, top + 1.6, n.z, false, a); }
 }
 // If the first few seconds run slowly, render at a lower resolution from then on.
 let probe = { frames: 0, time: 0 };

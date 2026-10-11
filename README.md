@@ -49,8 +49,10 @@ Interface wording (buttons, menu, prompts, the achievement text) in both languag
 
 ## The town hall and the agents
 
-- Agents sit and type at their desks, walk the carpets, and sometimes take a break out in the village (at most two at a time). Their name tag shows what they are doing.
-- The big **agent board** at the end of the hall lists everyone and their status. Press E beside it for the board menu: details for each agent and a button that calls one over to the board.
+- Agents sit and type at their desks, walk the carpets, and sometimes walk over to the stall they serve (`haunt` in `AGENTS`; at most two are away at a time). Their name tag shows what they are doing, and a speech bubble pops up when they start or finish something.
+- How each agent looks (clothes, hair, hats and other raised pieces) is set in `LOOKS` at the top of `src/agents.js`. Their desk-work lines for the log are in `WORK` in the same file.
+- The big **agent board** at the end of the hall shows everyone, their status and the latest activity. Press E beside it for the board menu: pick an agent to see what they do, when they last ran and where they are, and call them to the meeting table.
+- The activity log and the "last run" lines are sample data generated in the browser. To show real "last run" lines, set `LIVE_STATUS_URL` in `src/config.js` to a JSON endpoint (the format is in the comment there).
 - Talking to an agent opens its **demo**. Each demo is a small function in `src/demos.js` that runs entirely in the browser on made-up sample data. Nothing is fetched, sent or triggered. To wire up a real action later, replace a button's handler there with a call to your own endpoint.
 
 ## Link preview image

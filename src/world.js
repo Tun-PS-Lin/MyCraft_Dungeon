@@ -24,7 +24,7 @@ function classify(x, z) {
   let s;
   if (inside) {
     s = Math.min(ax - 3.4, az - 3.0, (Math.hypot(x / 12.5, z / 8) - 1) * 6, Math.abs(x + 12.6) - 1.8 + (z < -3 ? 9 : 0), Math.abs(x - 16.6) - 1.8 + (z < -3 ? 9 : 0));
-    s = Math.min(s, segDist(x, z, 4, -3, HALL.doorX, HALL.z1 + 2) - 2.6, Math.hypot(x - HALL.doorX, z - (HALL.z1 + 3)) - 4.2);
+    s = Math.min(s, segDist(x, z, 4, -3, HALL.doorX, HALL.z1 + 2) - 2.6, Math.hypot(x - HALL.doorX, z - (HALL.z1 + 3)) - 4.2, Math.max(Math.abs(x - HALL.doorX) - 7.4, z - (HALL.z1 + 5.2))); // the last term is the paved forecourt
     for (const p of STALLS) { const f = frontOf(p, 2.4); s = Math.min(s, Math.hypot(x - f[0], z - f[1]) - 3.7); }
   } else if (ax < 8 && !(z < 0 && x > HALL.x0 - 2)) s = ax - 3.2 + (z < 0 ? BOUNDS.z0 - z : z - BOUNDS.z1) * 0.22; // the road runs off the top and bottom of the map
   else s = 99;

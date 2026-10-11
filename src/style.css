@@ -14,7 +14,8 @@
   --emerald-lo:#1c7038;
   --danger:#d8403a;     /* close button hover */
   --danger-lo:#7d1814;
-  --forest:#1a2612;     /* page ground behind the canvas */
+  --forest:#1a2612;     /* the dark green of the far trees */
+  --paper:#f4f1e6;      /* page ground. Safari tints its tab bar from this, so it stays light */
   --dim:rgba(6,9,14,.5);
   --display:"Pixelify Sans","Noto Sans Myanmar","Courier New",ui-monospace,monospace;
   --body:"Nunito","Noto Sans Myanmar","Segoe UI",system-ui,sans-serif;
@@ -24,7 +25,8 @@
 }
 html,body{height:100%}
 #side,#card,#chat,.ward-panel,.board-panel{color-scheme:dark}
-body{margin:0;background:var(--forest);color:var(--ink);font-family:var(--body);font-size:14px;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+html{background:var(--paper)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:14px;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
 [hidden]{display:none!important}
 #world{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none}
 button{font:inherit;color:inherit;cursor:pointer}
@@ -267,27 +269,45 @@ kbd.gap{margin-left:8px}
 .board-head{display:flex;align-items:center;justify-content:space-between}
 #boardTitle{font-family:var(--display);font-size:24px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
 .board-hint{margin:0;color:var(--ink-dim);font-size:14px}
-.board-body{display:grid;grid-template-columns:minmax(190px,240px) 1fr;gap:16px;align-items:start}
-#boardList{display:flex;flex-direction:column;gap:8px}
-.brow{display:flex;align-items:center;gap:10px;text-align:left;background:var(--night-2);border:3px solid var(--frame);padding:6px 8px;transition:border-color .15s,transform .15s}
-.brow:hover{transform:translateX(3px)}
-.brow.on{border-color:var(--accent)}
-.brow canvas,.bhead canvas{width:48px;height:48px;flex:none;image-rendering:pixelated;border:2px solid #000}
-.brow span{display:flex;flex-direction:column;min-width:0}
-.brow strong{font-family:var(--display);font-size:18px;letter-spacing:.05em;text-transform:uppercase}
-.brow em{font-style:normal;font-family:var(--display);font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--gold)}
-.brow em.working{color:var(--emerald-hi)}
-#boardDetail{background:var(--night-2);border:3px solid var(--accent,var(--frame));padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px;min-height:250px}
-.bhead{display:flex;align-items:center;gap:12px}
-.bhead canvas{width:64px;height:64px}
-.bhead div{display:flex;flex-direction:column}
-.bhead strong{font-family:var(--display);font-size:24px;letter-spacing:.06em;text-transform:uppercase}
-.bhead span{font-family:var(--display);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim)}
-.babout{margin:0;font-size:16px;line-height:1.5}
-.bfacts{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:14px}
+/* laid out like a character-select screen: the chosen agent large on the left, everyone to pick from on the right */
+.board-panel{width:min(900px,100%)}
+.board-body{display:grid;grid-template-columns:minmax(250px,300px) 1fr;gap:18px;align-items:start}
+#boardHero{background:var(--night-2);border:3px solid var(--accent,var(--frame));padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+#boardHero canvas{width:120px;height:240px;image-rendering:pixelated;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
+#boardHero strong{font-family:var(--display);font-size:28px;letter-spacing:.06em;text-transform:uppercase;line-height:1}
+#boardHero .brole{font-family:var(--display);font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+#boardHero .bstate{font-family:var(--display);font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);display:inline-flex;align-items:center;gap:6px}
+#boardHero .bstate::before{content:"";width:9px;height:9px;background:currentColor;box-shadow:0 0 0 1px #000}
+#boardHero .bstate.working{color:var(--emerald-hi)}
+#boardHero .dbtn{align-self:stretch}
+.babout{margin:0;font-size:15px;line-height:1.5}
+.bfacts{margin:0;width:100%;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13px;text-align:left}
 .bfacts dt{color:var(--ink-dim)}
 .bfacts dd{margin:0;font-weight:700}
-.bnote{margin:0;font-size:13px;color:var(--ink-dim)}
+.bfacts dd small{display:block;font-weight:500;color:var(--ink-dim);font-size:12px}
+.bnote{margin:0;font-size:12px;color:var(--ink-dim)}
+.board-side{display:flex;flex-direction:column;gap:10px;min-width:0}
+#boardGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.bcard{position:relative;background:#0c1019;border:3px solid var(--frame);padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s,transform .15s,background-color .15s}
+.bcard canvas{width:60px;height:120px;image-rendering:pixelated}
+.bcard:hover{border-color:var(--ink);transform:translateY(-2px)}
+.bcard strong{font-family:var(--display);font-size:15px;letter-spacing:.05em;text-transform:uppercase}
+.bcard span{font-family:var(--display);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold)}
+.bcard span.working{color:var(--emerald-hi)}
+.bcard em{position:absolute;top:-3px;right:-3px;font-style:normal;font-family:var(--display);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:var(--gold);color:var(--night);padding:1px 6px;opacity:0;transition:opacity .15s}
+.bcard.on{border-color:var(--gold);background:#161d2c}
+.bcard.on em{opacity:1}
+.board-side h3{margin:6px 0 0;font-family:var(--display);font-weight:500;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+#boardLog{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;min-height:132px}
+#boardLog li{display:grid;grid-template-columns:44px 1fr;gap:8px;font-size:13px;background:var(--night-2);border-left:4px solid var(--c,var(--frame));padding:4px 8px}
+#boardLog li:first-child{animation:rowIn .3s var(--ease) both}
+#boardLog time{font-family:var(--display);color:var(--ink-dim);font-variant-numeric:tabular-nums}
+#boardLog b{font-family:var(--display);letter-spacing:.04em;text-transform:uppercase}
+.board-note{color:var(--ink-dim);font-size:11px}
+
+/* speech bubbles over agents */
+.bubble{position:absolute;left:0;top:0;white-space:nowrap;background:var(--ink);color:var(--night);font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.03em;padding:3px 8px 4px;box-shadow:0 0 0 2px #000;will-change:transform;transition:opacity .25s ease}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-8px;width:8px;height:6px;margin-left:-4px;background:var(--ink);box-shadow:2px 0 0 #000,-2px 0 0 #000,0 2px 0 #000}
 
 /* wardrobe */
 #wardrobe{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .3s ease,visibility 0s .34s;
@@ -326,10 +346,10 @@ kbd.gap{margin-left:8px}
 #toast span{font-size:14px;color:var(--ink-dim)}
 
 /* opening title card: covers the first moments while the world is built, then lifts */
-#intro{position:fixed;inset:0;z-index:30;background:var(--forest);display:grid;place-items:center;transition:opacity .9s ease,visibility 0s .9s}
+#intro{position:fixed;inset:0;z-index:30;background:var(--paper);display:grid;place-items:center;transition:opacity .9s ease,visibility 0s .9s}
 #intro > div{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:0 var(--edge);animation:introIn .7s var(--ease) both;transition:transform 1s var(--ease),opacity .7s ease}
-#intro strong{font-family:var(--display);font-weight:700;font-size:clamp(44px,9vw,92px);letter-spacing:.08em;text-transform:uppercase;line-height:1;color:var(--ink);text-shadow:5px 5px 0 #000}
-#intro span{font-family:var(--display);font-size:clamp(15px,2.2vw,22px);letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
+#intro strong{font-family:var(--display);font-weight:700;font-size:clamp(44px,9vw,92px);letter-spacing:.08em;text-transform:uppercase;line-height:1;color:var(--night);text-shadow:5px 5px 0 #cfc7b2}
+#intro span{font-family:var(--display);font-size:clamp(15px,2.2vw,22px);letter-spacing:.3em;text-transform:uppercase;color:var(--emerald-lo)}
 #intro.lift{opacity:0;visibility:hidden}
 #intro.lift > div{transform:translateY(-46px);opacity:0}
 @keyframes introIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -365,9 +385,16 @@ body:not(.touch) .touch-only,body.touch .desk-only{display:none}
   .chat-head{padding-right:46px}
   .demo{margin-left:-58px} /* the demo runs the full width, under the portrait */
   .chat-hint{margin-left:-58px}
-  .board-body{grid-template-columns:1fr}
-  #boardList{flex-direction:row;flex-wrap:wrap}
-  .brow{flex:1 1 140px}
+  /* phones: pick an agent, read about them, then the activity log */
+  .board-body{display:flex;flex-direction:column;gap:10px}
+  .board-side{display:contents}
+  .board-hint{order:0}#boardGrid{order:1}#boardHero{order:2}.board-side h3,#boardLog,.board-note{order:3}
+  #boardGrid{gap:6px}
+  .bcard canvas{width:40px;height:80px}
+  .bcard strong{font-size:13px}
+  #boardHero canvas{width:80px;height:160px}
+  #boardLog{min-height:0}
+  #boardLog li:nth-child(n+4){display:none}
   .dcity{width:100%}
   #chatFace{width:52px;height:52px}
 }
