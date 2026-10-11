@@ -78,7 +78,7 @@ export function buildHall(scene) {
   // timber band under the eaves
   B(fade, w + 0.6, 0.45, 0.4, darkF, cx, wallH - 0.22, z1 + 0.16);
   // windows with shutters and flower boxes (none behind the right-hand banner)
-  [lx - 0.4, rx + 2.2].forEach((x) => {
+  [doorX - 6.15, doorX + 6.15].forEach((x) => { // the same distance either side of the door, clear of the buttresses
     B(fade, 1.5, 2, 0.08, paneF, x, 3.3, z1 + 0.03, true); B(fade, 1.7, 0.14, 0.14, darkF, x, 3.3, z1 + 0.08); B(fade, 0.14, 2.1, 0.14, darkF, x, 3.3, z1 + 0.08);
     B(fade, 1.9, 0.22, 0.24, stoneF, x, 4.42, z1 + 0.1); B(fade, 1.9, 0.22, 0.3, stoneF, x, 2.18, z1 + 0.12);
     for (const s of [-1, 1]) B(fade, 0.5, 2, 0.1, plankF, x + s * 1.05, 3.3, z1 + 0.08);

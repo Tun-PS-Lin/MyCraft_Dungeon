@@ -28,7 +28,7 @@ npm run build    # production build in dist/
 | Open a stall or talk to an agent | E when near, or click it | the yellow button, or tap it |
 | Close | Esc, E or the × button | × button |
 
-The five buttons in the top-right corner are language (English / Burmese), music, sound effects, day/night, and the menu. A fresh visit opens in day or night to match the visitor's clock; the button overrides it for that visit. Music and sound settings, the chosen outfit, explored stalls and the wolf are remembered in the visitor's browser.
+The five buttons in the top-right corner are language (English / Burmese), music, sound effects, day/night, and the menu. On phones only day/night and the menu stay on screen; the other three move into the menu under Settings. A fresh visit opens in day or night to match the visitor's clock; the button overrides it for that visit. Music and sound settings, the chosen outfit, explored stalls and the wolf are remembered in the visitor's browser.
 
 Picking a place in the menu makes the character walk there, and so does tapping or clicking the ground. Scroll, pinch, or press + and - to zoom a little; the camera angle is fixed. Opening all six stalls unlocks a wolf companion.
 
@@ -40,6 +40,7 @@ Everything you are likely to edit is in **`src/config.js`**:
 - `AGENTS`: the town hall agents: name, role, robe colours, which desk, and the line they say. Talking to an agent only shows its line; nothing real is triggered yet.
 - `MUSIC_FILE` and `MUSIC_VOLUME`: the looping background track.
 - `CONTACT_EMAIL`: the address shown in the Contact popup.
+- `INTRO_NAME`: the name on the short title card shown when the page opens.
 - `CREDIT` and `REPO_URL`: the small credit line at the bottom of the screen and where it links. With `REPO_URL` empty it is plain text.
 - `SOUND_FILES`: real sound-effect files (see below).
 - `TUNING`: walk and run speed, jump height, camera angle and distance, and how close you must be to a stall to open it.
@@ -50,8 +51,8 @@ Interface wording (buttons, menu, prompts, the achievement text) in both languag
 
 This is the card shown when the site address is pasted into Telegram, LinkedIn, Facebook, X and so on.
 
-1. Take a screenshot of the village and crop it to **1200 × 630 pixels**.
-2. Save it as **`public/og-image.jpg`**.
+1. The picture is already in place as **`public/og-image.jpg`** (1200 × 630 pixels). Replace that file to change it.
+2. Deploy the site once so you know its address.
 3. Open **`index.html`** and replace `https://YOUR-SITE` with your real address in the two `og:` lines near the top (for example `https://mycraft.vercel.app`). The image address must be the full address, not a relative path.
 4. Commit, push, and let Vercel redeploy.
 5. Check it by pasting your address into https://www.opengraph.xyz or by sending the link to yourself on Telegram. Apps cache previews; on Telegram, send the link to `@WebpageBot` to refresh it.
@@ -94,7 +95,7 @@ Background music is `public/assets/sounds/background_music.mp3`. Replace the fil
 | Popup pixel icon | `ART` in `src/ui.js` |
 | Block textures (16×16 PNG) | `src/textures.js` (replace a generated canvas with a loaded image) |
 | Stall models (`.glb`, e.g. from Blockbench) | `src/stalls.js` (load the model in place of that stall's builder) |
-| Outfits | add an entry to `OUTFITS` in `src/figures.js` (colours and a few style switches) |
+| Outfits | add an entry to `OUTFITS` in `src/figures.js`: colours, a hairstyle, and a `gear` list of raised pieces (hats, belt, backpack, pouches, cape, boots ...). New pieces go in `GEAR` in the same file |
 | Favicon | `public/favicon.svg` |
 | Social preview image (1200×630) | add to `public/` and reference it from `index.html` |
 
@@ -108,7 +109,7 @@ src/config.js       content, links, sounds, tuning
 src/i18n.js         interface wording in English and Burmese
 src/main.js         renderer, lights, input, camera, game loop
 src/world.js        ground, paving stones, fences, forest, guide slab
-src/stalls.js       the six stalls
+src/stalls.js       the six stalls and their roofs
 src/hall.js         the town hall, its fading roof and the desks inside
 src/agents.js       the agents who walk and work in the hall
 src/figures.js      the blocky people: outfits, painting, posing

@@ -1,14 +1,16 @@
 // Interface layer: labels, the E prompt, the project popup, the menu, the wardrobe,
 // the agent chat box and the achievement badge. Plain DOM on top of the canvas so
 // text stays crisp and links are real links. All wording comes through i18n.js.
-import { STALLS, AGENTS, HALL_LABEL, CREDIT, REPO_URL } from './config.js';
+import { STALLS, AGENTS, HALL_LABEL, CREDIT, REPO_URL, INTRO_NAME } from './config.js';
 import { fill } from './textures.js';
 import { sound, music } from './audio.js';
-import { OUTFITS, drawSprite, drawFace } from './figures.js';
+import { OUTFITS, SPRITE, drawSprite, drawFace } from './figures.js';
 import { t, tr, getLang, setLang } from './i18n.js';
 import { BASE } from './base.js';
 
 const $ = (id) => document.getElementById(id);
+// a lighter version of a stall colour, readable as text on a dark ground
+const lighten = (hex, k = 0.5) => { const n = parseInt(hex.slice(1), 16); return 'rgb(' + [16, 8, 0].map((s) => Math.round(((n >> s) & 255) * (1 - k) + 255 * k)).join(',') + ')'; };
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 
 /* 32×32 pixel-art picture for each popup. Replace with <img> files later if you like. */
@@ -63,7 +65,7 @@ export function createUI(canvas, handlers) {
   /* project popup */
   function fillCard() {
     const p = STALLS.find((q) => q.id === openId); if (!p) return;
-    $('cardKicker').textContent = tr(p, 'label'); $('cardTitle').textContent = tr(p, 'title'); $('cardDesc').textContent = tr(p, 'desc');
+    $('cardTitle').textContent = tr(p, 'title'); $('cardDesc').textContent = tr(p, 'desc');
     const go = $('cardGo'), email = $('cardEmail');
     email.hidden = !p.email; if (p.email) { $('emailText').textContent = p.email; $('emailCopy').textContent = t('copy'); }
     if (p.url) {
@@ -79,11 +81,18 @@ export function createUI(canvas, handlers) {
     const p = STALLS.find((q) => q.id === id); if (!p || p.kind !== 'project') return;
     closeMenu(true); openId = id; fillCard();
     const g = $('cardArt').getContext('2d'); g.clearRect(0, 0, 32, 32); ART[id](g);
-    const img = $('cardImg'); if (p.image) { img.src = BASE + 'assets/images/' + p.image; img.alt = tr(p, 'title'); img.hidden = false; } else { img.hidden = true; img.removeAttribute('src'); }
-    $('card').scrollTop = 0; scrim.classList.add('show'); $('cardClose').focus({ preventScroll: true }); sound.play('open');
+    const card = $('card'), img = $('cardImg'); card.style.setProperty('--accent', p.color); card.classList.toggle('noimg', !p.image);
+    // empty the frame first, so the last stall's picture never shows while this one loads
+    img.classList.remove('ready'); img.removeAttribute('src'); img.alt = '';
+    if (p.image) { const pic = preload(p.image); const show = () => { if (openId !== id) return; img.src = pic.src; img.alt = tr(p, 'title'); requestAnimationFrame(() => img.classList.add('ready')); }; if (pic.complete && pic.naturalWidth) show(); else { pic.addEventListener('load', show, { once: true }); pic.addEventListener('error', () => { if (openId === id) card.classList.add('noimg'); }, { once: true }); } }
+    card.scrollTop = 0; scrim.classList.add('show'); $('cardClose').focus({ preventScroll: true }); sound.play('open');
   }
   function closeCard() { if (!openId) return; openId = null; scrim.classList.remove('show'); sound.play('close'); focusGame(); }
-  $('cardClose').onclick = closeCard; $('cardImg').onerror = () => { $('cardImg').hidden = true; };
+  $('cardClose').onclick = closeCard;
+  // fetch every popup picture ahead of time, once the page has settled
+  const pics = {};
+  function preload(file) { if (!pics[file]) { pics[file] = new Image(); pics[file].decoding = 'async'; pics[file].src = BASE + 'assets/images/' + file; } return pics[file]; }
+  setTimeout(() => STALLS.forEach((p) => { if (p.image) preload(p.image); }), 2500);
   scrim.addEventListener('pointerdown', (e) => { if (e.target === scrim) closeCard(); });
   $('emailCopy').onclick = () => {
     const done = () => { $('emailCopy').textContent = t('copied'); };
@@ -121,16 +130,16 @@ export function createUI(canvas, handlers) {
   if (REPO_URL) { const a = el('a', '', CREDIT); a.href = REPO_URL; a.target = '_blank'; a.rel = 'noopener'; credit.appendChild(a); } else credit.textContent = CREDIT;
 
   /* labels: stalls, the town hall, and a name tag for each agent */
-  const labels = {}, agentStatus = [];
-  const addLabel = (key, onClick) => { const b = el('button', 'lbl'); b.onclick = onClick; $('labels').appendChild(b); labels[key] = b; };
-  STALLS.forEach((p) => addLabel(p.id, () => (p.kind === 'project' ? openCard(p.id) : handlers.goTo(p.id))));
-  addLabel('hall', () => handlers.goTo('hall'));
+  const labels = {}, labelText = {}, agentStatus = [];
+  const addLabel = (key, color, onClick) => { const b = el('button', 'lbl'); b.appendChild(el('i')); labelText[key] = b.appendChild(el('span')); b.style.setProperty('--accent', color); b.style.setProperty('--accent-hi', lighten(color)); b.onclick = onClick; $('labels').appendChild(b); labels[key] = b; };
+  STALLS.forEach((p) => addLabel(p.id, p.color, () => (p.kind === 'project' ? openCard(p.id) : handlers.goTo(p.id))));
+  addLabel('hall', '#b9b6ae', () => handlers.goTo('hall'));
   AGENTS.forEach((a) => { const d = el('div', 'alab'); d.appendChild(el('strong', '', a.name)); const s = el('span'); s.appendChild(el('i')); const w = el('b'); s.appendChild(w); agentStatus.push(w); d.appendChild(s); $('labels').appendChild(d); labels[a.id] = d; });
 
   /* wardrobe */
   const grid = $('wardGrid'), cards = {};
   OUTFITS.forEach((o) => {
-    const b = el('button', 'wcard'); const c = document.createElement('canvas'); c.width = 16; c.height = 32; drawSprite(c.getContext('2d'), o);
+    const b = el('button', 'wcard'); const c = document.createElement('canvas'); c.width = SPRITE.w; c.height = SPRITE.h; drawSprite(c.getContext('2d'), o);
     const name = el('span', 'wname'), tag = el('em'); b.appendChild(c); b.appendChild(name); b.appendChild(tag);
     b.onclick = () => { select(o.id); handlers.pickOutfit(o.id); sound.play('near'); }; grid.appendChild(b); cards[o.id] = { b, name, tag };
   });
@@ -172,8 +181,8 @@ export function createUI(canvas, handlers) {
   let promptVars = null;
   function paintText() {
     document.querySelectorAll('[data-t]').forEach((e) => { e.textContent = t(e.dataset.t); });
-    STALLS.forEach((p) => { labels[p.id].textContent = tr(p, 'label'); nav[p.id].name.textContent = tr(p, 'title'); });
-    labels.hall.textContent = hallName(); nav.hall.name.textContent = t('townHall', { name: hallName() });
+    STALLS.forEach((p) => { labelText[p.id].textContent = tr(p, 'label'); nav[p.id].name.textContent = tr(p, 'title'); });
+    labelText.hall.textContent = hallName(); nav.hall.name.textContent = t('townHall', { name: hallName() });
     agentStatus.forEach((w) => { w.textContent = t('working'); });
     OUTFITS.forEach((o) => { cards[o.id].name.textContent = t('o.' + o.id); cards[o.id].tag.textContent = t('selected'); });
     $('chatHint').textContent = t(isTouch ? 'chatHintTouch' : 'chatHint'); $('toastTitle').textContent = t('achTitle'); $('toastText').textContent = t('achText');
@@ -191,9 +200,18 @@ export function createUI(canvas, handlers) {
   };
   paintText();
 
+  /* phones: language, music and sound live in the menu, leaving day/night and the menu button on screen */
+  const narrow = window.matchMedia ? matchMedia('(max-width: 700px)') : null, tools = [langBtn, musicBtn, $('soundBtn')];
+  const placeTools = () => tools.forEach((b) => { if (narrow && narrow.matches) $('sideTools').appendChild(b); else document.body.insertBefore(b, themeBtn); });
+  placeTools(); if (narrow) { if (narrow.addEventListener) narrow.addEventListener('change', placeTools); else narrow.addListener(placeTools); }
+
+  /* opening title card */
+  const intro = $('intro'); $('introName').textContent = INTRO_NAME;
+  const endIntro = () => { intro.classList.add('lift'); setTimeout(() => intro.remove(), 1200); };
+
   const busy = () => !!openId || !!chatAgent || wardOpen || menuOpen();
   return {
-    isTouch, openCard, closeCard, openMenu, closeMenu, setTheme, openWardrobe, closeWardrobe, openChat, closeChat, toast,
+    isTouch, endIntro, openCard, closeCard, openMenu, closeMenu, setTheme, openWardrobe, closeWardrobe, openChat, closeChat, toast,
     openId: () => openId, chatId: () => (chatAgent ? chatAgent.id : null), wardrobeOpen: () => wardOpen,
     paused: busy,
     // closes whatever is open; returns true if something was
@@ -207,7 +225,7 @@ export function createUI(canvas, handlers) {
     setProgress(visited, unlocked) { progress = { visited, unlocked }; paintProgress(); },
     placeLabel(key, sx, sy, near, alpha = 1) {
       const e = labels[key]; if (alpha < 0.03) { if (!e.hidden) e.hidden = true; return; } if (e.hidden) e.hidden = false;
-      e.style.transform = 'translate(-50%,-100%) translate(' + sx.toFixed(1) + 'px,' + Math.max(44, sy).toFixed(1) + 'px)'; e.style.opacity = alpha.toFixed(2); e.classList.toggle('near', !!near);
+      e.style.transform = 'translate(-50%,-100%) translate(' + sx.toFixed(1) + 'px,' + Math.max(44, sy).toFixed(1) + 'px)'; e.style.opacity = (alpha * (near || labelText[key] === undefined ? 1 : 0.72)).toFixed(2); e.classList.toggle('near', !!near);
     },
   };
 }

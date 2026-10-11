@@ -2,6 +2,7 @@
 // Stall and agent text is translated in config.js (each entry's `my` block).
 const UI = {
   en: {
+    introSub: 'Portfolio village', settings: 'Settings',
     mapTitle: 'Village map', projects: 'Projects', village: 'Village', hello: 'Say hello', townHall: '{name} (town hall)',
     progress: '{n} of {t} stalls explored', progHint: 'Open every stall to earn a companion', progWon: 'Wolf companion unlocked',
     menuHint: 'Pick a place and the character walks there. Tap or click the ground to walk too.',
@@ -16,6 +17,7 @@ const UI = {
     'o.mage': 'Mage', 'o.merchant': 'Merchant', 'o.farmer': 'Farmer', 'o.knight': 'Knight', 'o.sailor': 'Sailor', 'o.watch': 'Night watch',
   },
   my: {
+    introSub: 'ပို့ဖိုလီယို ရွာလေး', settings: 'ဆက်တင်များ',
     mapTitle: 'ရွာမြေပုံ', projects: 'ပရောဂျက်များ', village: 'ရွာ', hello: 'နှုတ်ဆက်ရန်', townHall: '{name} (မြို့တော်ခန်းမ)',
     progress: 'ဆိုင် {t} ခုအနက် {n} ခု လည်ပတ်ပြီး', progHint: 'အဖော်တစ်ကောင် ရရန် ဆိုင်အားလုံးကို ဖွင့်ကြည့်ပါ', progWon: 'ဝံပုလွေအဖော် ရရှိပြီ',
     menuHint: 'နေရာတစ်ခု ရွေးလိုက်ပါက ဇာတ်ကောင်က ထိုနေရာသို့ လမ်းလျှောက်သွားပါမည်။ မြေပြင်ကို နှိပ်၍လည်း သွားနိုင်သည်။',

@@ -9,6 +9,8 @@ export const CONTACT_EMAIL = 'tunpyaysonelin@gmail.com';
 
 // Small credit line at the bottom of the screen. Leave REPO_URL empty for plain text.
 export const CREDIT = 'Made by Tun. L';
+// The name on the short title card when the page opens.
+export const INTRO_NAME = 'Tun. L';
 export const REPO_URL = 'https://github.com/Tun-PS-Lin/MyCraft_Dungeon';
 
 // The stalls.
@@ -130,10 +132,10 @@ export const MUSIC_VOLUME = 0.14;
 
 export const TUNING = {
   walkSpeed: 4.3,
-  runSpeed: 7.6,
+  runSpeed: 6.6,
   jumpSpeed: 7.6,
   gravity: 22,
-  playerScale: 1.2,   // 1 is two blocks tall
+  playerScale: 1.15,  // 1 is two blocks tall
   interactRange: 2.6, // how close to a stall (from any side) before E works
   talkRange: 2.4,     // how close to an agent before E works
   cameraYaw: 0.16,    // radians; 0 looks straight up the map

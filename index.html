@@ -8,8 +8,8 @@
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
 <!-- Link preview (the card shown when the site is pasted into Telegram, LinkedIn, etc.).
-     1. Save your screenshot as public/og-image.jpg (1200 x 630 pixels).
-     2. Replace https://YOUR-SITE below with your real address, in both places. -->
+     The picture is public/og-image.jpg (1200 x 630 pixels).
+     Replace https://YOUR-SITE below with your real address, in both places. -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="James's Portfolio Village">
 <meta property="og:description" content="A small explorable village. Walk up to a market stall to open a project, or visit the town hall to meet the agents.">
@@ -26,6 +26,7 @@
 <body>
 <!-- app:start -->
 <canvas id="world" aria-label="A small blocky village with market stalls and a town hall. Walk to a stall and press E to read about a project."></canvas>
+<div id="atmo"><div class="haze top"></div><div class="haze bottom"></div></div>
 <div id="labels"></div>
 
 <div id="menuScrim"></div>
@@ -46,6 +47,8 @@
 <nav id="side" aria-label="Places in the village">
   <div class="side-head" data-t="mapTitle"></div>
   <div id="progress"><div id="progCount"></div><div class="bar"><div id="progBar"></div></div><div id="progHint"></div></div>
+  <h2 class="narrow-only" data-t="settings"></h2>
+  <div id="sideTools" class="narrow-only"></div>
   <h2 data-t="projects"></h2>
   <div id="navProjects" class="navlist"></div>
   <h2 data-t="village"></h2>
@@ -69,7 +72,7 @@
 <div id="prompt" hidden><kbd>E</kbd><span id="promptText"></span></div>
 
 <div id="chat" role="dialog" aria-labelledby="chatName">
-  <canvas id="chatFace" width="8" height="8"></canvas>
+  <canvas id="chatFace" width="16" height="16"></canvas>
   <div class="chat-body">
     <div class="chat-head"><strong id="chatName"></strong><span id="chatRole"></span><span class="status"><i></i><b data-t="working"></b></span></div>
     <p id="chatText"></p>
@@ -88,10 +91,9 @@
 
 <div id="scrim">
   <div id="card" role="dialog" aria-modal="true" aria-labelledby="cardTitle">
-    <div class="card-top"><span class="card-spacer"></span><div id="cardKicker"></div><button class="xbtn" id="cardClose" aria-label="Close">×</button></div>
-    <canvas id="cardArt" width="32" height="32"></canvas>
-    <img id="cardImg" alt="" hidden>
-    <h1 id="cardTitle"></h1>
+    <button class="xbtn" id="cardClose" aria-label="Close">×</button>
+    <div id="cardShot"><img id="cardImg" alt=""></div>
+    <div class="card-head"><canvas id="cardArt" width="32" height="32"></canvas><h1 id="cardTitle"></h1></div>
     <p id="cardDesc"></p>
     <div id="cardEmail" hidden><span id="emailText"></span><button id="emailCopy" type="button">Copy</button></div>
     <a id="cardGo" target="_blank" rel="noopener"><span></span><small></small></a>
@@ -103,6 +105,7 @@
   <button class="tbtn" id="tUse" hidden></button>
   <button class="tbtn" id="tJump"></button>
 </div>
+<div id="intro"><div><strong id="introName"></strong><span data-t="introSub"></span></div></div>
 <!-- app:end -->
 <script type="module" src="./src/main.js"></script>
 </body>

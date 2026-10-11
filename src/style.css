@@ -30,19 +30,29 @@ button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 
 /* stall name labels */
+/* depth: a soft vignette, and a slight blur along the far and near edges */
+#atmo{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 78% at 50% 54%,transparent 52%,rgba(4,7,11,.4) 100%)}
+.haze{position:absolute;left:0;right:0;-webkit-backdrop-filter:blur(2.5px);backdrop-filter:blur(2.5px)}
+.haze.top{top:0;height:24%;-webkit-mask-image:linear-gradient(to bottom,#000 10%,transparent);mask-image:linear-gradient(to bottom,#000 10%,transparent)}
+.haze.bottom{bottom:0;height:13%;-webkit-mask-image:linear-gradient(to top,#000,transparent);mask-image:linear-gradient(to top,#000,transparent)}
+body.touch .haze{display:none}
 #labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
 /* language change: the words fade out, are rewritten, and fade back in */
 #labels,#credit,#prompt,#touch .tbtn{transition:opacity .28s ease}
 body.lang-swap #labels,body.lang-swap #side > *,body.lang-swap #prompt,body.lang-swap #card > *,body.lang-swap .chat-body,body.lang-swap .ward-panel > *,body.lang-swap #wardDone,body.lang-swap #toast > div,body.lang-swap #touch .tbtn{opacity:0!important;transition:opacity .28s ease!important}
 /* Burmese script must not be letter-spaced, and needs taller lines */
 :lang(my) body *{letter-spacing:0!important}
-:lang(my) .lbl,:lang(my) .side-head,:lang(my) #side h2,:lang(my) .navbtn,:lang(my) #cardKicker,:lang(my) #cardTitle,:lang(my) #cardGo span,:lang(my) #wardTitle,:lang(my) #wardDone,:lang(my) .wname,:lang(my) .wcard em,:lang(my) #toast small,:lang(my) #toast strong,:lang(my) #chatRole,:lang(my) .alab span,:lang(my) .status,:lang(my) #prompt,:lang(my) .tbtn,:lang(my) #emailCopy,:lang(my) #progCount{line-height:1.6}
+:lang(my) .lbl,:lang(my) .side-head,:lang(my) #side h2,:lang(my) .navbtn,:lang(my) #cardTitle,:lang(my) #cardGo span,:lang(my) #wardTitle,:lang(my) #wardDone,:lang(my) .wname,:lang(my) .wcard em,:lang(my) #toast small,:lang(my) #toast strong,:lang(my) #chatRole,:lang(my) .alab span,:lang(my) .status,:lang(my) #prompt,:lang(my) .tbtn,:lang(my) #emailCopy,:lang(my) #progCount{line-height:1.6}
 :lang(my) #cardDesc,:lang(my) #chatText,:lang(my) .keys,:lang(my) #progHint,:lang(my) #toast span{line-height:1.85}
 :lang(my) #cardTitle{font-size:clamp(22px,4vw,28px)}
-.lbl{position:absolute;left:0;top:0;background:none;border:0;padding:4px 8px;pointer-events:auto;white-space:nowrap;
-  font-family:var(--display);font-weight:700;font-size:clamp(15px,1.7vw,24px);letter-spacing:.08em;text-transform:uppercase;
-  color:var(--ink);text-shadow:2px 2px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;will-change:transform;transition:color .2s}
-.lbl.near{color:var(--gold)}
+.lbl{position:absolute;left:0;top:0;background:none;border:0;padding:4px 8px;pointer-events:auto;white-space:nowrap;display:flex;align-items:center;gap:7px;
+  font-family:var(--display);font-weight:700;font-size:clamp(12px,1.15vw,16px);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink);text-shadow:2px 2px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;will-change:transform;transition:opacity .25s ease}
+/* a label stays small and faint until you are beside its stall, then grows and takes the stall's colour */
+.lbl span{display:inline-block;transform-origin:50% 100%;transition:transform .28s var(--ease),color .2s}
+.lbl i{width:8px;height:8px;flex:none;background:var(--accent,var(--ink-dim));box-shadow:0 0 0 2px #000;transition:transform .28s var(--ease)}
+.lbl.near span{transform:scale(1.4);color:var(--accent-hi,var(--gold))}
+.lbl.near i{transform:translateX(-10px) scale(1.4)}
 /* agent name tags */
 .alab{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:1px;white-space:nowrap;will-change:transform;
   font-family:var(--display);text-shadow:2px 2px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000}
@@ -69,7 +79,7 @@ body.lang-swap #labels,body.lang-swap #side > *,body.lang-swap #prompt,body.lang
 #langBtn{right:calc(var(--edge) + 4 * (var(--tb) + 8px))}
 #langBtn .ic{width:auto;height:auto;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.04em;line-height:1}
 #langBtn .ic-off{font-size:15px;letter-spacing:0}
-.topbtn .ic{grid-area:1/1;width:26px;height:26px;fill:currentColor;shape-rendering:crispEdges;transition:opacity .35s ease,transform .5s var(--ease)}
+.topbtn .ic{grid-area:1/1;width:24px;height:24px;fill:currentColor;shape-rendering:crispEdges;transition:opacity .35s ease,transform .5s var(--ease)}
 .topbtn .ic-off{opacity:0;transform:rotate(-90deg) scale(.5)}
 .topbtn.alt .ic-on{opacity:0;transform:rotate(90deg) scale(.5)}
 .topbtn.alt .ic-off{opacity:1;transform:none}
@@ -90,7 +100,10 @@ body.lang-swap #labels,body.lang-swap #side > *,body.lang-swap #prompt,body.lang
 #side.open{clip-path:inset(0 0 0 0);opacity:1;visibility:visible;transition:clip-path .44s var(--ease),opacity .1s ease}
 #side > *{opacity:0;transform:translateY(-8px);transition:opacity .16s ease,transform .2s ease}
 #side.open > *{opacity:1;transform:none;transition:opacity .28s ease,transform .4s var(--ease);transition-delay:calc(.1s + var(--i,0) * .04s)}
-#side > :nth-child(2){--i:1}#side > :nth-child(3){--i:2}#side > :nth-child(4){--i:3}#side > :nth-child(5){--i:4}#side > :nth-child(6){--i:5}#side > :nth-child(7){--i:6}#side > :nth-child(8){--i:7}#side > :nth-child(9){--i:8}#side > :nth-child(10){--i:9}
+#side > :nth-child(2){--i:1}#side > :nth-child(3){--i:2}#side > :nth-child(4){--i:3}#side > :nth-child(5){--i:4}#side > :nth-child(6){--i:5}#side > :nth-child(7){--i:6}#side > :nth-child(8){--i:7}#side > :nth-child(9){--i:8}#side > :nth-child(10){--i:9}#side > :nth-child(11){--i:10}#side > :nth-child(12){--i:11}
+.narrow-only{display:none!important}
+#sideTools{gap:8px}
+#sideTools .topbtn{position:static}
 .side-head{font-family:var(--display);font-weight:700;font-size:22px;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;min-height:30px;padding-right:52px;display:flex;align-items:center}
 #side h2{font-family:var(--display);font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);margin:10px 0 0;font-weight:500}
 .navlist{display:flex;flex-direction:column;gap:10px}
@@ -137,15 +150,20 @@ kbd.gap{margin-left:8px}
   padding:20px 26px 28px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;
   opacity:0;transform:translateY(22px) scale(.95);transition:opacity .2s ease,transform .26s ease-in}
 #scrim.show #card{opacity:1;transform:none;transition:opacity .3s ease,transform .46s var(--ease)}
-.card-top{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.card-spacer{width:40px;flex:none}
-#cardKicker{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);min-width:0}
+#cardClose{position:absolute;top:10px;right:10px;z-index:2;background:var(--night)}
+/* the screenshot leads; its frame, the icon tile and the title rule carry the stall's colour */
+#cardShot{width:100%;aspect-ratio:16/9;box-sizing:border-box;border:3px solid var(--accent,var(--frame));box-shadow:0 0 0 3px var(--frame-dark);background:var(--night-2);overflow:hidden}
+#card.noimg #cardShot{display:none}
+.card-head{width:100%;display:flex;align-items:center;gap:16px;text-align:left;padding-bottom:14px;border-bottom:3px solid var(--accent,var(--frame))}
+#card.noimg .card-head{flex-direction:column;text-align:center;gap:14px;padding:26px 0 16px}
 .xbtn{width:40px;height:40px;flex:none;background:var(--night-2);border:3px solid var(--frame);display:grid;place-content:center;font-family:var(--display);font-size:24px;line-height:1;padding:0 0 2px;
   transition:background-color .15s,border-color .15s,color .15s,transform .15s}
 .xbtn:hover{background:var(--danger);border-color:var(--danger-lo);color:#fff;transform:scale(1.06)}
-#cardArt{width:112px;height:112px;flex:none;image-rendering:pixelated;filter:drop-shadow(0 7px 0 rgba(0,0,0,.35))}
-#cardImg{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;object-position:top center;border:3px solid var(--frame);box-shadow:0 0 0 3px var(--frame-dark);background:var(--night-2);box-sizing:border-box}
-#cardTitle{font-family:var(--display);font-weight:700;font-size:clamp(26px,5vw,34px);line-height:1.08;letter-spacing:.05em;text-transform:uppercase;margin:0;text-wrap:balance;text-shadow:3px 3px 0 #000}
+#cardArt{width:64px;height:64px;flex:none;image-rendering:pixelated;background:var(--night-2);border:3px solid var(--accent,var(--frame));box-sizing:content-box}
+#card.noimg #cardArt{width:128px;height:128px}
+#cardImg{display:block;width:100%;height:100%;object-fit:cover;object-position:top center;opacity:0;transition:opacity .25s ease}
+#cardImg.ready{opacity:1}
+#cardTitle{flex:1;min-width:0;font-family:var(--display);font-weight:700;font-size:clamp(22px,4.4vw,30px);line-height:1.08;letter-spacing:.05em;text-transform:uppercase;margin:0;text-wrap:balance;text-shadow:3px 3px 0 #000}
 #cardDesc{font-size:17px;line-height:1.55;margin:0;max-width:42ch}
 #cardEmail{display:flex;align-items:center;gap:10px;max-width:100%;background:var(--night-2);border:3px solid var(--frame);padding:8px 8px 8px 12px}
 #emailText{font-size:15px;font-weight:700;min-width:0;overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
@@ -164,7 +182,7 @@ kbd.gap{margin-left:8px}
   background:var(--night);border:4px solid var(--frame);box-shadow:0 0 0 4px var(--frame-dark),0 18px 40px rgba(0,0,0,.55);padding:14px;display:flex;gap:14px;align-items:flex-start;
   opacity:0;visibility:hidden;transform:translate(-50%,26px);transition:opacity .2s ease,transform .24s ease-in,visibility 0s .26s}
 #chat.show{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .28s ease,transform .42s var(--ease)}
-#chatFace{width:72px;height:72px;flex:none;image-rendering:pixelated;border:3px solid #000}
+#chatFace{width:64px;height:64px;flex:none;image-rendering:pixelated;border:3px solid #000}
 .chat-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .chat-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
 #chatName{font-family:var(--display);font-size:22px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
@@ -183,9 +201,9 @@ kbd.gap{margin-left:8px}
 #wardrobe.show .ward-panel{transform:none;transition:transform .5s var(--ease)}
 .ward-head{display:flex;align-items:center;justify-content:space-between}
 #wardTitle{font-family:var(--display);font-size:24px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
-#wardGrid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;align-content:start;padding:4px;touch-action:pan-y}
+#wardGrid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;align-content:start;padding:4px;touch-action:pan-y}
 .wcard{position:relative;background:#0c1019;border:3px solid var(--frame);padding:12px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .15s,transform .15s,background-color .15s}
-.wcard canvas{width:64px;height:128px;image-rendering:pixelated}
+.wcard canvas{width:80px;height:160px;image-rendering:pixelated}
 .wcard:hover{border-color:var(--ink);transform:translateY(-2px)}
 .wname{font-family:var(--display);font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)}
 .wcard em{position:absolute;top:-3px;right:-3px;font-style:normal;font-family:var(--display);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:var(--gold);color:var(--night);padding:1px 6px;opacity:0;transition:opacity .15s}
@@ -203,11 +221,20 @@ kbd.gap{margin-left:8px}
   background:var(--night);border:4px solid var(--gold);box-shadow:0 0 0 4px var(--frame-dark),0 14px 30px rgba(0,0,0,.5);padding:10px 16px 10px 10px;display:flex;align-items:center;gap:12px;
   opacity:0;visibility:hidden;transform:translate(-50%,-140%);transition:opacity .4s ease,transform .5s ease-in,visibility 0s .5s}
 #toast.show{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .3s ease,transform .6s var(--ease)}
-#toast canvas{width:56px;height:56px;flex:none;image-rendering:pixelated;background:var(--night-2);border:3px solid #000}
+#toast canvas{width:64px;height:64px;flex:none;image-rendering:pixelated;background:var(--night-2);border:3px solid #000}
 #toast div{display:flex;flex-direction:column;min-width:0}
 #toast small{font-family:var(--display);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
 #toast strong{font-family:var(--display);font-size:20px;letter-spacing:.05em;text-transform:uppercase}
 #toast span{font-size:14px;color:var(--ink-dim)}
+
+/* opening title card: covers the first moments while the world is built, then lifts */
+#intro{position:fixed;inset:0;z-index:30;background:var(--forest);display:grid;place-items:center;transition:opacity .9s ease,visibility 0s .9s}
+#intro > div{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:0 var(--edge);animation:introIn .7s var(--ease) both;transition:transform 1s var(--ease),opacity .7s ease}
+#intro strong{font-family:var(--display);font-weight:700;font-size:clamp(44px,9vw,92px);letter-spacing:.08em;text-transform:uppercase;line-height:1;color:var(--ink);text-shadow:5px 5px 0 #000}
+#intro span{font-family:var(--display);font-size:clamp(15px,2.2vw,22px);letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
+#intro.lift{opacity:0;visibility:hidden}
+#intro.lift > div{transform:translateY(-46px);opacity:0}
+@keyframes introIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
 /* touch controls */
 #touch{position:fixed;inset:0;z-index:3;pointer-events:none}
@@ -219,21 +246,24 @@ kbd.gap{margin-left:8px}
 #tJump{bottom:calc(28px + env(safe-area-inset-bottom,0px))}
 #tUse{bottom:calc(112px + env(safe-area-inset-bottom,0px));background:var(--gold);color:var(--night);border-color:#000}
 body:not(.touch) .touch-only,body.touch .desk-only{display:none}
-@media (max-width:480px){:root{--tb:44px;--edge:12px}#menuBtn i{width:20px}.topbtn .ic{width:22px;height:22px}#langBtn .ic{font-size:14px}#langBtn .ic-off{font-size:12px}
+@media (max-width:480px){:root{--tb:44px;--edge:12px}#menuBtn i{width:20px}#langBtn .ic{font-size:14px}#langBtn .ic-off{font-size:12px}
   #stick{left:14px;width:112px;height:112px}.tbtn{right:14px;width:64px;height:64px;font-size:13px}#tUse{bottom:calc(102px + env(safe-area-inset-bottom,0px))}
-  #cardArt{width:80px;height:80px}#card{padding:14px 16px 20px;gap:12px}#cardDesc{font-size:15px}}
+  #card.noimg #cardArt{width:96px;height:96px}#card{padding:14px 16px 20px;gap:12px}#cardDesc{font-size:15px}}
 @media (max-width:700px){
   #scrim{justify-content:center}
   #toast{top:calc(var(--edge) + 64px + env(safe-area-inset-top,0px))}
   #wardrobe{background:linear-gradient(to bottom,rgba(6,9,14,0) 30%,rgba(6,9,14,.75) 52%)}
   .ward-panel{top:46%;left:var(--edge);width:auto;transform:translateY(40px)}
   #wardGrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
-  .wcard canvas{width:48px;height:96px}
+  .wcard canvas{width:60px;height:120px}
+  /* phones: language, music and sound move into the menu, leaving day/night and the menu button */
+  .narrow-only{display:block!important}
+  #sideTools.narrow-only{display:flex!important}
   #wardDone{left:var(--edge);bottom:auto;top:calc(46% - 66px);min-width:0;font-size:18px;padding:9px 16px 10px}
   #chat{bottom:calc(170px + env(safe-area-inset-bottom,0px))}
   #chatFace{width:52px;height:52px}
 }
 @media (prefers-reduced-motion:reduce){
-  #side,#side > *,#menuScrim,#scrim,#card,#menuBtn,#menuBtn i,.navbtn,.xbtn,#cardGo,.topbtn .ic,#chat,#wardrobe,.ward-panel,#wardDone,#toast,#progBar{transition-duration:.01s!important;transition-delay:0s!important}
-  #prompt,.alab span i,.status i{animation:none}
+  #side,#side > *,#menuScrim,#scrim,#card,#menuBtn,#menuBtn i,.navbtn,.xbtn,#cardGo,.topbtn .ic,#chat,#wardrobe,.ward-panel,#wardDone,#toast,#progBar,#intro,#intro > div,.lbl span,.lbl i{transition-duration:.01s!important;transition-delay:0s!important}
+  #prompt,.alab span i,.status i,#intro > div{animation:none}
 }

@@ -12,22 +12,33 @@ export function createPlayer(scene) {
   const fig = createFigure(OUTFITS.find((o) => o.id === saved) || OUTFITS[0]);
   const { group, rig } = fig;
   // no baked sun shadow on the player, so lantern and candle light can reach them under roofs
-  group.traverse((o) => { if (o.isMesh) o.receiveShadow = false; });
   group.scale.setScalar(TUNING.playerScale); scene.add(group);
 
   const shadow = makeBlob(scene, 1.25 * TUNING.playerScale);
-  const state = { x: 0, y: FLOOR, z: 4.6, vy: 0, yaw: Math.PI, grounded: true, phase: 0, blend: 0, squash: 0, visY: FLOOR };
+  const state = { x: 0, y: FLOOR, z: 4.6, vx: 0, vz: 0, vy: 0, yaw: Math.PI, grounded: true, phase: 0, blend: 0, gait: 0, air: 0, squash: 0, visY: FLOOR };
+  const mix = (a, b, t) => a + (b - a) * t;
 
-  // dt, time in seconds; day is 1 in full daylight and 0 at night or indoors
-  function animate(dt, time, moving, running, groundY, day) {
-    const P = state;
-    P.blend += ((moving && P.grounded ? 1 : 0) - P.blend) * Math.min(1, dt * 10);
-    fig.pose(Math.sin(P.phase) * (running ? 1.15 : 0.75) * P.blend, P.grounded ? 0 : 1, time);
+  // Advance the stride. Its pace follows the real ground speed, so feet never slide, and
+  // walk and run are blended rather than switched. Returns true on each footfall.
+  function stride(dt, speed, running) {
+    const P = state, before = Math.floor(P.phase / Math.PI);
+    P.gait += ((running ? 1 : 0) - P.gait) * Math.min(1, dt * 5);
+    P.blend += ((P.grounded ? Math.min(1, speed / (TUNING.walkSpeed * 0.8)) : 0) - P.blend) * Math.min(1, dt * 9);
+    P.air += ((P.grounded ? 0 : 1) - P.air) * Math.min(1, dt * 12);
+    P.phase += dt * speed * mix(2.2, 1.8, P.gait);
+    return P.grounded && speed > 0.6 && Math.floor(P.phase / Math.PI) !== before;
+  }
+  // time in seconds; day is 1 in full daylight and 0 at night or indoors
+  function animate(dt, time, groundY, day) {
+    const P = state, s = Math.sin(P.phase);
+    fig.pose(s * mix(0.72, 0.98, P.gait) * P.blend, P.air, time, 0, 0, s * 0.1 * P.blend);
     P.squash = Math.max(0, P.squash - dt * 6);
     rig.scale.set(1 + P.squash * 0.08, 1 - P.squash * 0.16, 1 + P.squash * 0.08);
     if (P.grounded) P.visY += (P.y - P.visY) * Math.min(1, dt * 18); else P.visY = P.y;
-    group.position.set(P.x, P.visY + Math.abs(Math.sin(P.phase)) * 0.05 * P.blend, P.z);
-    group.rotation.y = P.yaw; rig.rotation.x = running && P.grounded ? 0.12 * P.blend : 0;
+    // a smooth rise and fall twice per stride, and a forward lean that grows with the run
+    const bob = (1 - Math.cos(P.phase * 2)) * 0.5 * mix(0.045, 0.085, P.gait) * P.blend;
+    group.position.set(P.x, P.visY + bob, P.z);
+    group.rotation.y = P.yaw; rig.rotation.x = 0.13 * P.gait * P.blend;
     // In daylight the blob stretches away from the sun so it reads as a cast shadow.
     const lift = Math.max(0, P.visY - groundY), k = Math.max(0.45, 1 - lift * 0.35), stretch = 1 + day * 0.75, off = day * 0.42 * TUNING.playerScale;
     shadow.position.set(P.x + SHADOW_DIR[0] * off, groundY + 0.03, P.z + SHADOW_DIR[1] * off);
@@ -37,7 +48,7 @@ export function createPlayer(scene) {
     const o = OUTFITS.find((q) => q.id === id); if (!o) return; fig.setDesign(o);
     if (remember) { try { localStorage.setItem('pv-outfit', id); } catch (e) { /* ignore */ } }
   }
-  return { state, group, animate, setOutfit, outfit: () => fig.design.id };
+  return { state, group, stride, animate, setOutfit, outfit: () => fig.design.id };
 }
 
 // Round soft shadow, the same trick the original blocky games use for moving things.

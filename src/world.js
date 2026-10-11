@@ -29,8 +29,9 @@ function classify(x, z) {
   } else if (ax < 8 && !(z < 0 && x > HALL.x0 - 2)) s = ax - 3.2 + (z < 0 ? BOUNDS.z0 - z : z - BOUNDS.z1) * 0.22; // the road runs off the top and bottom of the map
   else s = 99;
   s += n;
-  if (s < 0) return noise(x * 0.55 + 50, z * 0.55 + 20) > 0.76 ? DIRT_T : COBBLE;
-  if (s < 1.9) return k < 0.68 ? DIRT_T : k < 0.84 ? COBBLE : GRASS_T;
+  if (s < 0) return COBBLE;                                   // roads are solid paving
+  if (s < 0.5) return k < 0.4 ? COBBLE : DIRT_T;              // a ragged edge
+  if (s < 1.5) return k < 0.8 ? DIRT_T : GRASS_T;             // then a narrow band of dirt
   if (!inside && noise(x * 0.3 + 40, z * 0.3 + 7) > 0.74) return DIRT_T;
   return GRASS_T;
 }
@@ -72,7 +73,7 @@ export function buildWorld(scene, renderer) {
   const turf = new Batch(grassBlock), mounds = new Batch(grassBlock);
   const bits = new Batch(M.tint, null, false);   // grass tufts, flowers, pebbles: tinted, no shadows
   const wood = new Batch(M.tint), rocks = new Batch(M.tint), logs = new Batch(M.log), leaves = new Batch(M.leaves);
-  const tint = () => col.set(PAVER_TINTS[(r() * PAVER_TINTS.length) | 0]).multiplyScalar(0.95 + r() * 0.1).clone();
+  const tint = () => col.set(PAVER_TINTS[(r() * PAVER_TINTS.length) | 0]).multiplyScalar(0.97 + r() * 0.06).clone();
   const stoneH = () => 0.055 + r() * 0.055; // keep this small: the road should read as cobbles, not rubble
   const moundAt = (x, z) => (!inSlabZone(x, z) && !inHallRect(x, z, 3) && Math.abs(x) > 5 && noise(x * 0.18 + 3, z * 0.18 + 8) > 0.63 ? 1 : 0);
   const flowerCols = ['#f4e04d', '#f6f6f6', '#e9627a', '#c58cf0', '#ff9a3d'];
@@ -87,9 +88,9 @@ export function buildWorld(scene, renderer) {
       else if (k < 0.5) {
         const turn = r() < 0.5;
         for (const o of [-0.25, 0.25]) { const h = stoneH(); half.add(x + (turn ? o : 0), h / 2, z + (turn ? 0 : o), 1, h, 1, tint(), turn ? Math.PI / 2 : 0); }
-      } else for (const ox of [-0.25, 0.25]) for (const oz of [-0.25, 0.25]) { if (r() < 0.05) continue; const h = stoneH() + (r() < 0.06 ? 0.03 : 0); small.add(x + ox, h / 2, z + oz, 1, h, 1, tint()); }
+      } else for (const ox of [-0.25, 0.25]) for (const oz of [-0.25, 0.25]) { if (r() < 0.015) continue; const h = stoneH() + (r() < 0.06 ? 0.03 : 0); small.add(x + ox, h / 2, z + oz, 1, h, 1, tint()); }
     } else if (t === DIRT_T) {
-      if (r() < 0.22) { const n = 1 + ((r() * 2) | 0); for (let i = 0; i < n; i++) { const h = 0.03 + r() * 0.03; small.add(x + (r() - 0.5) * 0.5, h / 2, z + (r() - 0.5) * 0.5, 0.7 + r() * 0.3, h, 0.7 + r() * 0.3, tint()); } }
+      if (r() < 0.1) { const n = 1 + ((r() * 2) | 0); for (let i = 0; i < n; i++) { const h = 0.03 + r() * 0.03; small.add(x + (r() - 0.5) * 0.5, h / 2, z + (r() - 0.5) * 0.5, 0.7 + r() * 0.3, h, 0.7 + r() * 0.3, tint()); } }
       if (r() < 0.12) bits.add(x + (r() - 0.5) * 0.7, 0.12, z + (r() - 0.5) * 0.7, 0.1, 0.24, 0.1, col.setHSL(0.24, 0.5, 0.36).clone());
     } else {
       const m = moundAt(x, z), base = m || heights[idx(x, z)];

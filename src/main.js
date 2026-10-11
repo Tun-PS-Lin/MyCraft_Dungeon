@@ -165,6 +165,8 @@ function pick(e) {
 let down = null, hoverT = 0;
 // zoom: mouse wheel, two-finger pinch, or the + and - keys. The camera angle never changes.
 let zoom = TUNING.zoomStart, zoomTarget = TUNING.zoomStart;
+let opening = 0; // seconds left of the opening glide; the camera starts high and settles while the title lifts
+let titleFor = 0; // seconds of drawn frames before the title card lifts, so it never lifts onto a half-built scene
 const setZoom = (z) => { zoomTarget = Math.max(TUNING.zoomMin, Math.min(TUNING.zoomMax, z)); };
 canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (!ui.paused()) setZoom(zoomTarget * Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0016)); }, { passive: false });
 window.addEventListener('keydown', (e) => { if (ui.paused()) return; if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(zoomTarget - 0.06); if (e.code === 'Minus' || e.code === 'NumpadSubtract') setZoom(zoomTarget + 0.06); });
@@ -230,22 +232,24 @@ function update(dt) {
     if (dist < 0.3) { const then = auto.then; auto = null; if (then) then(); }
     else { running = auto.path.length > 1 || dist > 6; const sp = Math.min(running ? TUNING.runSpeed : TUNING.walkSpeed, dist / dt); dx = (ddx / dist) * sp; dz = (ddz / dist) * sp; }
   }
-  const moving = dx !== 0 || dz !== 0;
-  if (moving) {
+  // ease into and out of motion instead of snapping to full speed
+  const accel = Math.min(1, dt * (dx || dz ? 9 : 12)); P.vx += (dx - P.vx) * accel; P.vz += (dz - P.vz) * accel;
+  if (Math.hypot(P.vx, P.vz) < 0.05) P.vx = P.vz = 0;
+  if (P.vx || P.vz) {
     const ox = P.x, oz = P.z;
-    const nx = P.x + dx * dt; if (!blocked(nx, P.z, P.y)) P.x = nx;
-    const nz = P.z + dz * dt; if (!blocked(P.x, nz, P.y)) P.z = nz;
+    const nx = P.x + P.vx * dt; if (!blocked(nx, P.z, P.y)) P.x = nx; else P.vx = 0;
+    const nz = P.z + P.vz * dt; if (!blocked(P.x, nz, P.y)) P.z = nz; else P.vz = 0;
     if (auto && P.x === ox && P.z === oz) { auto.stuck = (auto.stuck || 0) + dt; if (auto.stuck > 0.6) auto = null; } else if (auto) auto.stuck = 0;
-    let d = Math.atan2(dx, dz) - P.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); P.yaw += d * Math.min(1, dt * 14);
   }
+  const speed = Math.hypot(P.vx, P.vz);
+  if (speed > 0.4) { let d = Math.atan2(P.vx, P.vz) - P.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); P.yaw += d * Math.min(1, dt * 11); }
   if (ui.wardrobeOpen()) { let d = TUNING.cameraYaw + Math.sin(time * 0.8) * 0.45 - P.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); P.yaw += d * Math.min(1, dt * 5); }
   if (jumpQueued && P.grounded && !busy) { P.vy = TUNING.jumpSpeed; P.grounded = false; auto = null; sound.play('jump'); }
   jumpQueued = false;
   P.vy -= TUNING.gravity * dt; P.y += P.vy * dt;
   const g = groundAt(P.x, P.z, P.y);
   if (P.y <= g) { if (!P.grounded && P.vy < -4) { P.squash = 1; sound.play('land'); } P.y = g; P.vy = 0; P.grounded = true; } else P.grounded = false;
-  const before = Math.floor(P.phase / Math.PI); if (moving) P.phase += dt * (running ? 15 : 9.5);
-  if (P.grounded && moving && Math.floor(P.phase / Math.PI) !== before) sound.play('step');
+  if (player.stride(dt, speed, running)) sound.play('step');
 
   // town hall: the roof lifts away while the player is inside
   hall.update(dt, insideHall(P.x, P.z) || (Math.abs(P.x - HALL.doorX) < HALL.doorW / 2 && P.z < HALL.z1 + 0.2), time);
@@ -253,11 +257,11 @@ function update(dt) {
   if (night !== nightTarget) night += Math.sign(nightTarget - night) * Math.min(Math.abs(nightTarget - night), dt / 1.6);
   torch.position.set(P.x, P.visY + 2.2, P.z + 0.6);
   applyMood(time, indoors);
-  player.animate(dt, time, moving, running, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors));
+  player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors));
 
   // camera
   closeUp += Math.sign((ui.wardrobeOpen() ? 1 : 0) - closeUp) * Math.min(Math.abs((ui.wardrobeOpen() ? 1 : 0) - closeUp), dt / 0.7);
-  zoom += (zoomTarget - zoom) * Math.min(1, dt * 7);
+  if (titleFor <= 0) { zoom += (zoomTarget - zoom) * Math.min(1, dt * (opening > 0 ? 1.7 : 7)); if (opening > 0) opening -= dt; }
   focus.x += (P.x - focus.x) * Math.min(1, dt * 5); focus.z += (P.z - 1.5 * zoom - focus.z) * Math.min(1, dt * 5); focus.y += (P.visY * 0.5 - focus.y) * Math.min(1, dt * 3);
   camPos.copy(CAM).multiplyScalar(camScale * zoom).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
   if (closeUp > 0) {
@@ -268,6 +272,8 @@ function update(dt) {
     camera.near = mix(1, dist - 1.2, e); camera.updateProjectionMatrix(); // clip the fence that would stand in front
   } else if (camera.near !== 1) { camera.near = 1; camera.updateProjectionMatrix(); }
   camera.position.copy(camPos); camera.lookAt(camLook);
+  // haze begins a little beyond the player and thickens toward the far trees, at any zoom
+  const reach = camPos.distanceTo(camLook); scene.fog.near = reach + 13; scene.fog.far = reach + 54;
 
   // what E would do right now: the nearest stall (measured to its edge) or agent
   near = null; let bd = TUNING.interactRange, nearKey = null;
@@ -298,12 +304,15 @@ function frame(now) {
   const raw = (now - last) / 1000, dt = Math.min(0.05, raw); last = now; update(dt);
   if (probe && document.visibilityState === 'visible') { probe.frames++; if (probe.frames > 30) probe.time += raw; if (probe.frames === 150) { if (probe.time / 120 > 1 / 42 && pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.5); renderer.setPixelRatio(pixelRatio); resize(); probe = { frames: 0, time: 0 }; } else probe = null; } }
   if (bakeFrames > 0) { bakeFrames--; renderer.shadowMap.needsUpdate = true; }
+  else if (titleFor > 0) { titleFor -= Math.min(raw, 0.3); if (titleFor <= 0) ui.endIntro(); }
   renderer.render(scene, camera); requestAnimationFrame(frame);
 }
 
 function start(saved) {
   if (saved && typeof saved.x === 'number' && !blocked(saved.x, saved.z, floorAt(saved.x, saved.z))) { P.x = saved.x; P.z = saved.z; P.y = P.visY = floorAt(P.x, P.z); P.yaw = saved.yaw || 0; focus.set(P.x, 0, P.z - 1.5); }
   canvas.tabIndex = 0;
+  // a returning preview session skips the opening; a fresh visit glides in over about two seconds
+  if (saved && typeof saved.x === 'number') ui.endIntro(); else { zoom = TUNING.zoomStart * 1.55; opening = 2.8; titleFor = 1.3; for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); }, { once: true }); }
   window.__village = { P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }

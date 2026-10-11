@@ -27,6 +27,55 @@ function awning(g, mats, o = {}) {
     if (o.sides && (i === 0 || i === n - 1)) for (let k = 0; k < 3; k++) B(g, 0.1, 0.3, seg, o.trim || m, i ? w / 2 : -w / 2, y + st * (2 - k) - 0.24, zo - d / 2 + seg * (k + 0.5));
   }
 }
+// Posts of one height at the four corners, for the roofs below.
+function evenPosts(g, h, x = 2.55, z = 1.6) { for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(g, 0.34, h, 0.34, M.log, sx * x, h / 2, sz * z); }
+// A ragged cloth edge hanging under a roof, on the listed sides ('f', 'b', 'l', 'r').
+function valance(g, mat, y, w, d, sides = 'f', n = 6) {
+  for (const side of sides) {
+    const along = side === 'f' || side === 'b', len = along ? w : d, m = along ? n : Math.max(3, Math.round(n * d / w)), sw = len / m;
+    for (let i = 0; i < m; i++) {
+      const h = i % 2 ? 0.24 : 0.44, t = -len / 2 + sw * (i + 0.5);
+      if (along) B(g, sw, h, 0.1, mat, t, y - h / 2, (side === 'f' ? 1 : -1) * (d / 2 + 0.03)); else B(g, 0.1, h, sw, mat, (side === 'r' ? 1 : -1) * (w / 2 + 0.03), y - h / 2, t);
+    }
+  }
+}
+// Alacrity: a striped barrel vault with a glowing beacon on the crown.
+function archRoof(g, mats, trim, glowColor, y = 3.1) {
+  const w = 5.9, n = 6, sw = w / n, rise = [0, 0.32, 0.46, 0.32, 0], seg = 0.82;
+  for (let i = 0; i < n; i++) for (let k = 0; k < 5; k++) B(g, sw, 0.22, seg + 0.03, mats[i % mats.length], -w / 2 + sw * (i + 0.5), y + 0.11 + rise[k], (k - 2) * seg);
+  for (const sx of [-1, 1]) { B(g, 0.12, 0.34, 2.5, trim, sx * (w / 2 - 0.02), y + 0.17, 0); B(g, 0.12, 0.16, 0.9, trim, sx * (w / 2 - 0.02), y + 0.42, 0); B(g, 0.2, 0.5, 0.2, trim, sx * (w / 2 - 0.1), y + 0.9, 0); }
+  B(g, w + 0.1, 0.1, 0.16, trim, 0, y + 0.72, 0);
+  valance(g, trim, y, w, seg * 5, 'fb', 8);
+  B(g, 0.6, 0.14, 0.6, M.dark, 0, y + 0.82, 0); B(g, 0.36, 0.36, 0.36, glow(glowColor), 0, y + 1.08, 0, true); B(g, 0.56, 0.6, 0.56, glass, 0, y + 1.16, 0, true);
+}
+// Mingalar: a pitched shingle roof with a ridge beam, a weathervane and a hanging sign.
+function gableRoof(g, mats, y = 3.0) {
+  const w = 6.1, rows = 4, dz = 0.52;
+  for (let k = 0; k < rows; k++) for (const s of [-1, 1]) B(g, w, 0.22, dz + 0.1, mats[k % mats.length], 0, y + 0.11 + k * 0.3, s * (1.92 - k * dz));
+  B(g, w + 0.3, 0.26, 0.42, M.dark, 0, y + rows * 0.3 + 0.04, 0);
+  for (const s of [-1, 1]) B(g, w + 0.2, 0.12, 0.14, M.dark, 0, y - 0.02, s * 2.2);
+  for (const sx of [-1, 1]) for (let k = 0; k < rows; k++) B(g, 0.12, 0.3, Math.max(0.5, (1.92 - k * dz) * 2 - 0.5), M.planks, sx * (w / 2 - 0.2), y + 0.15 + k * 0.3 - 0.22, 0);
+  // weathervane
+  B(g, 0.08, 0.8, 0.08, M.dark, 1.9, y + rows * 0.3 + 0.55, 0); B(g, 0.7, 0.1, 0.06, flat('#e4b93a'), 1.9, y + rows * 0.3 + 0.9, 0); B(g, 0.16, 0.26, 0.06, flat('#e4b93a'), 2.2, y + rows * 0.3 + 0.9, 0);
+  // hanging sign under the front eave
+  for (const sx of [-0.6, 0.6]) B(g, 0.06, 0.34, 0.06, M.dark, sx, y - 0.24, 2.22);
+  B(g, 1.7, 0.62, 0.1, M.planks, 0, y - 0.7, 2.22); B(g, 1.36, 0.4, 0.04, M.paper, 0, y - 0.7, 2.28);
+}
+// Urban Simulation: a flat slab roof with a parapet, hazard stripes and a model skyline on top.
+function flatRoof(g, heat, y = 3.1) {
+  const w = 6, d = 4.3, slate = flat('#3a4250'), orange = wool('#d2542f');
+  B(g, w, 0.28, d, slate, 0, y + 0.14, 0);
+  for (const s of [-1, 1]) { B(g, w, 0.3, 0.2, orange, 0, y + 0.43, s * (d / 2 - 0.1)); B(g, 0.2, 0.3, d - 0.4, orange, s * (w / 2 - 0.1), y + 0.43, 0); }
+  for (let i = 0; i < 8; i++) { B(g, w / 8, 0.3, 0.08, i % 2 ? slate : wool('#e4b93a'), -w / 2 + (w / 8) * (i + 0.5), y - 0.15, d / 2 + 0.02); B(g, 0.08, 0.3, d / 6, i % 2 ? slate : wool('#e4b93a'), -w / 2 - 0.02, y - 0.15, -d / 2 + (d / 6) * (i % 6 + 0.5)); }
+  [[-1.9, -0.9, 0.5, 1], [-1.2, -0.2, 0.9, 3], [-0.4, -0.7, 1.5, 5], [0.4, 0.1, 1.1, 4], [1.1, -0.9, 0.7, 2], [1.8, 0.3, 0.45, 1], [-0.6, 0.9, 0.6, 2], [0.5, 1.0, 0.35, 0]].forEach(([x, z, h, k]) => { B(g, 0.5, h, 0.5, flat(heat[k]), x, y + 0.28 + h / 2, z); B(g, 0.3, 0.08, 0.3, glow(heat[k]), x, y + 0.32 + h, z, true); });
+  B(g, 0.08, 1.5, 0.08, M.dark, 2.2, y + 1.03, -1.3); B(g, 0.16, 0.16, 0.16, glow('#ff5a4a'), 2.2, y + 1.85, -1.3, true); B(g, 0.5, 0.06, 0.06, M.dark, 2.2, y + 1.4, -1.3);
+}
+// Contact Me: a pointed tent in rings of two colours, with a pennant on the tip.
+function tentRoof(g, mats, trim, y = 3.0) {
+  for (let k = 0; k < 5; k++) B(g, 6.3 - k * 1.3, 0.36, 4.5 - k * 0.92, mats[k % 2], 0, y + 0.18 + k * 0.36, 0);
+  valance(g, trim, y, 6.3, 4.5, 'fblr', 6);
+  B(g, 0.12, 1.1, 0.12, M.dark, 0, y + 2.3, 0); B(g, 0.26, 0.26, 0.26, flat('#e4b93a'), 0, y + 2.95, 0); B(g, 0.8, 0.36, 0.05, mats[0], 0.46, y + 2.55, 0); B(g, 0.3, 0.2, 0.05, mats[0], 1.0, y + 2.55, 0);
+}
 export function crate(g, x, z, s = 1, y = 0.2) { B(g, s, s, s, M.crate, x, y + s / 2, z); }
 function barrel(g, x, z) { B(g, 0.8, 1, 0.8, M.dark, x, 0.7, z); B(g, 0.86, 0.1, 0.86, flat('#3a2a1a'), x, 0.45, z); B(g, 0.86, 0.1, 0.86, flat('#3a2a1a'), x, 0.95, z); B(g, 0.7, 0.04, 0.7, M.planks, x, 1.22, z); }
 function chest(g, x, z, body, lid) { B(g, 0.95, 0.5, 0.65, flat(body), x, 0.45, z); B(g, 1, 0.24, 0.7, flat(lid), x, 0.82, z); B(g, 0.14, 0.2, 0.06, flat('#e4b93a'), x, 0.68, z + 0.36); }
@@ -50,8 +99,8 @@ const BUILD = {
   // Blue patterned awning, glass cases with glowing cubes, a humming machine.
   alacrity(g, s, col) {
     const blue = patterned('#4f8df0'), deep = '#234a9e';
-    platform(g); posts(g, 3.05, 3.6);
-    awning(g, [blue, blue, wool(WHITE), blue, wool(WHITE), blue], { trim: wool(WHITE), sides: true });
+    platform(g); evenPosts(g, 3.1);
+    archRoof(g, [blue, wool(WHITE)], wool(WHITE), s.glow);
     counter(g, M.planks, WHITE); B(g, 4.9, 0.42, 0.06, wool(s.color), 0, 1.0, 1.78);
     banner(g, 0, 0.72, 1.84, 0.8, 0.9, deep, 'crest');
     B(g, 4.9, 2.7, 0.12, wool(deep), 0, 1.75, -1.72); B(g, 1.3, 1.7, 0.06, glow('#3aa7ff'), -1.3, 1.9, -1.64, true);
@@ -68,8 +117,8 @@ const BUILD = {
   },
   // Dark green canopy, stacked newspapers, a printing press and a notice board.
   mingalar(g, s, col) {
-    platform(g); posts(g, 2.95, 3.25);
-    awning(g, [wool('#2f6b35'), wool('#3d8244')], { y: 3.05, step: 0.14, trim: wool('#24552a'), sides: true });
+    platform(g); evenPosts(g, 3.0);
+    gableRoof(g, [wool('#2f6b35'), wool('#3d8244')]);
     counter(g, M.planks); B(g, 4.9, 0.08, 1.14, M.dark, 0, 1.24, 1.2);
     papers(g, -1.7, 1.28, 1.2, 4); papers(g, -0.75, 1.28, 1.2, 2);
     B(g, 1.3, 0.3, 0.85, flat('#2b2b2f'), 0.7, 1.43, 1.2); B(g, 1, 0.5, 0.45, flat('#3a3a40'), 0.7, 1.83, 1.02); B(g, 1.1, 0.16, 0.16, wool('#d8d0bc'), 0.7, 1.68, 1.48); B(g, 0.08, 0.5, 0.08, flat('#8a8a8a'), 1.25, 2.1, 1.02); B(g, 0.2, 0.12, 0.12, flat('#c23b32'), 1.25, 2.38, 1.02);
@@ -104,8 +153,8 @@ const BUILD = {
   },
   // Magenta striped tent, a writing desk with letters, and a mailbox.
   contact(g, s, col) {
-    platform(g); posts(g, 3, 3.6);
-    awning(g, [wool('#c04bd6'), wool('#7a3fb4')], { trim: wool('#5a2f86'), sides: true });
+    platform(g); evenPosts(g, 3.0);
+    tentRoof(g, [wool('#c04bd6'), wool('#7a3fb4')], wool('#5a2f86'));
     B(g, 4.9, 0.05, 3.2, wool('#5a2f86'), 0, 0.23, 0);
     B(g, 4.6, 0.2, 1.3, M.planks, 0, 1.2, 1.0); [[-2.1, 0.5], [2.1, 0.5], [-2.1, 1.5], [2.1, 1.5]].forEach(([x, z]) => B(g, 0.24, 0.9, 0.24, M.dark, x, 0.65, z));
     [[-1.6, 0.9, 0.2], [-0.8, 1.2, -0.15], [0.9, 1.1, 0.1]].forEach(([x, z, ry]) => { const l = B(g, 0.7, 0.06, 0.48, wool('#fbfaf4'), x, 1.33, z); l.rotation.y = ry; const w = B(g, 0.12, 0.08, 0.12, flat('#c23b32'), x, 1.36, z); w.rotation.y = ry; });
@@ -121,8 +170,8 @@ const BUILD = {
   },
   // Orange and slate tent with a glowing heat-map board and a small model city.
   urbansim(g, s, col) {
-    platform(g); posts(g, 3.05, 3.6);
-    awning(g, [wool('#d2542f'), wool('#3a4250')], { trim: wool('#e4b93a'), sides: true });
+    platform(g); evenPosts(g, 3.1);
+    flatRoof(g, ['#2b6fd0', '#2fa0a8', '#57d47c', '#e4d23a', '#f08a2a', '#d8403a']);
     counter(g, M.dark, '#3a4250');
     B(g, 4.6, 2.7, 0.16, flat('#1b2030'), 0, 1.95, -1.68); B(g, 4.8, 0.14, 0.24, M.planks, 0, 3.32, -1.66); B(g, 4.8, 0.14, 0.24, M.planks, 0, 0.62, -1.66);
     const heat = ['#2b6fd0', '#2fa0a8', '#57d47c', '#e4d23a', '#f08a2a', '#d8403a'];
@@ -151,7 +200,7 @@ const BUILD = {
     B(g, 5.6, 0.05, 2.4, M.carpet, 0, 0.23, 0.9); B(g, 5.8, 0.04, 0.12, flat('#d9a93a'), 0, 0.24, 2.12);
     B(g, 5.5, 2.5, 0.2, M.dark, 0, 1.45, -1.75); B(g, 5.2, 0.08, 0.08, flat('#d9a93a'), 0, 2.45, -1.45);
     ['#2f66c4', '#e9e2cf', '#3d7d40', '#a3342e', '#7a4fc2', '#c98a2b', '#2a2a33'].forEach((c, i) => B(g, 0.5, 1.15, 0.12, wool(c), -2.1 + i * 0.7, 1.82, -1.45));
-    ['knight', 'scholar', 'performer', 'watch'].forEach((id, i) => {
+    ['knight', 'farmer', 'performer', 'mage'].forEach((id, i) => {
       const x = -1.95 + i * 1.3; B(g, 0.8, 0.3, 0.8, M.planks, x, 0.35, 1.05);
       const f = createFigure(OUTFITS.find((o) => o.id === id)); f.group.scale.setScalar(0.82); f.group.position.set(x, 0.5, 1.05); f.pose(0, 0, i);
       f.group.traverse((o) => { if (o.isMesh) o.castShadow = true; }); f.group.userData.keep = true; g.add(f.group);

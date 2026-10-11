@@ -39,15 +39,15 @@ export function toTex(c, repeat) {
 }
 
 /* ── palettes ── */
-export const DIRT = ['#8a5a36', '#7b4e2e', '#96633b', '#6f4528', '#845431'];
-export const GRASS = ['#5f8f33', '#53812c', '#6b9b39', '#4a7427', '#5f8f33'];
-export const MORTAR = ['#4a3a2a', '#40321f', '#54422f'];
-export const PAVER_TINTS = ['#a39382', '#998a78', '#a89886', '#948573', '#9f8e7a', '#97897c', '#a5927d'];
+export const DIRT = ['#8a5a36', '#855532', '#8e5d38', '#825330'];
+export const GRASS = ['#5f8f33', '#5a8930', '#649536', '#588630'];
+export const MORTAR = ['#77695a', '#716354', '#7c6e5f'];
+export const PAVER_TINTS = ['#a39382', '#9e8f7e', '#a79785']; // keep these close: the road should read as one surface
 
 export const tiles = {
   dirt: (seed) => cv(16, 16, (g) => {
     const r = rng(seed); speck(g, 16, 16, DIRT, r);
-    for (let i = 0; i < 5; i++) fill(g, r() < 0.5 ? '#5f3a1e' : '#a87a4e', (r() * 16) | 0, (r() * 16) | 0, 1, 1);
+    for (let i = 0; i < 5; i++) fill(g, r() < 0.5 ? '#74492a' : '#96683f', (r() * 16) | 0, (r() * 16) | 0, 1, 1);
   }),
   grass: (seed, flowers) => cv(16, 16, (g) => {
     const r = rng(seed); speck(g, 16, 16, GRASS, r);
@@ -123,7 +123,9 @@ const cache = { wool: {}, pat: {}, glow: {}, flat: {} };
 export const wool = (c) => cache.wool[c] || (cache.wool[c] = lam({ map: T.wool, color: lin(c) }));
 export const patterned = (c) => cache.pat[c] || (cache.pat[c] = lam({ map: T.pattern, color: lin(c) }));
 export const glow = (c) => cache.glow[c] || (cache.glow[c] = new THREE.MeshBasicMaterial({ color: lin(c) }));
-export const flat = (c) => cache.flat[c] || (cache.flat[c] = lam({ color: lin(c) }));
+// Flat colours still carry a faint 16-pixel grain, so every surface has the same pixel size.
+T.grain = toTex(cv(16, 16, (g) => speck(g, 16, 16, ['#ffffff', '#f4f4f4', '#ebebeb', '#f9f9f9', '#f0f0f0'], rng(41))));
+export const flat = (c) => cache.flat[c] || (cache.flat[c] = lam({ map: T.grain, color: lin(c) }));
 export const glass = new THREE.MeshLambertMaterial({ color: '#d8f2ff', transparent: true, opacity: 0.2, depthWrite: false });
 
 /* ── boxes ── */

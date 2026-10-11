@@ -7,7 +7,7 @@ import { CARPET, deskOf } from './hall.js';
 import { makeBlob } from './player.js';
 
 const SPEED = 1.7;
-const designFor = (a) => ({ id: a.id, name: a.name, skin: '#c99a72', hair: a.robe, hairStyle: 'bald', brow: '#3a2a1f', eye: '#2f6b35', top: a.robe, top2: a.color, trim: a.trim, topStyle: 'robe', sleeve: 'long', robe: true, pants: a.robe, boots: '#3a2a1a' });
+const designFor = (a) => ({ id: a.id, name: a.name, skin: '#c99a72', hair: a.robe, hairStyle: 'bald', brow: '#3a2a1f', gear: ['sash'], eye: '#2f6b35', top: a.robe, top2: a.color, trim: a.trim, topStyle: 'robe', sleeve: 'long', robe: true, pants: a.robe, boots: '#3a2a1a' });
 
 export function createAgents(scene) {
   const rand = (a, b) => a + Math.random() * (b - a);
@@ -17,7 +17,7 @@ export function createAgents(scene) {
   const route = (from, to) => (onH(from) === onH(to) || (Math.abs(from[0] - CARPET.vx) < 0.05 && Math.abs(from[1] - CARPET.hz) < 0.05) ? [to] : [[CARPET.vx, CARPET.hz], to]);
 
   const list = AGENTS.map((a, i) => {
-    const design = designFor(a), fig = createFigure(design, { nose: true }), desk = deskOf(a);
+    const design = designFor(a), fig = createFigure(design, { nose: true, tag: a.id }), desk = deskOf(a);
     fig.group.traverse((o) => { if (o.isMesh) { o.receiveShadow = false; o.userData.agent = a.id; } });
     scene.add(fig.group);
     const seated = i % 2 === 0, start = seated ? desk.seat : desk.access;
