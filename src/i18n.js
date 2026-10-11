@@ -1,8 +1,14 @@
+import { LANGUAGE_TOGGLE } from './config.js';
+
 // Interface text in English and Burmese, and the current-language switch.
 // Stall and agent text is translated in config.js (each entry's `my` block).
 const UI = {
   en: {
     introSub: 'Portfolio village', settings: 'Settings',
+    break: 'On a break', coming: 'On the way', here: 'At the board', openBoard: 'Open the agent board', boardTitle: 'Agent board', boardHint: 'Pick an agent to see what they do. Agents out in the village can be called back.',
+    schedule: 'Runs', delivers: 'Delivers', where: 'Right now', whereDesk: 'At the desk', whereHall: 'In the town hall', whereOut: 'Out in the village', whereWay: 'Walking over', whereHere: 'Waiting at the board',
+    call: 'Call to the board', called: 'On the way', isHere: 'Already here', boardTalk: 'Walk up to an agent and press E to try their demo.', boardTalkTouch: 'Walk up to an agent and tap Talk to try their demo.',
+    demoNote: 'Demo with sample data. Nothing real is triggered.',
     mapTitle: 'Village map', projects: 'Projects', village: 'Village', hello: 'Say hello', townHall: '{name} (town hall)',
     progress: '{n} of {t} stalls explored', progHint: 'Open every stall to earn a companion', progWon: 'Wolf companion unlocked',
     menuHint: 'Pick a place and the character walks there. Tap or click the ground to walk too.',
@@ -34,7 +40,7 @@ const UI = {
 };
 
 let lang = 'en';
-try { if (localStorage.getItem('pv-lang') === 'my') lang = 'my'; } catch (e) { /* storage unavailable */ }
+if (LANGUAGE_TOGGLE) { try { if (localStorage.getItem('pv-lang') === 'my') lang = 'my'; } catch (e) { /* storage unavailable */ } }
 document.documentElement.lang = lang;
 const listeners = [];
 

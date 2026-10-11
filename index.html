@@ -6,6 +6,9 @@
 <title>James's Portfolio Village</title>
 <meta name="description" content="A small explorable village. Walk up to a market stall to open one of James's projects, or visit the town hall to meet the agents.">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<!-- keep the browser's own bars and tab light, whatever the visitor's system setting -->
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f4f1e6">
 
 <!-- Link preview (the card shown when the site is pasted into Telegram, LinkedIn, etc.).
      The picture is public/og-image.jpg (1200 x 630 pixels).
@@ -76,9 +79,18 @@
   <div class="chat-body">
     <div class="chat-head"><strong id="chatName"></strong><span id="chatRole"></span><span class="status"><i></i><b data-t="working"></b></span></div>
     <p id="chatText"></p>
-    <small class="chat-hint" id="chatHint"></small>
+    <div id="chatDemo" class="demo"></div>
+    <small class="chat-hint"><span data-t="demoNote"></span> <span id="chatHint"></span></small>
   </div>
   <button class="xbtn" id="chatClose" aria-label="Close">×</button>
+</div>
+
+<div id="board" role="dialog" aria-labelledby="boardTitle">
+  <div class="board-panel">
+    <div class="board-head"><strong id="boardTitle" data-t="boardTitle"></strong><button class="xbtn" id="boardClose" aria-label="Close">×</button></div>
+    <p class="board-hint" data-t="boardHint"></p>
+    <div class="board-body"><div id="boardList"></div><div id="boardDetail"></div></div>
+  </div>
 </div>
 
 <div id="wardrobe" role="dialog" aria-labelledby="wardTitle">

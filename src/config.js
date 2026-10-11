@@ -45,7 +45,7 @@ export const STALLS = [
   },
   {
     id: 'urban', kind: 'project', face: 'east',
-    label: 'Urban Expansion', title: 'Incomplete Theory of Urban Expansion',
+    label: 'Urban Expansion', title: 'Urban Expansion',
     pos: [-17, 1.5],
     color: '#c98a2b', glow: '#8fd0ff',
     image: 'urban.jpg',
@@ -91,19 +91,27 @@ export const frontOf = (s, dist) => { const f = FACING[s.face || 'south']; retur
 
 // The town hall and the agents who work in it. desk is which corner of the hall
 // the agent's desk stands in: 'nw', 'ne', 'sw' or 'se'.
+// The English / Burmese button. The Burmese text is all still here; set this to true to bring the button back.
+export const LANGUAGE_TOGGLE = false;
+
+// about / schedule / delivers are shown on the agent board inside the hall.
 export const HALL_LABEL = { en: 'AI Agents', my: 'AI အေးဂျင့်များ' };
 export const AGENTS = [
   { id: 'bobby', name: 'Bobby', role: 'News scraper', desk: 'sw', color: '#2f7a3c', robe: '#3d8a4a', trim: '#e9d9a8',
     line: "I'm Bobby. I'm a news scraper: I search and filter news for Mingalar News every day at 10:30am Bangkok time.",
+    about: 'Reads Thai and Myanmar news sources, removes duplicates, and ranks what matters to Myanmar migrants in Thailand.', schedule: 'Every day at 10:30am Bangkok time', delivers: 'A ranked shortlist on Telegram',
     my: { role: 'သတင်းရှာဖွေသူ', line: 'ကျွန်တော် Bobby ပါ။ Mingalar News အတွက် နေ့စဉ် ဘန်ကောက်စံတော်ချိန် နံနက် ၁၀:၃၀ တွင် သတင်းများကို ရှာဖွေစစ်ထုတ်ပေးသည့် သတင်းရှာဖွေသူ ဖြစ်ပါသည်။' } },
   { id: 'friday', name: 'Friday', role: 'Personal assistant', desk: 'nw', color: '#2f66c4', robe: '#3b6fd0', trim: '#cfe6ff',
     line: "I'm Friday. I'm the personal assistant for Alacrity Research: ask me about a project and I'll look it up for you.",
+    about: 'Answers questions about plots, tasks and progress in the Alacrity Research map, by text or by voice.', schedule: 'Whenever she is asked', delivers: 'A short spoken or written answer',
     my: { role: 'ကိုယ်ရေးလက်ထောက်', line: 'ကျွန်မ Friday ပါ။ Alacrity Research ၏ ကိုယ်ရေးလက်ထောက် ဖြစ်ပါသည်။ ပရောဂျက်တစ်ခုအကြောင်း မေးလိုက်ပါက ရှာဖွေပေးပါမည်။' } },
   { id: 'sally', name: 'Sally', role: 'Researcher', desk: 'ne', color: '#1f8a7a', robe: '#2b9a88', trim: '#f3ead2',
     line: "I'm Sally. I'm the researcher for Urban Expansion: I gather city data and check the growth model against it.",
+    about: 'Gathers city growth data and tests the urban expansion model against it.', schedule: 'Whenever she is asked', delivers: 'Fitted numbers and a short note',
     my: { role: 'သုတေသီ', line: 'ကျွန်မ Sally ပါ။ Urban Expansion အတွက် သုတေသီ ဖြစ်ပါသည်။ မြို့ပြဒေတာများ စုဆောင်းပြီး ကြီးထွားမှုပုံစံနှင့် တိုက်ဆိုင်စစ်ဆေးပါသည်။' } },
   { id: 'edwin', name: 'Edwin', role: 'Financial advisor', desk: 'se', color: '#7a4fc2', robe: '#6a3fb0', trim: '#e4b93a',
     line: "I'm Edwin. I'm a financial advisor and portfolio manager: I watch the portfolio and flag what needs attention.",
+    about: 'Watches a portfolio against its targets and flags what needs attention.', schedule: 'Every weekday morning', delivers: 'A short morning brief',
     my: { role: 'ဘဏ္ဍာရေးအကြံပေး', line: 'ကျွန်တော် Edwin ပါ။ ဘဏ္ဍာရေးအကြံပေးနှင့် ရင်းနှီးမြှုပ်နှံမှု စီမံခန့်ခွဲသူ ဖြစ်ပါသည်။ ရင်းနှီးမြှုပ်နှံမှုများကို စောင့်ကြည့်ပြီး အာရုံစိုက်ရန်လိုသည်များကို အသိပေးပါသည်။' } },
 ];
 

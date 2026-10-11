@@ -12,8 +12,8 @@ const { x0, x1, z0, z1, doorX, doorW, floor, wallH } = HALL;
 const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
 
 // Where each desk stands, and the short route an agent takes from the carpet to its seat.
-const DESK_AT = { nw: [x0 + 4.3, z0 + 4.8], ne: [x1 - 4.3, z0 + 4.8], sw: [x0 + 4.3, z1 - 4.4], se: [x1 - 4.3, z1 - 4.4] };
-export const CARPET = { hz: cz, hx: [x0 + 2.6, x1 - 2.8], vx: doorX, vz: [z0 + 3, z1 - 1.8] };
+const DESK_AT = { nw: [x0 + 4.3, z0 + 6], ne: [x1 - 4.3, z0 + 6], sw: [x0 + 4.3, z1 - 4.4], se: [x1 - 4.3, z1 - 4.4] };
+export const CARPET = { hz: cz, hx: [x0 + 2.6, x1 - 2.8], vx: doorX, vz: [z0 + 5.4, z1 - 1.8] };
 export function deskOf(agent) {
   const [x, z] = DESK_AT[agent.desk], side = x < cx ? 1 : -1;
   return { x, z, seat: [x, z - 0.15], side: [x + side * 2.05, z - 0.15], access: [x + side * 2.05, cz] };
@@ -128,32 +128,57 @@ export function buildHall(scene) {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const x = cx + sx * 3.4, z = cz + sz * 3.6; B(inner, 1.4, 0.03, 1.4, flat('#34333a'), x, F + 0.016, z); B(inner, 0.9, 0.035, 0.9, flat('#6a6871'), x, F + 0.018, z); B(inner, 0.3, 0.04, 0.3, gold, x, F + 0.02, z); }
   AGENTS.forEach((a) => buildDesk(inner, a));
 
-  // back wall: bookcases, the big banner between two statues, torches
-  [x0 + 3.2, x0 + 6.6, x1 - 6.6, x1 - 3.2].forEach((x) => bookcase(inner, x, F, nz + 0.3, 3, 3.5));
-  banner(inner, doorX, F + 4.1, nz + 0.06, 1.6, 2.4, '#234a9e', 'tree');
-  for (const s of [-1, 1]) {
-    const x = doorX + s * 2.1;
-    B(inner, 0.9, 0.8, 0.9, M.stone, x, F + 0.4, nz + 0.6); B(inner, 0.5, 0.9, 0.3, flat('#8f8f96'), x, F + 1.25, nz + 0.6); B(inner, 0.36, 0.36, 0.36, flat('#9a9aa2'), x, F + 1.88, nz + 0.6); B(inner, 0.14, 0.8, 0.2, flat('#8f8f96'), x - 0.32, F + 1.3, nz + 0.6); B(inner, 0.14, 0.8, 0.2, flat('#8f8f96'), x + 0.32, F + 1.3, nz + 0.6);
-    collide(x - 0.45, x + 0.45, nz + 0.15, nz + 1.05, 2.5);
-    banner(inner, doorX + s * 4.9, F + 4.4, nz + 0.06, 0.9, 1.4, '#8a2026', 'tree');
-    B(inner, 0.16, 0.5, 0.16, M.log, doorX + s * 1.15, F + 3.1, nz + 0.12); B(inner, 0.24, 0.24, 0.24, glow('#ffc76a'), doorX + s * 1.15, F + 3.46, nz + 0.16);
-  }
-  // left wall: a fireplace in the middle with bookcases either side
-  B(inner, 1, 2.9, 3.6, M.brick, wx + 0.5, F + 1.45, cz); B(inner, 0.5, 1.5, 2, flat('#141418'), wx + 0.82, F + 0.75, cz); B(inner, 1.3, 0.24, 4, M.stone, wx + 0.62, F + 3.0, cz); B(inner, 1.2, 0.2, 3.8, M.stone, wx + 0.6, F + 0.1, cz);
-  B(inner, 0.4, 0.22, 1.3, M.log, wx + 0.9, F + 0.3, cz); B(inner, 0.3, 0.4, 0.5, glow('#ff8a2a'), wx + 0.92, F + 0.6, cz - 0.25); B(inner, 0.3, 0.6, 0.4, glow('#ffc24a'), wx + 0.92, F + 0.7, cz + 0.2); B(inner, 0.26, 0.3, 0.3, glow('#ffe08a'), wx + 0.94, F + 0.56, cz + 0.02);
-  candle(inner, wx + 0.7, F + 3.12, cz - 1.4); candle(inner, wx + 0.7, F + 3.12, cz + 1.4); B(inner, 0.08, 0.9, 1.2, wool('#e8d3a0'), wx + 1.04, F + 2.1, cz);
-  collide(wx, wx + 1.15, cz - 1.9, cz + 1.9, 3);
-  addLamp(scene, wx + 2, F + 1.3, cz, 1.3, 1.6, 8, '#ff9a4a');
+  // back wall: a bookcase in each corner, with the agent board between them (built further down)
+  [x0 + 3.2, x1 - 3.2].forEach((x) => bookcase(inner, x, F, nz + 0.3, 3, 3.5));
+  for (const s of [-1, 1]) banner(inner, doorX + s * 6.3, F + 4.5, nz + 0.06, 0.9, 1.4, '#8a2026', 'tree');
+  // left wall: a fireplace in the middle with bookcases either side. Every face sits at its
+  // own depth, so nothing shares a plane and flickers.
+  B(inner, 1, 2.9, 3.6, M.brick, wx + 0.5, F + 1.45, cz); B(inner, 1.3, 0.24, 4, M.stone, wx + 0.62, F + 3.02, cz); B(inner, 1.3, 0.2, 3.8, M.stone, wx + 0.65, F + 0.1, cz);
+  B(inner, 0.1, 1.5, 2, flat('#141418'), wx + 1.03, F + 0.95, cz);                                      // the dark opening
+  for (const s of [-1, 1]) B(inner, 0.16, 1.7, 0.3, M.stone, wx + 1.06, F + 1.05, cz + s * 1.15);       // stone jambs
+  B(inner, 0.16, 0.3, 2.6, M.stone, wx + 1.06, F + 1.85, cz);                                           // lintel
+  B(inner, 0.34, 0.2, 1.3, M.log, wx + 1.3, F + 0.31, cz);
+  B(inner, 0.1, 0.44, 0.5, glow('#ff8a2a'), wx + 1.24, F + 0.62, cz - 0.28); B(inner, 0.1, 0.66, 0.42, glow('#ffc24a'), wx + 1.3, F + 0.74, cz + 0.2); B(inner, 0.1, 0.3, 0.3, glow('#ffe08a'), wx + 1.36, F + 0.56, cz - 0.02);
+  candle(inner, wx + 0.7, F + 3.14, cz - 1.4); candle(inner, wx + 0.7, F + 3.14, cz + 1.4); B(inner, 0.06, 0.8, 1.2, wool('#e8d3a0'), wx + 1.04, F + 2.5, cz);
+  collide(wx, wx + 1.5, cz - 1.9, cz + 1.9, 3);
+  addLamp(scene, wx + 2.2, F + 1.3, cz, 1.3, 1.6, 8, '#ff9a4a');
   bookcase(inner, wx + 0.3, F, cz - 4.2, 2.6, 3.5, 'x'); bookcase(inner, wx + 0.3, F, cz + 4.2, 2.6, 3.5, 'x');
   // right side: low things only, so nothing hides the room from the camera
   const ex = x1 - 1.75;
-  B(inner, 1, 0.9, 1, M.stone, ex, F + 0.45, cz); B(inner, 1.2, 0.14, 1.2, M.stone, ex, F + 0.97, cz); B(inner, 0.6, 0.6, 0.6, glow('#62c8ff'), ex, F + 1.5, cz); B(inner, 0.82, 0.06, 0.82, gold, ex, F + 1.14, cz); collide(ex - 0.6, ex + 0.6, cz - 0.6, cz + 0.6, 2);
+  B(inner, 1, 0.9, 1, M.stone, ex, F + 0.45, cz); B(inner, 1.2, 0.14, 1.2, M.stone, ex, F + 0.97, cz); B(inner, 0.6, 0.6, 0.6, glow('#62c8ff'), ex, F + 1.5, cz); B(inner, 0.82, 0.06, 0.82, gold, ex, F + 1.07, cz); collide(ex - 0.6, ex + 0.6, cz - 0.6, cz + 0.6, 2);
   crate(inner, ex, cz + 3.6, 1, F); crate(inner, ex + 0.1, cz + 4.6, 0.7, F); B(inner, 0.8, 1, 0.8, M.dark, ex, F + 0.5, cz - 3.6); B(inner, 0.86, 0.1, 0.86, flat('#3a2a1a'), ex, F + 0.3, cz - 3.6); B(inner, 0.86, 0.1, 0.86, flat('#3a2a1a'), ex, F + 0.75, cz - 3.6);
   collide(ex - 0.55, ex + 0.55, cz + 3.05, cz + 5, 1.1); collide(ex - 0.45, ex + 0.45, cz - 4.05, cz - 3.15, 1.1);
-  // benches inside the front wall, plants in the corners, candle stands along the carpets
+  // benches inside the front wall and plants in the corners
   for (const s of [-1, 1]) { const x = doorX + s * 4.6; B(inner, 2.6, 0.16, 0.6, M.planks, x, F + 0.5, z1 - 1.75); B(inner, 0.18, 0.44, 0.5, M.dark, x - 1.1, F + 0.22, z1 - 1.75); B(inner, 0.18, 0.44, 0.5, M.dark, x + 1.1, F + 0.22, z1 - 1.75); collide(x - 1.3, x + 1.3, z1 - 2.05, z1 - 1.45, 1); }
   [[wx + 0.75, nz + 0.75], [x1 - 1.75, nz + 0.75], [wx + 0.75, z1 - 1.75], [x1 - 1.75, z1 - 1.75]].forEach(([x, z]) => { B(inner, 0.6, 0.5, 0.6, M.dark, x, F + 0.25, z); B(inner, 0.8, 0.8, 0.8, flat('#3f8a3a'), x, F + 0.9, z); B(inner, 0.5, 0.5, 0.5, flat('#4f9a44'), x + 0.1, F + 1.45, z - 0.05); collide(x - 0.4, x + 0.4, z - 0.4, z + 0.4, 1.5); });
-  [[doorX - 1.9, z1 - 1.7], [doorX + 1.9, z1 - 1.7], [doorX - 1.9, cz - 1.9], [doorX + 1.9, cz - 1.9], [doorX - 1.9, cz + 1.9], [doorX + 1.9, cz + 1.9], [doorX - 1.9, nz + 2.4], [doorX + 1.9, nz + 2.4]].forEach(([x, z]) => { B(inner, 0.5, 0.16, 0.5, M.stone, x, F + 0.08, z); B(inner, 0.16, 1.1, 0.16, flat('#3a3a40'), x, F + 0.7, z); B(inner, 0.4, 0.08, 0.4, flat('#3a3a40'), x, F + 1.28, z); candle(inner, x, F + 1.32, z); collide(x - 0.22, x + 0.22, z - 0.22, z + 0.22, 1.6); });
+
+  /* the agent board: a big lit screen at the end of the hall, leaning back toward the camera.
+     It is drawn on a canvas, so main.js can repaint it whenever an agent's status changes. */
+  const BW = 9.1, BH = 3.9, board = new THREE.Group(); board.position.set(doorX, F + 0.55, nz + 1.75); board.rotation.x = -0.24; // far enough out that the leaning top clears the wall
+  const bc = document.createElement('canvas'); bc.width = 840; bc.height = 360;
+  const btex = new THREE.CanvasTexture(bc); btex.encoding = THREE.sRGBEncoding; btex.magFilter = THREE.NearestFilter;
+  B(board, BW + 0.5, BH + 0.5, 0.24, M.dark, 0, BH / 2 + 0.1, -0.13, true); B(board, BW + 0.7, 0.2, 0.34, gold, 0, BH + 0.42, -0.1, true);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), new THREE.MeshBasicMaterial({ map: btex })); screen.position.set(0, BH / 2 + 0.1, 0); screen.userData.board = true; board.add(screen);
+  scene.add(board);
+  B(inner, BW + 0.9, 0.55, 1.9, M.stone, doorX, F + 0.275, nz + 1.0); for (const s of [-1, 1]) { B(inner, 0.4, 4.6, 0.4, M.log, doorX + s * (BW / 2 + 0.5), F + 2.3, nz + 0.6); B(inner, 0.3, 0.3, 0.3, glow('#bfe0ff'), doorX + s * (BW / 2 + 0.5), F + 4.75, nz + 0.6); }
+  collide(doorX - BW / 2 - 0.7, doorX + BW / 2 + 0.7, nz, nz + 2, 4);
+  addLamp(scene, doorX, F + 2.6, nz + 3.6, 1.1, 1.3, 9, '#bfe0ff');
+  // rows: [{ name, role, color, status, live, face (a 16×16 canvas) }]
+  function drawBoard(rows) {
+    const g = bc.getContext('2d'), font = (px, bold) => { g.font = (bold ? '700 ' : '500 ') + px + 'px "Pixelify Sans","Courier New",monospace'; };
+    g.imageSmoothingEnabled = false; g.fillStyle = '#0d1420'; g.fillRect(0, 0, 840, 360); g.fillStyle = '#17233a'; g.fillRect(0, 0, 840, 62);
+    g.textBaseline = 'middle'; g.textAlign = 'left'; font(34, true); g.fillStyle = '#ffc93c'; g.fillText('AGENT BOARD', 24, 33);
+    g.textAlign = 'right'; font(20); g.fillStyle = '#a9b3c6'; g.fillText(rows.filter((r) => r.live).length + ' OF ' + rows.length + ' IN THE HALL', 816, 34); g.textAlign = 'left';
+    rows.forEach((r, i) => {
+      const x = 20 + (i % 2) * 406, y = 78 + ((i / 2) | 0) * 138;
+      g.fillStyle = '#1d2638'; g.fillRect(x, y, 394, 126); g.fillStyle = r.color; g.fillRect(x, y, 8, 126);
+      g.fillStyle = r.color; g.fillRect(x + 22, y + 15, 96, 96); g.drawImage(r.face, x + 22, y + 15, 96, 96);
+      font(32, true); g.fillStyle = '#f3f1ea'; g.fillText(r.name.toUpperCase(), x + 134, y + 32);
+      font(19); g.fillStyle = '#a9b3c6'; g.fillText(r.role.toUpperCase(), x + 134, y + 62);
+      g.fillStyle = r.live ? '#57d47c' : '#ffc93c'; g.fillRect(x + 134, y + 86, 14, 14); font(21, true); g.fillText(r.status.toUpperCase(), x + 158, y + 94);
+    });
+    btex.needsUpdate = true;
+  }
   addLamp(scene, cx, F + 3.6, cz, 1.3, 1.5, 12, '#ffc27a');
   inner.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
   bake(inner); scene.add(inner);
@@ -161,6 +186,9 @@ export function buildHall(scene) {
   let open = 0; // 0 = roof on, 1 = fully cut away
   return {
     labelAt: [doorX, wallH + 2.2, z1],
+    board: { mesh: screen, draw: drawBoard, rect: { x0: doorX - BW / 2, x1: doorX + BW / 2, z0: nz, z1: nz + 2 }, stand: [doorX, nz + 3.1],
+      // where a called agent comes to stand, by its place in the list
+      callSpot: (i, n) => [doorX + (i - (n - 1) / 2) * 1.6, nz + 4.9] },
     entrance: [doorX, z1 - 3.4],
     openness: () => open,
     update(dt, inside, time) {

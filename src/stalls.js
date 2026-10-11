@@ -225,7 +225,10 @@ export function buildStalls(scene) {
     const col = (x0, x1, z0, z1, h) => { const r = box(x0, x1, z0, z1); collide(r.x0, r.x1, r.z0, r.z1, h + 0.1); };
     g.position.set(p.pos[0], 0.1, p.pos[1]); g.rotation.y = th; g.userData.id = p.id;
     BUILD[p.id](g, s, col);
-    addLamp(g, 0, 2.4, 1.6, 0, 1.5, 7.5, '#ffc27a'); // the stall lights up at night
+    // night lighting: a lantern hung on each front post, a pool of light in front, and a glow over and behind the stall
+    for (const sx of [-1, 1]) { B(g, 0.06, 0.3, 0.06, M.dark, sx * 2.55, 2.5, 1.95, true); B(g, 0.26, 0.3, 0.26, glow('#ffc76a'), sx * 2.55, 2.22, 1.95, true); B(g, 0.34, 0.07, 0.34, M.dark, sx * 2.55, 2.4, 1.95, true); }
+    addLamp(g, 0, 2.3, 1.7, 0, 2.0, 9, '#ffc27a'); addLamp(g, 0, 1.7, 4.6, 0, 1.3, 9, '#ffc27a'); addLamp(g, 0, 5.2, -0.6, 0, 1.2, 11, '#ffd9a0');
+    addLamp(g, -4.6, 1.8, 0, 0, 0.9, 8, '#ffc27a'); addLamp(g, 4.6, 1.8, 0, 0, 0.9, 8, '#ffc27a');
     // main footprint: blocks walking through, and is what "near the stall" is measured from
     const hw = p.id === 'outfits' ? 3.15 : 2.85;
     s.rect = box(-hw, hw, -2.05, 2.2);

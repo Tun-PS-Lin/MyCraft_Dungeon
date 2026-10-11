@@ -28,7 +28,7 @@ npm run build    # production build in dist/
 | Open a stall or talk to an agent | E when near, or click it | the yellow button, or tap it |
 | Close | Esc, E or the × button | × button |
 
-The five buttons in the top-right corner are language (English / Burmese), music, sound effects, day/night, and the menu. On phones only day/night and the menu stay on screen; the other three move into the menu under Settings. A fresh visit opens in day or night to match the visitor's clock; the button overrides it for that visit. Music and sound settings, the chosen outfit, explored stalls and the wolf are remembered in the visitor's browser.
+The four buttons in the top-right corner are music, sound effects, day/night, and the menu. On phones only day/night and the menu stay on screen; music and sound move into the menu under Settings. The English / Burmese button is switched off for now: set `LANGUAGE_TOGGLE` to `true` in `src/config.js` to bring it back (all the Burmese text is still in place). A fresh visit opens in day or night to match the visitor's clock; the button overrides it for that visit. Music and sound settings, the chosen outfit, explored stalls and the wolf are remembered in the visitor's browser.
 
 Picking a place in the menu makes the character walk there, and so does tapping or clicking the ground. Scroll, pinch, or press + and - to zoom a little; the camera angle is fixed. Opening all six stalls unlocks a wolf companion.
 
@@ -37,7 +37,7 @@ Picking a place in the menu makes the character walk there, and so does tapping 
 Everything you are likely to edit is in **`src/config.js`**:
 
 - `STALLS`: the name, description, link, map position and facing of each stall, plus its Burmese text in `my`. A project with an empty `url` shows "Link coming soon". `image` names a picture in `public/assets/images/` that is shown in the popup; leave it `''` for none.
-- `AGENTS`: the town hall agents: name, role, robe colours, which desk, and the line they say. Talking to an agent only shows its line; nothing real is triggered yet.
+- `AGENTS`: the town hall agents: name, role, robe colours, which desk, the line they say, and the `about` / `schedule` / `delivers` text shown on the agent board.
 - `MUSIC_FILE` and `MUSIC_VOLUME`: the looping background track.
 - `CONTACT_EMAIL`: the address shown in the Contact popup.
 - `INTRO_NAME`: the name on the short title card shown when the page opens.
@@ -46,6 +46,12 @@ Everything you are likely to edit is in **`src/config.js`**:
 - `TUNING`: walk and run speed, jump height, camera angle and distance, and how close you must be to a stall to open it.
 
 Interface wording (buttons, menu, prompts, the achievement text) in both languages is in **`src/i18n.js`**.
+
+## The town hall and the agents
+
+- Agents sit and type at their desks, walk the carpets, and sometimes take a break out in the village (at most two at a time). Their name tag shows what they are doing.
+- The big **agent board** at the end of the hall lists everyone and their status. Press E beside it for the board menu: details for each agent and a button that calls one over to the board.
+- Talking to an agent opens its **demo**. Each demo is a small function in `src/demos.js` that runs entirely in the browser on made-up sample data. Nothing is fetched, sent or triggered. To wire up a real action later, replace a button's handler there with a call to your own endpoint.
 
 ## Link preview image
 
@@ -110,8 +116,9 @@ src/i18n.js         interface wording in English and Burmese
 src/main.js         renderer, lights, input, camera, game loop
 src/world.js        ground, paving stones, fences, forest, guide slab
 src/stalls.js       the six stalls and their roofs
-src/hall.js         the town hall, its fading roof and the desks inside
-src/agents.js       the agents who walk and work in the hall
+src/hall.js         the town hall, its fading roof, the desks and the agent board
+src/agents.js       the agents: desk work, breaks outside, being called to the board
+src/demos.js        the demo each agent shows when you talk to them (sample data only)
 src/figures.js      the blocky people: outfits, painting, posing
 src/player.js       the player's state and shadow
 src/critters.js     chickens and the wolf
@@ -119,7 +126,7 @@ src/nav.js          path finding for walk-to
 src/ambience.js     fireflies and drifting leaves
 src/collision.js    the walkable area, steps and jumping onto things
 src/textures.js     pixel textures, materials, instancing helpers
-src/ui.js           labels, popup, menu, wardrobe, chat box, achievement badge
+src/ui.js           labels, popup, menu, wardrobe, chat panel, agent board menu, achievement badge
 src/audio.js        sound effects and music
 src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)
 src/style.css       interface styling

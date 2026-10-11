@@ -1,7 +1,8 @@
 // Interface layer: labels, the E prompt, the project popup, the menu, the wardrobe,
 // the agent chat box and the achievement badge. Plain DOM on top of the canvas so
 // text stays crisp and links are real links. All wording comes through i18n.js.
-import { STALLS, AGENTS, HALL_LABEL, CREDIT, REPO_URL, INTRO_NAME } from './config.js';
+import { STALLS, AGENTS, HALL_LABEL, CREDIT, REPO_URL, INTRO_NAME, LANGUAGE_TOGGLE } from './config.js';
+import { DEMOS } from './demos.js';
 import { fill } from './textures.js';
 import { sound, music } from './audio.js';
 import { OUTFITS, SPRITE, drawSprite, drawFace } from './figures.js';
@@ -51,7 +52,8 @@ const ART = {
   },
 };
 
-// handlers: { goTo(id), pickOutfit(id), endWardrobe(keep), toggleTheme() -> bool, languageChanged() }
+// handlers: { goTo(id), pickOutfit(id), endWardrobe(keep), toggleTheme() -> bool, languageChanged(),
+//             agentState(id) -> { status, where }, callAgent(id), agentDesign(id) }
 export function createUI(canvas, handlers) {
   const scrim = $('scrim'), side = $('side'), menuBtn = $('menuBtn'), menuScrim = $('menuScrim'), promptEl = $('prompt'), touchUI = $('touch'), tUse = $('tUse');
   const ward = $('wardrobe'), chat = $('chat'), toastEl = $('toast');
@@ -130,11 +132,11 @@ export function createUI(canvas, handlers) {
   if (REPO_URL) { const a = el('a', '', CREDIT); a.href = REPO_URL; a.target = '_blank'; a.rel = 'noopener'; credit.appendChild(a); } else credit.textContent = CREDIT;
 
   /* labels: stalls, the town hall, and a name tag for each agent */
-  const labels = {}, labelText = {}, agentStatus = [];
+  const labels = {}, labelText = {}, agentStatus = {}, agentState = {};
   const addLabel = (key, color, onClick) => { const b = el('button', 'lbl'); b.appendChild(el('i')); labelText[key] = b.appendChild(el('span')); b.style.setProperty('--accent', color); b.style.setProperty('--accent-hi', lighten(color)); b.onclick = onClick; $('labels').appendChild(b); labels[key] = b; };
   STALLS.forEach((p) => addLabel(p.id, p.color, () => (p.kind === 'project' ? openCard(p.id) : handlers.goTo(p.id))));
   addLabel('hall', '#b9b6ae', () => handlers.goTo('hall'));
-  AGENTS.forEach((a) => { const d = el('div', 'alab'); d.appendChild(el('strong', '', a.name)); const s = el('span'); s.appendChild(el('i')); const w = el('b'); s.appendChild(w); agentStatus.push(w); d.appendChild(s); $('labels').appendChild(d); labels[a.id] = d; });
+  AGENTS.forEach((a) => { const d = el('div', 'alab'); d.appendChild(el('strong', '', a.name)); const st = el('span'); st.appendChild(el('i')); agentStatus[a.id] = st.appendChild(el('b')); agentState[a.id] = 'working'; d.appendChild(st); $('labels').appendChild(d); labels[a.id] = d; });
 
   /* wardrobe */
   const grid = $('wardGrid'), cards = {};
@@ -148,8 +150,8 @@ export function createUI(canvas, handlers) {
   function closeWardrobe(keep) { if (!wardOpen) return; wardOpen = false; ward.classList.remove('show'); sound.play('close'); handlers.endWardrobe(keep); focusGame(); }
   $('wardDone').onclick = () => closeWardrobe(true); $('wardClose').onclick = () => closeWardrobe(false);
 
-  /* agent chat */
-  let typer = 0;
+  /* agent chat, with that agent's demo underneath */
+  let typer = 0, demoStop = () => {};
   function typeLine() {
     const line = tr(chatAgent, 'line'), out = $('chatText'), chars = Array.from(line); out.textContent = ''; clearInterval(typer); let i = 0;
     typer = setInterval(() => { i += 2; out.textContent = chars.slice(0, i).join(''); if (i >= chars.length) clearInterval(typer); }, 28);
@@ -158,10 +160,39 @@ export function createUI(canvas, handlers) {
   function openChat(a, design) {
     closeMenu(true); chatAgent = a; chatDesign = design; $('chatName').textContent = a.name;
     drawFace($('chatFace').getContext('2d'), design); $('chatFace').style.background = a.color;
-    typeLine(); chat.classList.add('show'); sound.play('villager');
+    typeLine(); demoStop(); $('chatDemo').textContent = ''; if (DEMOS[a.id]) demoStop = DEMOS[a.id]($('chatDemo'), a) || demoStop;
+    chat.scrollTop = 0; chat.classList.add('show'); sound.play('villager');
   }
-  function closeChat() { if (!chatAgent) return; chatAgent = null; clearInterval(typer); chat.classList.remove('show'); sound.play('close'); focusGame(); }
+  function closeChat() { if (!chatAgent) return; chatAgent = null; clearInterval(typer); demoStop(); demoStop = () => {}; chat.classList.remove('show'); sound.play('close'); focusGame(); }
   $('chatClose').onclick = closeChat;
+
+  /* agent board: who is who, where they are, and a button to call one over */
+  const board = $('board'); let boardOpen = false, boardPick = AGENTS[0].id, boardTick = 0;
+  const brow = {};
+  AGENTS.forEach((a) => {
+    const b = el('button', 'brow'), c = document.createElement('canvas'); c.width = 16; c.height = 16; c.style.background = a.color; drawFace(c.getContext('2d'), handlers.agentDesign(a.id));
+    const txt = el('span'); txt.appendChild(el('strong', '', a.name)); const st = el('em'); txt.appendChild(st); b.append(c, txt); b.style.setProperty('--accent', a.color);
+    b.onclick = () => { boardPick = a.id; sound.play('near'); paintBoard(true); }; $('boardList').appendChild(b); brow[a.id] = { b, st, c };
+  });
+  function paintBoard(full) {
+    AGENTS.forEach((a) => { const s = handlers.agentState(a.id); brow[a.id].st.textContent = t(s.status); brow[a.id].st.className = s.status; brow[a.id].b.classList.toggle('on', a.id === boardPick); });
+    const a = AGENTS.find((q) => q.id === boardPick), s = handlers.agentState(a.id), d = $('boardDetail');
+    if (full) {
+      d.textContent = ''; d.style.setProperty('--accent', a.color);
+      const head = el('div', 'bhead'), c = document.createElement('canvas'); c.width = 16; c.height = 16; c.style.background = a.color; drawFace(c.getContext('2d'), handlers.agentDesign(a.id));
+      const name = el('div'); name.append(el('strong', '', a.name), el('span', '', tr(a, 'role'))); head.append(c, name); d.appendChild(head);
+      d.appendChild(el('p', 'babout', a.about || tr(a, 'line')));
+      const facts = el('dl', 'bfacts'); [['schedule', a.schedule], ['delivers', a.delivers], ['where', '']].forEach(([k, v]) => { if (k !== 'where' && !v) return; facts.appendChild(el('dt', '', t(k))); const dd = el('dd', '', v); if (k === 'where') dd.id = 'boardWhere'; facts.appendChild(dd); });
+      d.appendChild(facts);
+      const call = el('button', 'dbtn'); call.id = 'boardCall'; call.onclick = () => { handlers.callAgent(a.id); sound.play('villager'); paintBoard(false); }; d.appendChild(call);
+      d.appendChild(el('p', 'bnote', t(isTouch ? 'boardTalkTouch' : 'boardTalk')));
+    }
+    const w = $('boardWhere'), call = $('boardCall'); if (w) w.textContent = t(s.where);
+    if (call) { const busyNow = s.status === 'coming' || s.status === 'here'; call.disabled = busyNow; call.textContent = s.status === 'coming' ? t('called') : s.status === 'here' ? t('isHere') : t('call'); }
+  }
+  function openBoard() { closeMenu(true); boardOpen = true; paintBoard(true); board.classList.add('show'); sound.play('open'); clearInterval(boardTick); boardTick = setInterval(() => paintBoard(false), 400); brow[boardPick].b.focus({ preventScroll: true }); }
+  function closeBoard() { if (!boardOpen) return; boardOpen = false; clearInterval(boardTick); board.classList.remove('show'); sound.play('close'); focusGame(); }
+  $('boardClose').onclick = closeBoard; board.addEventListener('pointerdown', (e) => { if (e.target === board) closeBoard(); });
 
   /* achievement badge */
   let toastT = 0;
@@ -183,12 +214,13 @@ export function createUI(canvas, handlers) {
     document.querySelectorAll('[data-t]').forEach((e) => { e.textContent = t(e.dataset.t); });
     STALLS.forEach((p) => { labelText[p.id].textContent = tr(p, 'label'); nav[p.id].name.textContent = tr(p, 'title'); });
     labelText.hall.textContent = hallName(); nav.hall.name.textContent = t('townHall', { name: hallName() });
-    agentStatus.forEach((w) => { w.textContent = t('working'); });
+    AGENTS.forEach((a) => { agentStatus[a.id].textContent = t(agentState[a.id]); });
     OUTFITS.forEach((o) => { cards[o.id].name.textContent = t('o.' + o.id); cards[o.id].tag.textContent = t('selected'); });
     $('chatHint').textContent = t(isTouch ? 'chatHintTouch' : 'chatHint'); $('toastTitle').textContent = t('achTitle'); $('toastText').textContent = t('achText');
     $('tJump').textContent = t('jump');
     if (promptKey) { $('promptText').textContent = t(promptKey, promptVars); tUse.textContent = t(promptKey === 'talkTo' ? 'talk' : 'use'); }
-    paintProgress(); if (openId) fillCard(); if (chatAgent) typeLine();
+    langBtn.hidden = !LANGUAGE_TOGGLE;
+    paintProgress(); if (openId) fillCard(); if (chatAgent) typeLine(); if (boardOpen) paintBoard(true);
     langBtn.classList.toggle('alt', getLang() === 'my'); langBtn.setAttribute('aria-pressed', String(getLang() === 'my')); langBtn.setAttribute('aria-label', getLang() === 'my' ? 'Switch to English' : 'ဗမာစာသို့ ပြောင်းရန်');
   }
   // fade the words out, swap them, fade back in
@@ -201,7 +233,7 @@ export function createUI(canvas, handlers) {
   paintText();
 
   /* phones: language, music and sound live in the menu, leaving day/night and the menu button on screen */
-  const narrow = window.matchMedia ? matchMedia('(max-width: 700px)') : null, tools = [langBtn, musicBtn, $('soundBtn')];
+  const narrow = window.matchMedia ? matchMedia('(max-width: 700px)') : null, tools = [...(LANGUAGE_TOGGLE ? [langBtn] : []), musicBtn, $('soundBtn')];
   const placeTools = () => tools.forEach((b) => { if (narrow && narrow.matches) $('sideTools').appendChild(b); else document.body.insertBefore(b, themeBtn); });
   placeTools(); if (narrow) { if (narrow.addEventListener) narrow.addEventListener('change', placeTools); else narrow.addListener(placeTools); }
 
@@ -209,13 +241,15 @@ export function createUI(canvas, handlers) {
   const intro = $('intro'); $('introName').textContent = INTRO_NAME;
   const endIntro = () => { intro.classList.add('lift'); setTimeout(() => intro.remove(), 1200); };
 
-  const busy = () => !!openId || !!chatAgent || wardOpen || menuOpen();
+  const busy = () => !!openId || !!chatAgent || wardOpen || boardOpen || menuOpen();
   return {
-    isTouch, endIntro, openCard, closeCard, openMenu, closeMenu, setTheme, openWardrobe, closeWardrobe, openChat, closeChat, toast,
-    openId: () => openId, chatId: () => (chatAgent ? chatAgent.id : null), wardrobeOpen: () => wardOpen,
+    isTouch, endIntro, openCard, closeCard, openMenu, closeMenu, setTheme, openWardrobe, closeWardrobe, openChat, closeChat, openBoard, closeBoard, toast,
+    openId: () => openId, chatId: () => (chatAgent ? chatAgent.id : null), wardrobeOpen: () => wardOpen, boardOpen: () => boardOpen,
+    // the small status line under an agent's name tag
+    setAgentStatus(id, key) { if (agentState[id] === key) return; agentState[id] = key; agentStatus[id].textContent = t(key); labels[id].classList.toggle('away', key !== 'working'); },
     paused: busy,
     // closes whatever is open; returns true if something was
-    escape() { if (openId) closeCard(); else if (chatAgent) closeChat(); else if (wardOpen) closeWardrobe(false); else if (menuOpen()) closeMenu(); else return false; return true; },
+    escape() { if (openId) closeCard(); else if (chatAgent) closeChat(); else if (boardOpen) closeBoard(); else if (wardOpen) closeWardrobe(false); else if (menuOpen()) closeMenu(); else return false; return true; },
     // what E will do: an i18n key plus its values and an id for change detection, or null
     setPrompt(key, vars, id) {
       const sig = key ? key + '|' + id : null;

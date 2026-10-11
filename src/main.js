@@ -12,9 +12,10 @@ import { blocked, groundAt, floorAt, rectDistance, insideHall } from './collisio
 import { findPath } from './nav.js';
 import { createUI } from './ui.js';
 import { sound } from './audio.js';
-import { tr } from './i18n.js';
+import { t, tr } from './i18n.js';
 import { lamps, addLamp, MOOD } from './lights.js';
 import { cv } from './textures.js';
+import { drawFace } from './figures.js';
 
 const canvas = document.getElementById('world');
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } } };
@@ -57,13 +58,13 @@ scene.add(sun, sun.target);
 buildWorld(scene, renderer);
 const stalls = buildStalls(scene);
 const hall = buildHall(scene);
-const agents = createAgents(scene);
+const agents = createAgents(scene, hall.board);
 const player = createPlayer(scene), P = player.state;
 const chickens = createChickens(scene);
 const wolf = createWolf(scene, blocked);
 const ambience = createAmbience(scene);
 const torch = addLamp(scene, 0, 2, 0, 0, 0.85, 5.5, '#ffd9a0'); // a soft light that follows the player at night
-const pickable = [...stalls.map((s) => s.group), ...agents.groups];
+const pickable = [...stalls.map((s) => s.group), ...agents.groups, hall.board.mesh];
 let bakeFrames = 4; // draw the sun shadows over the first few frames, then keep them
 
 /* ── progress: which stalls have been opened, and the wolf reward ── */
@@ -82,7 +83,10 @@ const ui = createUI(canvas, {
   goTo,
   pickOutfit: (id) => player.setOutfit(id, false),
   endWardrobe: (keep) => { player.setOutfit(keep ? player.outfit() : wardrobePrev, true); },
-  languageChanged: () => refreshSlab(),
+  languageChanged: () => { refreshSlab(); boardSig = ''; },
+  agentState: (id) => { const n = agents.list.find((q) => q.id === id); return { status: agents.status(n), where: agents.where(n) }; },
+  agentDesign: (id) => agents.list.find((q) => q.id === id).design,
+  callAgent: (id) => agents.call(id),
   toggleTheme: () => { nightTarget = nightTarget ? 0 : 1; try { sessionStorage.setItem('pv-theme', nightTarget ? 'dark' : 'light'); } catch (e) { /* ignore */ } return nightTarget === 1; },
 });
 ui.setProgress(visited, wolfUnlocked);
@@ -94,6 +98,18 @@ function openStall(s) {
   visit(s.id);
 }
 function talkTo(n) { auto = null; ui.openChat(n, n.design); }
+
+/* ── the agent board in the hall: repainted whenever somebody's status changes ── */
+const faces = {}; for (const n of agents.list) { faces[n.id] = cv(16, 16, (g) => drawFace(g, n.design)); }
+let boardSig = '';
+function refreshBoard() {
+  const sig = agents.list.map((n) => agents.status(n)).join();
+  for (const n of agents.list) ui.setAgentStatus(n.id, agents.status(n));
+  if (sig === boardSig) return; boardSig = sig;
+  hall.board.draw(agents.list.map((n) => ({ name: n.name, role: tr(n, 'role'), color: n.color, face: faces[n.id], status: t(agents.status(n)), live: !n.outside && n.task !== 'break' })));
+}
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardSig = ''; });
+function openBoard() { auto = null; ui.openBoard(); }
 
 /* ── walk-to: the menu sends the character somewhere on foot ── */
 let auto = null; // { path: [[x, z], ...], then: fn }
@@ -138,14 +154,16 @@ function applyMood(time, indoors) {
   for (const l of lamps) l.light.intensity = mix(l.day, l.night, t) * (1 + Math.sin(time * 9 + l.seed) * 0.05 + Math.sin(time * 23 + l.seed * 2) * 0.035);
 }
 
+const nearBoard = () => rectDistance(hall.board.rect, P.x, P.z) < 2.3;
+
 /* ── input ── */
 const keys = {}, joy = { x: 0, y: 0 };
 let jumpQueued = false, near = null; // near: { act: fn, text }
 window.addEventListener('keydown', (e) => {
   const k = e.code;
   if (k === 'Escape') { ui.escape(); return; }
-  if (k === 'KeyE' && !e.repeat) { if (ui.openId() || ui.chatId()) ui.escape(); else if (near && !ui.paused()) near.act(); return; }
-  if (k === 'Space' || k.startsWith('Arrow')) { if (ui.paused() && k === 'Space') return; e.preventDefault(); }
+  if (k === 'KeyE' && !e.repeat) { if (ui.openId() || ui.chatId() || ui.boardOpen()) ui.escape(); else if (near && !ui.paused()) near.act(); return; }
+  if (k === 'Space' || k.startsWith('Arrow')) { if (ui.paused()) return; e.preventDefault(); } // leave these keys to buttons and sliders while a panel is open
   if (k === 'Space' && !e.repeat) jumpQueued = true;
   keys[k] = true; sound.unlock();
 });
@@ -157,7 +175,8 @@ const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function pick(e) {
   const r = canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera);
   for (const hit of ray.intersectObjects(pickable, true)) {
-    if (hit.object.userData.agent) { if (hall.openness() > 0.6) return { agent: agents.list.find((n) => n.id === hit.object.userData.agent) }; continue; }
+    if (hit.object.userData.board) { if (hall.openness() > 0.6) return { board: true }; continue; }
+    if (hit.object.userData.agent) { const n = agents.list.find((q) => q.id === hit.object.userData.agent); if (n.outside || hall.openness() > 0.6) return { agent: n }; continue; }
     let o = hit.object; while (o && !o.userData.id) o = o.parent; if (o) return { stall: stalls.find((s) => s.id === o.userData.id) };
   }
   return null;
@@ -181,7 +200,8 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointerup', (e) => {
   lift(e); if (!down) return; const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]); down = null; if (moved >= 8 || ui.paused()) return;
   const hit = pick(e); if (!hit) { tapGround(); return; }
-  if (hit.agent) { const n = hit.agent; if (Math.hypot(P.x - n.x, P.z - n.z) < TUNING.talkRange * 1.7) talkTo(n); else walkTo(n.x, n.z + 1.3); }
+  if (hit.board) { if (nearBoard()) openBoard(); else walkTo(hall.board.stand[0], hall.board.stand[1], openBoard); }
+  else if (hit.agent) { const n = hit.agent; if (Math.hypot(P.x - n.x, P.z - n.z) < TUNING.talkRange * 1.7) talkTo(n); else walkTo(n.x, n.z + 1.3); }
   else if (hit.stall.kind === 'outfits') goTo('outfits'); else openStall(hit.stall);
 });
 canvas.addEventListener('pointermove', (e) => {
@@ -280,7 +300,10 @@ function update(dt) {
   for (const s of stalls) {
     const d = rectDistance(s.rect, P.x, P.z); if (d < bd) { bd = d; nearKey = s.id; near = s.kind === 'outfits' ? { key: 'changeOutfit', act: () => goTo('outfits') } : { key: 'open', vars: { name: tr(s, 'label') }, act: () => openStall(s) }; }
   }
-  if (indoors > 0.5) { const n = agents.nearest(P); if (n) { nearKey = n.id; near = { key: 'talkTo', vars: { name: n.name }, act: () => talkTo(n) }; } }
+  { const n = agents.nearest(P, indoors); if (n) { nearKey = n.id; near = { key: 'talkTo', vars: { name: n.name }, act: () => talkTo(n) }; } }
+  // the board wins when you are right up against it
+  if (indoors > 0.5 && nearBoard() && (!near || near.key !== 'talkTo' || rectDistance(hall.board.rect, P.x, P.z) < 1.1)) { nearKey = 'board'; near = { key: 'openBoard', act: openBoard }; }
+  refreshBoard();
   if (auto || !near) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
   if (markerLife > 0) { markerLife = auto ? Math.max(0.35, markerLife - dt * 0.8) : markerLife - dt * 3; marker.material.opacity = Math.max(0, markerLife) * 0.9; marker.scale.setScalar(0.8 + Math.sin(time * 6) * 0.08); marker.rotation.z = time * 1.2; }
   if (pendingReward && !ui.paused()) { pendingReward = false; wolfUnlocked = true; store.set('pv-wolf', 'yes'); wolf.activate(P); ui.setProgress(visited, true); ui.toast(); sound.play('achieve'); setTimeout(() => sound.play('bark'), 700); }
@@ -296,7 +319,7 @@ function update(dt) {
   const place = (key, x, y, z, isNear, alpha) => { v3.set(x, y, z).project(camera); ui.placeLabel(key, (v3.x * 0.5 + 0.5) * w, (-v3.y * 0.5 + 0.5) * h, isNear, v3.z > 1 ? 0 : alpha * hide); };
   for (const s of stalls) place(s.id, s.pos[0], 5.3, s.pos[1], s.id === nearKey, 1);
   place('hall', hall.labelAt[0], hall.labelAt[1], hall.labelAt[2], false, 1 - indoors);
-  for (const n of agents.list) place(n.id, n.x, HALL.floor + 2.5 - n.sit * 0.3, n.z, n.id === nearKey, indoors);
+  for (const n of agents.list) place(n.id, n.x, n.y + 2.5 - n.sit * 0.3, n.z, n.id === nearKey, n.outside ? 1 : indoors);
 }
 // If the first few seconds run slowly, render at a lower resolution from then on.
 let probe = { frames: 0, time: 0 };
