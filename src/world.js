@@ -1,6 +1,6 @@
 // The map: ground, raised paving stones, grass, fences, bushes, forest and the guide slab.
 import * as THREE from 'three';
-import { BOUNDS, HALL, STALLS, TUNING, frontOf } from './config.js';
+import { BOUNDS, HALL, STALLS, TUNING, CAVE, frontOf } from './config.js';
 import { t } from './i18n.js';
 import { rng, hash, noise, cv, fill, speck, toTex, tiles, M, B, Batch, boxGeo, glow, PAVER_TINTS, DIRT, GRASS } from './textures.js';
 import { collide, inHallRect } from './collision.js';
@@ -8,6 +8,8 @@ import { addLamp } from './lights.js';
 
 const HALF = 48, SIZE = HALF * 2;
 const GRASS_T = 0, COBBLE = 1, DIRT_T = 2, HALL_T = 3;
+// the hole in the ground where the cave stairs go down
+const inPit = (x, z, pad = 0) => Math.abs(x - CAVE.x) < CAVE.w / 2 + pad && z > CAVE.z0 - pad && z < CAVE.z1 + pad;
 const inBounds = (x, z, pad = 0) => x > BOUNDS.x0 - pad && x < BOUNDS.x1 + pad && z > BOUNDS.z0 - pad && z < BOUNDS.z1 + pad;
 // distance from a point to a line segment, for the diagonal road to the town hall
 const segDist = (x, z, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz))); return Math.hypot(x - ax - dx * t, z - az - dz * t); };
@@ -26,7 +28,7 @@ function classify(x, z) {
     s = Math.min(ax - 3.4, az - 3.0, (Math.hypot(x / 12.5, z / 8) - 1) * 6, Math.abs(x + 12.6) - 1.8 + (z < -3 ? 9 : 0), Math.abs(x - 16.6) - 1.8 + (z < -3 ? 9 : 0));
     s = Math.min(s, segDist(x, z, 4, -3, HALL.doorX, HALL.z1 + 2) - 2.6, Math.hypot(x - HALL.doorX, z - (HALL.z1 + 3)) - 4.2, Math.max(Math.abs(x - HALL.doorX) - 7.4, z - (HALL.z1 + 5.2))); // the last term is the paved forecourt
     for (const p of STALLS) { const f = frontOf(p, 2.4); s = Math.min(s, Math.hypot(x - f[0], z - f[1]) - 3.7); }
-  } else if (ax < 8 && !(z < 0 && x > HALL.x0 - 2)) s = ax - 3.2 + (z < 0 ? BOUNDS.z0 - z : z - BOUNDS.z1) * 0.22; // the road runs off the top and bottom of the map
+  } else if (ax < 8 && z < 0 && !(x > HALL.x0 - 2)) s = ax - 3.2 + (BOUNDS.z0 - z) * 0.22; // the road runs off the top of the map (the bottom ends at the cave)
   else s = 99;
   s += n;
   if (s < 0) return COBBLE;                                   // roads are solid paving
@@ -61,7 +63,11 @@ export function buildWorld(scene, renderer) {
       }
     });
     const tex = toTex(c, false); tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE, SIZE, SIZE), new THREE.MeshLambertMaterial({ map: tex }));
+    // one quad per cell; the cells over the cave stairs are left out, leaving a hole
+    const geo = new THREE.PlaneGeometry(SIZE, SIZE, SIZE, SIZE), src = geo.index.array, keep = [];
+    for (let j = 0; j < SIZE; j++) for (let i = 0; i < SIZE; i++) { if (inPit(i - HALF + 0.5, j - HALF + 0.5, -0.1)) continue; const o = (j * SIZE + i) * 6; for (let k = 0; k < 6; k++) keep.push(src[o + k]); }
+    geo.setIndex(keep);
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex }));
     m.rotation.x = -Math.PI / 2; m.receiveShadow = true; scene.add(m);
   }
 
@@ -80,7 +86,7 @@ export function buildWorld(scene, renderer) {
 
   for (let z = -44.5; z < 34; z++) for (let x = -42.5; x < 46; x++) {
     const t = types[idx(x, z)];
-    if (t === HALL_T) continue;
+    if (t === HALL_T || inPit(x, z, 0.6)) continue;
     if (t === COBBLE) {
       if (Math.abs(x) < 3.2 && Math.abs(z) < 2.1) continue; // hidden under the guide slab
       const k = r();
@@ -114,7 +120,17 @@ export function buildWorld(scene, renderer) {
     const gate = alongX && Math.abs(x) < 3.5;
     if (gate || noise(x * 0.22 + 70, z * 0.22 + 31) > 0.47) fence(x, z, alongX); else bush(x, z);
   };
-  for (let x = BOUNDS.x0 - 0.5; x <= BOUNDS.x1 + 0.5; x++) { edge(x, BOUNDS.z0 - 0.5, true); edge(x, BOUNDS.z1 + 0.5, true); }
+  // the bottom edge is a low ridge of mossy rock instead of a fence, rising either side of the cave
+  const ridge = (x) => {
+    const near = Math.abs(x - CAVE.x); if (near < CAVE.w / 2 + 0.6) return;
+    const lift = near < 6 ? (6 - near) * 0.22 : 0;
+    for (const [dz, base] of [[0, 0.75], [1, 1.05], [2, 0.6]]) {
+      const h = base + lift + noise(x * 0.5 + dz * 3, 11) * 0.7, z = BOUNDS.z1 + 0.5 + dz;
+      rocks.add(x, h / 2, z, 1, h, 1, col.setHSL(0.08, 0.05, 0.3 + r() * 0.1).clone());
+      if (r() < 0.55) leaves.add(x + (r() - 0.5) * 0.3, h + 0.08, z, 0.9 + r() * 0.2, 0.18, 0.9, col.setHSL(0.24 + r() * 0.05, 0.45, 0.3 + r() * 0.08).clone());
+    }
+  };
+  for (let x = BOUNDS.x0 - 0.5; x <= BOUNDS.x1 + 0.5; x++) { edge(x, BOUNDS.z0 - 0.5, true); ridge(x); }
   for (let z = BOUNDS.z0 + 0.5; z < BOUNDS.z1; z++) { edge(BOUNDS.x0 - 0.5, z, false); edge(BOUNDS.x1 + 0.5, z, false); }
 
   /* loose stones and lantern posts inside the plaza */
@@ -132,7 +148,7 @@ export function buildWorld(scene, renderer) {
 
   /* forest. Trees are left out wherever they would stand between the camera and the player. */
   const dir = [Math.sin(TUNING.cameraYaw), Math.cos(TUNING.cameraYaw)];
-  const hides = (x, z) => { for (let s = 1.5; s <= 11.5; s += 0.5) { const px = x - dir[0] * s, pz = z - dir[1] * s; if (inBounds(px, pz) || inHallRect(px, pz)) return true; } return false; };
+  const hides = (x, z) => { if (inPit(x, z, 3)) return true; for (let s = 1.5; s <= 11.5; s += 0.5) { const px = x - dir[0] * s, pz = z - dir[1] * s; if (inBounds(px, pz) || inHallRect(px, pz) || inPit(px, pz, 1)) return true; } return false; };
   const tree = (x, z, base) => {
     const h = 4 + ((r() * 3) | 0), tc = col.setHSL(0.185 + r() * 0.075, 0.5 + r() * 0.14, 0.37 + r() * 0.1).clone();
     const lc = () => tc.clone().offsetHSL(0, 0, (r() - 0.5) * 0.12);
@@ -174,7 +190,7 @@ export function buildWorld(scene, renderer) {
       text(t('slabTitle'), my ? 44 : 52, 312, 76);
       key(182, 146, 'W'); key(126, 204, 'A'); key(182, 204, 'S'); key(238, 204, 'D'); text(t('slabOr'), 26, 312, 206);
       key(442, 146, null, 0); key(386, 204, null, -Math.PI / 2); key(442, 204, null, Math.PI); key(498, 204, null, Math.PI / 2);
-      text(t('slabMove'), my ? 24 : 32, 312, 286); text(t('slabKeys'), my ? 23 : 25, 312, 340);
+      text(t('slabMove'), my ? 24 : 30, 312, 272); text(t('slabKeys'), my ? 22 : 23, 312, 318); text(t('slabKeys2'), my ? 22 : 23, 312, 354);
       tex.needsUpdate = true;
     };
     draw(); redrawSlab = draw;

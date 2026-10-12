@@ -3,6 +3,8 @@
 // Music is a separate looping track with its own on/off switch.
 import { SOUND_FILES, MUSIC_FILE, MUSIC_VOLUME } from './config.js';
 import { BASE } from './base.js';
+import { RECORDS } from './hideout-content.js';
+import { rng } from './textures.js';
 
 const read = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v !== 'off'; } catch (e) { return d; } };
 const write = (k, v) => { try { localStorage.setItem(k, v ? 'on' : 'off'); } catch (e) { /* ignore */ } };
@@ -54,6 +56,7 @@ const SYNTH = {
   cricket: () => { for (let i = 0; i < 3; i++) tone(4300, 4300, 0.045, 'sine', 0.008, i * 0.07); },
   // a nasal "hrmm", in the spirit of a grumbling villager
   villager: () => { const f = 150 + Math.random() * 50; tone(f, f * 0.78, 0.34, 'sawtooth', 0.16, 0, 820); tone(f * 1.5, f * 1.1, 0.22, 'sawtooth', 0.05, 0.02, 1500); },
+  roll: () => { thud(0.22, 1400, 0.12); tone(200, 110, 0.2, 'triangle', 0.05); },
   bark: () => { tone(430, 250, 0.09, 'square', 0.07, 0, 700); tone(470, 260, 0.1, 'square', 0.07, 0.16, 700); },
   achieve: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.22, 'triangle', 0.08, i * 0.1)); },
 };
@@ -67,20 +70,68 @@ export const sound = {
   toggle() { on = !on; write('pv-sound', on); return on; },
 };
 
-/* ── background music ── */
-let track = null, musicOn = read('pv-music', true), began = false;
+/* ── background music ──
+   The music box in the Hideout holds several records (src/hideout-content.js). A record is
+   either an audio file, played with an <audio> element, or one of the small built-in demo
+   tunes below, played with Web Audio. The chosen record is remembered. */
+const pick = () => { try { return localStorage.getItem('pv-record'); } catch (e) { return null; } };
+let musicOn = read('pv-music', true), began = false, el = null, current = (RECORDS.find((r) => r.id === pick()) || RECORDS[0] || {}).id, synth = null, mctx = null;
+const listeners = [];
+const changed = () => listeners.forEach((f) => f());
+function musicCtx() {
+  if (!mctx) { const A = window.AudioContext || window.webkitAudioContext; if (!A) return null; try { mctx = new A(); } catch (e) { return null; } }
+  if (mctx.state === 'suspended') mctx.resume(); return mctx;
+}
+// the demo tunes: a chord progression played as an arpeggio over a bass line, with a few melody notes
+const TUNES = {
+  cave:   { bpm: 70, root: 57, wave: 'triangle', lead: 'sine', echo: 0.42, chords: [[0, 3, 7, 12], [-4, 0, 3, 8], [3, 7, 10, 15], [-2, 2, 5, 10]], scale: [0, 3, 5, 7, 10, 12] },
+  rain:   { bpm: 82, root: 60, wave: 'sine', lead: 'triangle', echo: 0.3, chords: [[0, 4, 7, 11], [-3, 0, 4, 7], [-7, -3, 0, 4], [-5, -1, 2, 4]], scale: [0, 2, 4, 7, 9, 12] },
+  market: { bpm: 116, root: 53, wave: 'square', lead: 'square', echo: 0.15, chords: [[0, 4, 7, 12], [5, 9, 12, 17], [7, 11, 14, 19], [0, 4, 7, 12]], scale: [0, 2, 4, 7, 9, 12], bounce: true },
+};
+const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+function startSynth(name) {
+  const a = musicCtx(), T = TUNES[name]; if (!a || !T) return null;
+  const out = a.createGain(); out.gain.value = 0; out.gain.linearRampToValueAtTime(MUSIC_VOLUME * (T.wave === 'square' ? 0.55 : 1.1), a.currentTime + 0.8); out.connect(a.destination);
+  const echo = a.createDelay(1), fb = a.createGain(), wet = a.createGain(); echo.delayTime.value = 60 / T.bpm * 0.75; fb.gain.value = T.echo; wet.gain.value = T.echo;
+  echo.connect(fb); fb.connect(echo); echo.connect(wet); wet.connect(out);
+  const note = (m, t, len, type, vol) => {
+    const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.value = hz(m);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(out); g.connect(echo); o.start(t); o.stop(t + len + 0.05);
+  };
+  const r = rng(name.length * 7 + 3), melody = []; // a fixed little melody for the 4-bar loop
+  for (let i = 0; i < 16; i++) melody.push(r() < 0.55 ? T.scale[(r() * T.scale.length) | 0] + 12 : null);
+  const step = 60 / T.bpm / 2, ARP = [0, 1, 2, 3, 2, 1, 2, 1];
+  let n = 0, next = a.currentTime + 0.1;
+  const timer = setInterval(() => {
+    while (next < a.currentTime + 0.25) {
+      const bar = Math.floor(n / 8) % 4, k = n % 8, ch = T.chords[bar];
+      note(T.root + ch[ARP[k]], next, step * 1.6, T.wave, T.wave === 'square' ? 0.05 : 0.12);
+      if (k % (T.bounce ? 2 : 4) === 0) note(T.root - 12 + ch[0] + (T.bounce && k % 4 === 2 ? 7 : 0), next, step * (T.bounce ? 1.5 : 3.6), 'triangle', 0.16);
+      if (k % 2 === 0) { const m = melody[(bar * 4 + k / 2) % 16]; if (m !== null) note(T.root + m, next + step * 0.02, step * 2.6, T.lead, T.lead === 'square' ? 0.035 : 0.09); }
+      n++; next += step;
+    }
+  }, 50);
+  return { stop() { clearInterval(timer); const t = a.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.linearRampToValueAtTime(0, t + 0.4); setTimeout(() => out.disconnect(), 600); } };
+}
+function stopAll() { if (el) el.pause(); if (synth) { synth.stop(); synth = null; } }
+function playCurrent() {
+  stopAll(); const rec = RECORDS.find((q) => q.id === current); if (!rec || !musicOn) { changed(); return; }
+  if (rec.file) {
+    if (!el) { el = new Audio(); el.loop = true; }
+    const src = BASE + 'assets/sounds/' + rec.file; if (el.dataset.src !== src) { el.src = src; el.dataset.src = src; }
+    el.volume = MUSIC_VOLUME; el.play().catch(() => { began = false; });
+  } else if (rec.synth) synth = startSynth(rec.synth);
+  changed();
+}
 export const music = {
-  available: !!MUSIC_FILE,
+  available: RECORDS.length > 0 && !!(MUSIC_FILE || RECORDS.some((r) => r.synth)),
   isOn: () => musicOn,
+  current: () => current,
   // browsers only allow audio after the visitor has pressed a key or tapped
-  start() {
-    if (!MUSIC_FILE || began) return; began = true;
-    track = new Audio(BASE + 'assets/sounds/' + MUSIC_FILE); track.loop = true; track.volume = MUSIC_VOLUME;
-    if (musicOn) track.play().catch(() => { began = false; });
-  },
-  toggle() {
-    musicOn = !musicOn; write('pv-music', musicOn);
-    if (!track) this.start(); else if (musicOn) track.play().catch(() => {}); else track.pause();
-    return musicOn;
-  },
+  start() { if (began || !this.available) return; began = true; playCurrent(); },
+  toggle() { musicOn = !musicOn; write('pv-music', musicOn); if (!began) { began = true; } playCurrent(); return musicOn; },
+  // the music box: put on a record (and switch music on if it was off)
+  play(id) { current = id; try { localStorage.setItem('pv-record', id); } catch (e) { /* ignore */ } began = true; if (!musicOn) { musicOn = true; write('pv-music', true); } playCurrent(); },
+  onChange: (f) => listeners.push(f),
 };

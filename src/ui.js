@@ -123,14 +123,15 @@ export function createUI(canvas, handlers) {
   };
   STALLS.forEach((p) => navItem(p.id, p.color, p.email || p.about ? 'navContact' : p.kind === 'outfits' ? 'navVillage' : 'navProjects'));
   navItem('hall', '#8b8a86', 'navVillage'); nav.hall.b.classList.add('noTick');
+  navItem('hideout', '#ffd060', 'navVillage'); nav.hideout.b.classList.add('noTick');
 
   /* top buttons */
   const toggleBtn = (id, isOn, flip, onWord, offWord) => {
-    const b = $(id); const paint = () => { const v = isOn(); b.classList.toggle('alt', !v); b.setAttribute('aria-pressed', String(v)); b.setAttribute('aria-label', v ? offWord : onWord); };
+    const b = $(id); const paint = b._paint = () => { const v = isOn(); b.classList.toggle('alt', !v); b.setAttribute('aria-pressed', String(v)); b.setAttribute('aria-label', v ? offWord : onWord); };
     b.onclick = () => { flip(); paint(); b.blur(); }; paint(); return b;
   };
   toggleBtn('soundBtn', sound.isOn, () => { if (sound.toggle()) sound.play('menu'); }, 'Turn sound on', 'Turn sound off');
-  const musicBtn = toggleBtn('musicBtn', music.isOn, () => { music.toggle(); sound.play('menu'); }, 'Turn music on', 'Turn music off'); if (!music.available) musicBtn.hidden = true;
+  const musicBtn = toggleBtn('musicBtn', music.isOn, () => { music.toggle(); sound.play('menu'); }, 'Turn music on', 'Turn music off'); if (!music.available) musicBtn.hidden = true; music.onChange(() => musicBtn._paint());
   const themeBtn = $('themeBtn');
   const setTheme = (dark) => { themeBtn.classList.toggle('alt', dark); themeBtn.setAttribute('aria-pressed', String(dark)); themeBtn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode'); };
   themeBtn.onclick = () => { setTheme(handlers.toggleTheme()); sound.play('menu'); themeBtn.blur(); };
@@ -234,7 +235,7 @@ export function createUI(canvas, handlers) {
   function paintText() {
     document.querySelectorAll('[data-t]').forEach((e) => { e.textContent = t(e.dataset.t); });
     STALLS.forEach((p) => { labelText[p.id].textContent = tr(p, 'label'); nav[p.id].name.textContent = tr(p, 'title'); });
-    labelText.hall.textContent = hallName(); nav.hall.name.textContent = t('townHall', { name: hallName() });
+    labelText.hall.textContent = hallName(); nav.hall.name.textContent = t('townHall', { name: hallName() }); nav.hideout.name.textContent = t('hideoutNav');
     AGENTS.forEach((a) => { agentStatus[a.id].textContent = t(agentState[a.id]); });
     OUTFITS.forEach((o) => { cards[o.id].name.textContent = t('o.' + o.id); cards[o.id].tag.textContent = t('selected'); });
     $('chatHint').textContent = t(isTouch ? 'chatHintTouch' : 'chatHint'); $('toastTitle').textContent = t('achTitle'); $('toastText').textContent = t('achText');
@@ -273,6 +274,8 @@ export function createUI(canvas, handlers) {
     // the small status line under an agent's name tag
     setAgentStatus(id, key) { if (agentState[id] === key) return; agentState[id] = key; agentStatus[id].textContent = t(key); labels[id].classList.toggle('away', key !== 'working'); },
     paused: busy,
+    // a name tag for something that is not a stall (the cave, the things in the Hideout)
+    addPlace(key, text, color, onClick) { addLabel(key, color, onClick); labelText[key].textContent = text; },
     // closes whatever is open; returns true if something was
     escape() { if (openId) closeCard(); else if (chatAgent) closeChat(); else if (boardOpen) closeBoard(); else if (wardOpen) closeWardrobe(false); else if (menuOpen()) closeMenu(); else return false; return true; },
     // what E will do: an i18n key plus its values and an id for change detection, or null
@@ -285,7 +288,7 @@ export function createUI(canvas, handlers) {
     placeLabel(key, sx, sy, near, alpha = 1) {
       if (key.startsWith('say:') && performance.now() > bubbleUntil[key.slice(4)]) alpha = 0;
       const e = labels[key]; if (alpha < 0.03) { if (!e.hidden) e.hidden = true; return; } if (e.hidden) e.hidden = false;
-      e.style.transform = 'translate(-50%,-100%) translate(' + sx.toFixed(1) + 'px,' + Math.max(44, sy).toFixed(1) + 'px)'; e.style.opacity = (alpha * (near || labelText[key] === undefined ? 1 : 0.72)).toFixed(2); if (key === 'hall') e.hidden = true; // the hall now carries its own carved sign e.classList.toggle('near', !!near);
+      e.style.transform = 'translate(-50%,-100%) translate(' + sx.toFixed(1) + 'px,' + Math.max(44, sy).toFixed(1) + 'px)'; e.style.opacity = (alpha * (near || labelText[key] === undefined ? 1 : 0.72)).toFixed(2); if (key === 'hall') e.hidden = true; // the hall now carries its own carved sign
     },
   };
 }

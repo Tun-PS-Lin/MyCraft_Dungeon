@@ -2,7 +2,7 @@
 // plus the inside of the town hall, joined by the doorway; everything else is solid.
 // Inside that area, boxes block if they are taller than a step; lower ones can be
 // walked or jumped onto.
-import { BOUNDS, HALL, FLOOR } from './config.js';
+import { BOUNDS, HALL, FLOOR, CAVE, HIDEOUT } from './config.js';
 
 export const boxes = [];
 export const RADIUS = 0.4;
@@ -19,13 +19,24 @@ export const insideHall = (x, z) => x > HALL.x0 + 1 + M && x < HALL.x1 - 1 - M &
 const inDoor = (x, z) => Math.abs(x - HALL.doorX) < HALL.doorW / 2 - M && z > HALL.z1 - 1.6 && z < HALL.z1 + 0.6;
 const inSquare = (x, z) => x > BOUNDS.x0 + M && x < BOUNDS.x1 - M && z > BOUNDS.z0 + M && z < BOUNDS.z1 - M && !inHallRect(x, z, M);
 
+// the cave stairs, and the Hideout room with the way back up in its back wall
+export const inCave = (x, z) => Math.abs(x - CAVE.x) < CAVE.w / 2 - M - 0.05 && z > BOUNDS.z1 - 1 && z < CAVE.z0 + 3.2;
+const H = HIDEOUT, hx = (x) => x - H.cx, hz = (z) => z - H.cz;
+export const inHideout = (x, z) => hx(x) > H.x0 - 1 && hx(x) < H.x1 + 1 && hz(z) > H.z0 - 3 && hz(z) < H.z1 + 1;
+const inRoom = (x, z) => hx(x) > H.x0 + M && hx(x) < H.x1 - M && hz(z) > H.z0 + M && hz(z) < H.z1 - M;
+export const HIDEOUT_EXIT = { x: H.cx - 8.5, z0: H.cz + H.z0 - 1.4, z1: H.cz + H.z0 + 0.6 }; // the glowing doorway, back wall left
+const inExit = (x, z) => Math.abs(x - HIDEOUT_EXIT.x) < 0.55 && z > HIDEOUT_EXIT.z0 && z < HIDEOUT_EXIT.z1;
+
 export function blocked(x, z, y) {
-  if (!(inSquare(x, z) || insideHall(x, z) || inDoor(x, z))) return true;
+  if (!(inSquare(x, z) || insideHall(x, z) || inDoor(x, z) || inCave(x, z) || inRoom(x, z) || inExit(x, z))) return true;
   for (const b of boxes) if (over(b, x, z) && b.h - y > STEP) return true;
   return false;
 }
 // The square is one flat level so walking over cobbles, dirt and grass never bobs.
-export function floorAt(x, z) { return inHallRect(x, z) && z < HALL.z1 - 0.5 ? HALL.floor : FLOOR; }
+export function floorAt(x, z) {
+  if (inCave(x, z) && z > CAVE.z0) return FLOOR - (z - CAVE.z0) * 0.62; // down the cave stairs
+  return inHallRect(x, z) && z < HALL.z1 - 0.5 ? HALL.floor : FLOOR;
+}
 export function groundAt(x, z, y) {
   let g = floorAt(x, z);
   for (const b of boxes) if (b.h > g && over(b, x, z) && b.h - y <= STEP) g = b.h;

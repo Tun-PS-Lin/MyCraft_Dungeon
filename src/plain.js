@@ -3,6 +3,8 @@
 import { inject as analytics } from '@vercel/analytics';
 import { STALLS, AGENTS, SITE_NAME, CONTACT_EMAIL, REPO_URL } from './config.js';
 import { BASE } from './base.js';
+import { JOURNAL, GALLERY } from './hideout-content.js';
+import { drawPainting, drawIcon, pictureCanvas } from './pixelart.js';
 
 analytics();
 
@@ -47,6 +49,29 @@ for (const a of AGENTS) {
   const dl = el('dl');
   for (const [k, v] of [['Runs', a.schedule], ['Delivers', a.delivers]]) { dl.appendChild(el('dt', '', k)); dl.appendChild(el('dd', '', v)); }
   c.appendChild(dl); list.appendChild(c);
+}
+
+/* side projects (the gallery in the Hideout) */
+if (GALLERY.length) {
+  const gs = sec('Side projects', 'Smaller things I have built. In the village they hang in the Hideout, down the cave.');
+  const gg = el('div', 'cards'); gs.appendChild(gg);
+  for (const p of GALLERY) {
+    const c = el('article', 'card'); c.style.setProperty('--accent', '#c98a2b');
+    const pic = pictureCanvas(32, 24, (g) => drawPainting(g, p.art)); pic.className = 'pix'; c.appendChild(pic);
+    const b = el('div', 'body'); b.appendChild(el('h3', '', p.title)); b.appendChild(el('p', '', p.desc));
+    if (p.url) b.appendChild(link(p.url, 'Visit ↗', 'go')); else b.appendChild(el('span', 'soon', 'Link coming soon'));
+    c.appendChild(b); gg.appendChild(c);
+  }
+}
+
+/* journal */
+if (JOURNAL.length) {
+  const js = sec('Journal');
+  for (const e of JOURNAL) {
+    const d = el('details', 'entry'), s2 = el('summary'); const ic = pictureCanvas(16, 16, (g) => drawIcon(g, e.icon)); ic.className = 'pix-icon';
+    const t = el('span'); t.append(el('strong', '', e.title), el('small', '', [e.tag, e.date].filter(Boolean).join(' · ')));
+    s2.append(ic, t); d.appendChild(s2); (e.body || []).forEach((p) => d.appendChild(el('p', '', p))); js.appendChild(d);
+  }
 }
 
 /* contact */

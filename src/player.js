@@ -15,7 +15,7 @@ export function createPlayer(scene) {
   group.scale.setScalar(TUNING.playerScale); scene.add(group);
 
   const shadow = makeBlob(scene, 1.25 * TUNING.playerScale);
-  const state = { x: 0, y: FLOOR, z: 4.6, vx: 0, vz: 0, vy: 0, yaw: Math.PI, grounded: true, phase: 0, blend: 0, gait: 0, air: 0, squash: 0, visY: FLOOR };
+  const state = { rollK: -1, x: 0, y: FLOOR, z: 4.6, vx: 0, vz: 0, vy: 0, yaw: Math.PI, grounded: true, phase: 0, blend: 0, gait: 0, air: 0, squash: 0, visY: FLOOR };
   const mix = (a, b, t) => a + (b - a) * t;
 
   // Advance the stride. Its pace follows the real ground speed, so feet never slide, and
@@ -31,14 +31,22 @@ export function createPlayer(scene) {
   // time in seconds; day is 1 in full daylight and 0 at night or indoors
   function animate(dt, time, groundY, day) {
     const P = state, s = Math.sin(P.phase);
-    fig.pose(s * mix(0.72, 0.98, P.gait) * P.blend, P.air, time, 0, 0, s * 0.1 * P.blend);
     P.squash = Math.max(0, P.squash - dt * 6);
-    rig.scale.set(1 + P.squash * 0.08, 1 - P.squash * 0.16, 1 + P.squash * 0.08);
+    if (P.rollK >= 0) {
+      // the dash roll: tuck into a ball and turn one full forward somersault around the body's middle
+      const k = P.rollK, e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, a = e * Math.PI * 2;
+      const tuck = Math.sin(Math.PI * Math.min(1, k * 1.08)), s2 = 1 - 0.2 * tuck, c = 1 * s2;
+      fig.pose(0, 0, time, tuck, 0, 0);
+      rig.scale.setScalar(s2); rig.rotation.x = a; rig.position.set(0, c - c * Math.cos(a), -c * Math.sin(a));
+    } else {
+      fig.pose(s * mix(0.72, 0.98, P.gait) * P.blend, P.air, time, 0, 0, s * 0.1 * P.blend);
+      rig.scale.set(1 + P.squash * 0.08, 1 - P.squash * 0.16, 1 + P.squash * 0.08); rig.position.set(0, 0, 0);
+    }
     if (P.grounded) P.visY += (P.y - P.visY) * Math.min(1, dt * 18); else P.visY = P.y;
     // a smooth rise and fall twice per stride, and a forward lean that grows with the run
     const bob = (1 - Math.cos(P.phase * 2)) * 0.5 * mix(0.045, 0.085, P.gait) * P.blend;
     group.position.set(P.x, P.visY + bob, P.z);
-    group.rotation.y = P.yaw; rig.rotation.x = 0.13 * P.gait * P.blend;
+    group.rotation.y = P.yaw; if (P.rollK < 0) rig.rotation.x = 0.13 * P.gait * P.blend;
     // In daylight the blob stretches away from the sun so it reads as a cast shadow.
     const lift = Math.max(0, P.visY - groundY), k = Math.max(0.45, 1 - lift * 0.35), stretch = 1 + day * 0.75, off = day * 0.42 * TUNING.playerScale;
     shadow.position.set(P.x + SHADOW_DIR[0] * off, groundY + 0.03, P.z + SHADOW_DIR[1] * off);

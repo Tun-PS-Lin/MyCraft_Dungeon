@@ -4,13 +4,13 @@
 
 **My portfolio, built as a little blocky village you can walk around.**
 
-[**Play it**](https://mycraft-dungeon.vercel.app) · [Simple version](https://mycraft-dungeon.vercel.app/plain.html) · [Say hello](mailto:tunpyaysonelin@gmail.com)
+[**Play it**](https://portfolio.alacrityresearch.xyz) · [Simple version](https://portfolio.alacrityresearch.xyz/plain.html) · [Say hello](mailto:tunpyaysonelin@gmail.com)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-d9a93a)](LICENSE)
 [![three.js r128](https://img.shields.io/badge/three.js-r128-2f66c4)](https://threejs.org)
-[![Hosted on Vercel](https://img.shields.io/badge/hosted%20on-Vercel-1b2130)](https://mycraft-dungeon.vercel.app)
+[![Hosted on Vercel](https://img.shields.io/badge/hosted%20on-Vercel-1b2130)](https://portfolio.alacrityresearch.xyz)
 
-<a href="https://mycraft-dungeon.vercel.app"><img src="docs/img/readme/hero.gif" alt="Walking across the village square past the stalls and the movement guide" width="100%"></a>
+<a href="https://portfolio.alacrityresearch.xyz"><img src="docs/img/readme/hero.gif" alt="Walking across the village square past the stalls and the movement guide" width="100%"></a>
 
 </div>
 
@@ -38,8 +38,24 @@ nothing to install.
 </table>
 
 A few small things to find: an **About Me** signpost above the movement guide, a day and night
-switch, a meeting table you can call the agents to, and a wolf that starts following you once you
-have opened every stall.
+switch, a dash roll (tap <kbd>Space</kbd> twice), a meeting table you can call the agents to, and a
+wolf that starts following you once you have opened every stall.
+
+<br>
+
+## The Hideout
+
+At the bottom of the square, a cave glows in the rock. Walk down the steps and you arrive in the
+**Hideout**, a private room underground:
+
+- **The music box.** A jukebox with a shelf of records. Pick one and it becomes the background music
+  for the rest of your visit.
+- **The journal.** An open book on a stand, with my notes and blog posts.
+- **The gallery.** Paintings of my side projects, each with a link.
+- **The window.** Sunny sky by day, stars by night, so you can tell the time even underground.
+
+Everything in it lives in `src/hideout-content.js`. The records, entries and paintings there now are
+placeholders.
 
 <br>
 
@@ -93,6 +109,7 @@ what they do.
 |---|---|---|
 | Move | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrow keys, or click the ground | Stick, or tap the ground |
 | Run and jump | Hold <kbd>Shift</kbd>, <kbd>Space</kbd> | Push the stick to its edge, Jump button |
+| Dash roll | <kbd>Space</kbd> twice, quickly | Jump button twice |
 | Open, talk, read | <kbd>E</kbd> when near, or click it | The yellow button, or tap it |
 | Close | <kbd>Esc</kbd> | × |
 | Zoom a little | Scroll, <kbd>+</kbd> and <kbd>-</kbd> | Pinch |
@@ -113,8 +130,9 @@ npm run dev      # http://localhost:5173
 npm run build    # the finished site, in dist/
 ```
 
-The live site deploys from this repository on [Vercel](https://mycraft-dungeon.vercel.app): every push to the main branch
-goes live in about a minute. Any static host works too; upload the contents of `dist/`.
+The live site deploys from this repository on [Vercel](https://vercel.com) and is served at
+[portfolio.alacrityresearch.xyz](https://portfolio.alacrityresearch.xyz): every push to the main branch goes live in
+about a minute. Any static host works too; upload the contents of `dist/`.
 
 **Visitor numbers.** The site reports page views to Vercel Web Analytics, which sets no cookies.
 Turn it on once in the Vercel project under **Analytics**; until then it does nothing.
@@ -136,7 +154,8 @@ Almost everything you would change lives in **`src/config.js`**:
 | `LANGUAGE_TOGGLE` | `true` brings back the English and Burmese button. The Burmese text is all in place. |
 
 How the agents look is set in `LOOKS` at the top of `src/agents.js`; their demos are in
-`src/demos.js`. The simple version (`plain.html`) is built from the same config, so it never falls
+`src/demos.js`. The Hideout's records, journal entries and paintings are in **`src/hideout-content.js`**:
+put your songs in `public/assets/sounds/` and list them under `RECORDS`. The simple version (`plain.html`) is built from the same config, so it never falls
 out of step with the village.
 
 <details>
@@ -144,7 +163,7 @@ out of step with the village.
 
 <br>
 
-The address `https://mycraft-dungeon.vercel.app` appears in `index.html` (the `canonical` and two `og:` lines),
+The address `https://portfolio.alacrityresearch.xyz` appears in `index.html` (the `canonical` and two `og:` lines),
 in `plain.html`, in `SITE_URL` in `src/config.js` and at the top of this README. If the site moves
 to its own domain, change it in those places. The preview picture is `public/og-image.jpg`
 (1200 × 630). Paste the address into [opengraph.xyz](https://www.opengraph.xyz) to check it, and
@@ -225,7 +244,11 @@ src/ambience.js     fireflies and drifting leaves
 src/collision.js    the walkable area, steps and jumping onto things
 src/textures.js     pixel textures, materials, instancing helpers
 src/ui.js           labels, popup, menu, wardrobe, chat panel, agent board menu, achievement badge
-src/audio.js        sound effects and music
+src/audio.js        sound effects, music and the music box's demo tunes
+src/hideout.js      the cave at the bottom of the square and the Hideout room
+src/hideout-ui.js   the music box, journal and gallery menus
+src/hideout-content.js  the records, journal entries and paintings (edit these)
+src/pixelart.js     the pixel discs, icons and paintings
 src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)
 src/style.css       interface styling
 src/plain.js        builds the simple version from the same config
@@ -261,6 +284,8 @@ docs/img/readme/    the screenshots used in this README
 - [x] The simple version, a loading screen and visitor analytics
 - [ ] Connect Bobby and Friday to their real workflows
 - [ ] Build Sally and Edwin
+- [x] The Hideout: music box, journal and gallery
+- [ ] Fill the Hideout with my own songs, posts and side projects
 - [ ] Launch Urban Simulation and link its stall
 - [ ] Switch the Burmese translation back on
 

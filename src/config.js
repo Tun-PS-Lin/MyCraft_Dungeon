@@ -14,7 +14,7 @@ export const CREDIT = 'Made by Tun. L';
 export const SITE_NAME = 'MyCraft Dungeon';
 export const INTRO_NAME = SITE_NAME;
 export const INTRO_BY = 'A portfolio by Tun. L';
-export const SITE_URL = 'https://mycraft-dungeon.vercel.app';
+export const SITE_URL = 'https://portfolio.alacrityresearch.xyz';
 export const REPO_URL = 'https://github.com/Tun-PS-Lin/MyCraft_Dungeon';
 
 // The stalls.
@@ -170,6 +170,8 @@ export const TUNING = {
   walkSpeed: 4.3,
   runSpeed: 6.6,
   jumpSpeed: 7.6,
+  rollSpeed: 11.5,    // the dash roll (Space twice quickly, or the Jump button twice on phones)
+  rollTime: 0.46,     // seconds the roll lasts
   gravity: 22,
   playerScale: 1.15,  // 1 is two blocks tall
   interactRange: 2.6, // how close to a stall (from any side) before E works
@@ -189,3 +191,7 @@ export const TUNING = {
 export const BOUNDS = { x0: -21, x1: 25, z0: -14, z1: 16 };
 export const HALL = { x0: 6, x1: 25, z0: -30, z1: -10, doorX: 15.5, doorW: 4, floor: 0.4, wallH: 6 };
 export const FLOOR = 0.08; // the height the player walks at everywhere on the square
+// The cave at the bottom of the square: stairs down from z0 to z1, w wide. Walking down them
+// (or pressing E at the top) travels to the Hideout, an underground room built far to the south.
+export const CAVE = { x: 0, z0: 16, z1: 21, w: 4 };
+export const HIDEOUT = { cx: 0, cz: 170, x0: -11, x1: 11, z0: -7.5, z1: 7.5 };

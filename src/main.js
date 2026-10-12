@@ -1,6 +1,6 @@
 // Entry point: builds the scene, reads input and runs the game loop.
 import * as THREE from 'three';
-import { STALLS, TUNING, HALL, FLOOR } from './config.js';
+import { STALLS, TUNING, HALL, FLOOR, CAVE } from './config.js';
 import { buildWorld, refreshSlab } from './world.js';
 import { buildStalls } from './stalls.js';
 import { buildHall } from './hall.js';
@@ -8,10 +8,13 @@ import { createAgents } from './agents.js';
 import { createPlayer } from './player.js';
 import { createChickens, createWolf } from './critters.js';
 import { createAmbience } from './ambience.js';
-import { blocked, groundAt, floorAt, rectDistance, insideHall } from './collision.js';
+import { blocked, groundAt, floorAt, rectDistance, insideHall, inCave, HIDEOUT_EXIT } from './collision.js';
 import { findPath } from './nav.js';
 import { createUI } from './ui.js';
-import { sound } from './audio.js';
+import { sound, music } from './audio.js';
+import { buildCave, buildHideout } from './hideout.js';
+import { createHideoutUI } from './hideout-ui.js';
+import { RECORDS } from './hideout-content.js';
 import { t, tr } from './i18n.js';
 import { lamps, addLamp, MOOD } from './lights.js';
 import { cv } from './textures.js';
@@ -73,6 +76,7 @@ const chickens = createChickens(scene);
 const wolf = createWolf(scene, blocked);
 const ambience = createAmbience(scene);
 const torch = addLamp(scene, 0, 2, 0, 0, 0.85, 5.5, '#ffd9a0'); // a soft light that follows the player at night
+const cave = buildCave(scene), hideout = buildHideout(scene);
 const pickable = [...stalls.map((s) => s.group), ...agents.groups, hall.board.mesh];
 let bakeFrames = 4; // draw the sun shadows over the first few frames, then keep them
 
@@ -102,6 +106,30 @@ const ui = createUI(canvas, {
 ui.setProgress(visited, wolfUnlocked);
 if (wolfUnlocked) wolf.activate(P);
 
+/* ── the Hideout: the cave at the bottom of the square leads to a private room underground ── */
+const hx = createHideoutUI({ onDisc: (r) => hideout.setDisc(r.disc), focusGame: () => canvas.focus({ preventScroll: true }) });
+{ const r = RECORDS.find((q) => q.id === music.current()); if (r) hideout.setDisc(r.disc); }
+let underground = false, travelling = false;
+const paused = () => ui.paused() || hx.isOpen() || travelling;
+ui.addPlace('cave', 'The Hideout', '#ffd060', () => goTo('hideout'));
+for (const p of hideout.props) ui.addPlace('hx:' + p.id, p.label, p.color, () => goTo('hx:' + p.id));
+// a short fade through dark, then the character is in the other place
+function travel(down, then) {
+  if (travelling) return; travelling = true; auto = null; ui.closeMenu(true); hx.hide();
+  const veil = document.getElementById('travel'); veil.querySelector('strong').textContent = down ? 'The Hideout' : 'The Village'; veil.classList.add('show');
+  sound.play('roll');
+  setTimeout(() => {
+    underground = down;
+    if (down) { P.x = hideout.arrive[0]; P.z = hideout.arrive[1]; P.yaw = 0; } else { P.x = cave.top[0]; P.z = cave.top[1] - 0.6; P.yaw = Math.PI; }
+    P.vx = P.vz = P.vy = 0; P.y = P.visY = floorAt(P.x, P.z); focus.set(P.x, 0, P.z - 1.5 * zoom);
+    setTimeout(() => { veil.classList.remove('show'); travelling = false; if (then) then(); }, 260);
+  }, 480);
+}
+function useProp(id) {
+  auto = null;
+  if (id === 'exit') travel(false); else hx.show(id);
+}
+
 function openStall(s) {
   auto = null;
   if (s.kind === 'outfits') { wardrobePrev = player.outfit(); ui.openWardrobe(wardrobePrev); } else ui.openCard(s.id);
@@ -125,7 +153,8 @@ function openBoard() { auto = null; ui.openBoard(); }
 
 /* ── walk-to: the menu sends the character somewhere on foot ── */
 let auto = null; // { path: [[x, z], ...], then: fn }
-function walkTo(x, z, then) { const path = findPath(P.x, P.z, x, z); if (!path || !path.length) { if (then) then(); return false; } auto = { path, then }; return true; }
+function walkTo(x, z, then) { if (underground) { auto = { path: [[x, z]], then }; return true; } // the Hideout is one open room
+  const path = findPath(P.x, P.z, x, z); if (!path || !path.length) { if (then) then(); return false; } auto = { path, then }; return true; }
 
 // tap (or click) the ground to walk there; a ring marks the spot
 const marker = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, map: new THREE.CanvasTexture(cv(64, 64, (g) => { g.strokeStyle = '#ffd24a'; g.lineWidth = 7; g.strokeRect(10, 10, 44, 44); g.fillStyle = '#ffd24a'; g.fillRect(28, 28, 8, 8); })) }));
@@ -142,6 +171,13 @@ function tapGround() {
   }
 }
 function goTo(id) {
+  if (id === 'hideout') { if (!underground) walkTo(cave.top[0], cave.top[1], () => travel(true)); return; }
+  if (id.startsWith('hx:')) {
+    const p = hideout.props.find((q) => 'hx:' + q.id === id); if (!p) return;
+    if (!underground) { travel(true, () => goTo(id)); return; }
+    if (rectDistance(p.rect, P.x, P.z) < TUNING.interactRange) useProp(p.id); else walkTo(p.front[0], p.front[1], () => useProp(p.id)); return;
+  }
+  if (underground) { travel(false, () => goTo(id)); return; } // everything else is up in the village
   if (id === 'hall') { walkTo(hall.entrance[0], hall.entrance[1]); return; }
   const s = stalls.find((q) => q.id === id); if (!s) return;
   if (Math.hypot(P.x - s.front[0], P.z - s.front[1]) < 0.7) openStall(s); else walkTo(s.front[0], s.front[1], () => openStall(s));
@@ -157,12 +193,20 @@ let night = nightTarget;
 ui.setTheme(nightTarget === 1);
 const mix = (a, b, t) => a + (b - a) * t;
 const ease = (t) => t * t * (3 - 2 * t);
+const UNDER = { sky: new THREE.Color('#ffd9a8'), ground: new THREE.Color('#3a2a1a'), sunDay: new THREE.Color('#ffe2b0'), sunNight: new THREE.Color('#7f95e0'), back: new THREE.Color('#0a0705').convertSRGBToLinear() };
 function applyMood(time, indoors) {
   // walking into the hall dims the daylight so the candles carry the room
-  const d = MOOD.day, n = MOOD.night, t = Math.min(1, ease(night) + (1 - ease(night)) * indoors * 0.8);
-  hemi.color.copy(d.sky).lerp(n.sky, t); hemi.groundColor.copy(d.ground).lerp(n.ground, t); hemi.intensity = mix(d.hemi, n.hemi, t);
-  sun.color.copy(d.sun).lerp(n.sun, t); sun.intensity = mix(d.sunI, n.sunI, t);
-  backdrop.copy(d.back).lerp(n.back, t); scene.fog.color.copy(backdrop);
+  const d = MOOD.day, n = MOOD.night, t = underground ? ease(night) : Math.min(1, ease(night) + (1 - ease(night)) * indoors * 0.8);
+  if (underground) {
+    // underground: warm low fill, and the sun (or moon) only as the light through the window
+    hemi.color.copy(UNDER.sky); hemi.groundColor.copy(UNDER.ground); hemi.intensity = mix(0.36, 0.15, t);
+    sun.color.copy(UNDER.sunDay).lerp(UNDER.sunNight, t); sun.intensity = mix(0.62, 0.12, t);
+    backdrop.copy(UNDER.back); scene.fog.color.copy(backdrop);
+  } else {
+    hemi.color.copy(d.sky).lerp(n.sky, t); hemi.groundColor.copy(d.ground).lerp(n.ground, t); hemi.intensity = mix(d.hemi, n.hemi, t);
+    sun.color.copy(d.sun).lerp(n.sun, t); sun.intensity = mix(d.sunI, n.sunI, t);
+    backdrop.copy(d.back).lerp(n.back, t); scene.fog.color.copy(backdrop);
+  }
   for (const l of lamps) l.light.intensity = mix(l.day, l.night, t) * (1 + Math.sin(time * 9 + l.seed) * 0.05 + Math.sin(time * 23 + l.seed * 2) * 0.035);
 }
 
@@ -171,22 +215,27 @@ const nearBoard = () => rectDistance(hall.board.rect, P.x, P.z) < 2.3;
 /* ── input ── */
 const keys = {}, joy = { x: 0, y: 0 };
 let jumpQueued = false, near = null; // near: { act: fn, text }
+// Space (or the Jump button) twice in quick succession is a dash roll
+let lastJumpPress = -9, rollQueued = false, rollT = -1, rollCool = 0;
+const rollDir = [0, 1];
+function pressJump() { if (time - lastJumpPress < 0.3) { rollQueued = true; lastJumpPress = -9; } else { jumpQueued = true; lastJumpPress = time; } }
 window.addEventListener('keydown', (e) => {
   const k = e.code;
-  if (k === 'Escape') { ui.escape(); return; }
-  if (k === 'KeyE' && !e.repeat) { if (ui.openId() || ui.chatId() || ui.boardOpen()) ui.escape(); else if (near && !ui.paused()) near.act(); return; }
-  if (k === 'Space' || k.startsWith('Arrow')) { if (ui.paused()) return; e.preventDefault(); } // leave these keys to buttons and sliders while a panel is open
-  if (k === 'Space' && !e.repeat) jumpQueued = true;
+  if (k === 'Escape') { if (!ui.escape()) hx.hide(); return; }
+  if (k === 'KeyE' && !e.repeat) { if (ui.openId() || ui.chatId() || ui.boardOpen()) ui.escape(); else if (hx.isOpen()) hx.hide(); else if (near && !paused()) near.act(); return; }
+  if (k === 'Space' || k.startsWith('Arrow')) { if (paused()) return; e.preventDefault(); } // leave these keys to buttons and sliders while a panel is open
+  if (k === 'Space' && !e.repeat) pressJump();
   keys[k] = true; sound.unlock();
 });
-window.addEventListener('keyup', (e) => { keys[e.code] = false; if (e.code === 'Space' && !ui.paused()) e.preventDefault(); });
+window.addEventListener('keyup', (e) => { keys[e.code] = false; if (e.code === 'Space' && !paused()) e.preventDefault(); });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
 // click or tap a stall or an agent
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function pick(e) {
   const r = canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera);
-  for (const hit of ray.intersectObjects(pickable, true)) {
+  for (const hit of ray.intersectObjects(underground ? hideout.pickables : pickable, true)) {
+    { let o = hit.object; while (o && !o.userData.prop) o = o.parent; if (o) return { prop: o.userData.prop }; }
     if (hit.object.userData.board) { if (hall.openness() > 0.6) return { board: true }; continue; }
     if (hit.object.userData.agent) { const n = agents.list.find((q) => q.id === hit.object.userData.agent); if (n.outside || hall.openness() > 0.6) return { agent: n }; continue; }
     let o = hit.object; while (o && !o.userData.id) o = o.parent; if (o) return { stall: stalls.find((s) => s.id === o.userData.id) };
@@ -199,8 +248,8 @@ let zoom = TUNING.zoomStart, zoomTarget = TUNING.zoomStart;
 let opening = 0; // seconds left of the opening glide; the camera starts high and settles while the title lifts
 let titleFor = 0; // seconds of drawn frames before the title card lifts, so it never lifts onto a half-built scene
 const setZoom = (z) => { zoomTarget = Math.max(TUNING.zoomMin, Math.min(TUNING.zoomMax, z)); };
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (!ui.paused()) setZoom(zoomTarget * Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0016)); }, { passive: false });
-window.addEventListener('keydown', (e) => { if (ui.paused()) return; if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(zoomTarget - 0.06); if (e.code === 'Minus' || e.code === 'NumpadSubtract') setZoom(zoomTarget + 0.06); });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (!paused()) setZoom(zoomTarget * Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0016)); }, { passive: false });
+window.addEventListener('keydown', (e) => { if (paused()) return; if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(zoomTarget - 0.06); if (e.code === 'Minus' || e.code === 'NumpadSubtract') setZoom(zoomTarget + 0.06); });
 const touches = new Map(); let pinch = 0;
 const spread = () => { const p = [...touches.values()]; return Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]); };
 const lift = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch = 0; };
@@ -210,10 +259,11 @@ canvas.addEventListener('pointerdown', (e) => {
   if (touches.size === 2) { pinch = spread(); down = null; } else down = [e.clientX, e.clientY];
 });
 canvas.addEventListener('pointerup', (e) => {
-  lift(e); if (!down) return; const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]); down = null; if (moved >= 8 || ui.paused()) return;
+  lift(e); if (!down) return; const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]); down = null; if (moved >= 8 || paused()) return;
   const hit = pick(e); if (!hit) { tapGround(); return; }
   if (hit.board) { if (nearBoard()) openBoard(); else walkTo(hall.board.stand[0], hall.board.stand[1], openBoard); }
   else if (hit.agent) { const n = hit.agent; if (Math.hypot(P.x - n.x, P.z - n.z) < TUNING.talkRange * 1.7) talkTo(n); else walkTo(n.x, n.z + 1.3); }
+  else if (hit.prop) goTo('hx:' + hit.prop);
   else if (hit.stall.kind === 'outfits') goTo('outfits'); else openStall(hit.stall);
 });
 canvas.addEventListener('pointermove', (e) => {
@@ -228,7 +278,7 @@ canvas.addEventListener('pointermove', (e) => {
   stick.addEventListener('pointerdown', (e) => { id = e.pointerId; stick.setPointerCapture(id); move(e); sound.unlock(); });
   stick.addEventListener('pointermove', (e) => { if (e.pointerId === id) move(e); });
   stick.addEventListener('pointerup', end); stick.addEventListener('pointercancel', end);
-  document.getElementById('tJump').addEventListener('pointerdown', (e) => { e.preventDefault(); jumpQueued = true; sound.unlock(); });
+  document.getElementById('tJump').addEventListener('pointerdown', (e) => { e.preventDefault(); pressJump(); sound.unlock(); });
   document.getElementById('tUse').addEventListener('click', () => { if (near) near.act(); });
 }
 
@@ -249,7 +299,7 @@ let last = performance.now(), time = 0, chirpT = 4;
 const v3 = new THREE.Vector3();
 function update(dt) {
   time += dt;
-  const busy = ui.paused();
+  const busy = paused();
   let ix = 0, iy = 0;
   if (!busy) { ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x; iy = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + joy.y; }
   let mag = Math.hypot(ix, iy), dx = 0, dz = 0, running = false;
@@ -264,8 +314,19 @@ function update(dt) {
     if (dist < 0.3) { const then = auto.then; auto = null; if (then) then(); }
     else { running = auto.path.length > 1 || dist > 6; const sp = Math.min(running ? TUNING.runSpeed : TUNING.walkSpeed, dist / dt); dx = (ddx / dist) * sp; dz = (ddz / dist) * sp; }
   }
-  // ease into and out of motion instead of snapping to full speed
-  const accel = Math.min(1, dt * (dx || dz ? 9 : 12)); P.vx += (dx - P.vx) * accel; P.vz += (dz - P.vz) * accel;
+  // the dash roll: a burst in the direction you are steering (or facing) that eases off
+  rollCool -= dt;
+  if (rollQueued && !busy && rollT < 0 && rollCool <= 0 && !ui.wardrobeOpen()) {
+    const m = Math.hypot(dx, dz); if (m > 0.1) { rollDir[0] = dx / m; rollDir[1] = dz / m; } else { rollDir[0] = Math.sin(P.yaw); rollDir[1] = Math.cos(P.yaw); }
+    rollT = 0; P.vy = Math.min(P.vy, 1.5); auto = null; sound.play('roll');
+  }
+  rollQueued = false;
+  let accel = Math.min(1, dt * (dx || dz ? 9 : 12)); // ease into and out of motion instead of snapping to full speed
+  if (rollT >= 0) {
+    rollT += dt; const k = Math.min(1, rollT / TUNING.rollTime), sp = mix(TUNING.rollSpeed, dx || dz ? TUNING.walkSpeed : 1.2, k * k);
+    dx = rollDir[0] * sp; dz = rollDir[1] * sp; accel = Math.min(1, dt * 30); running = false; P.rollK = k;
+    if (k >= 1) { rollT = -1; rollCool = 0.25; P.rollK = -1; P.squash = 0.55; }
+  } P.vx += (dx - P.vx) * accel; P.vz += (dz - P.vz) * accel;
   if (Math.hypot(P.vx, P.vz) < 0.05) P.vx = P.vz = 0;
   if (P.vx || P.vz) {
     const ox = P.x, oz = P.z;
@@ -276,20 +337,24 @@ function update(dt) {
   const speed = Math.hypot(P.vx, P.vz);
   if (speed > 0.4) { let d = Math.atan2(P.vx, P.vz) - P.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); P.yaw += d * Math.min(1, dt * 11); }
   if (ui.wardrobeOpen()) { let d = TUNING.cameraYaw + Math.sin(time * 0.8) * 0.45 - P.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); P.yaw += d * Math.min(1, dt * 5); }
-  if (jumpQueued && P.grounded && !busy) { P.vy = TUNING.jumpSpeed; P.grounded = false; auto = null; sound.play('jump'); }
+  if (jumpQueued && P.grounded && !busy && rollT < 0) { P.vy = TUNING.jumpSpeed; P.grounded = false; auto = null; sound.play('jump'); }
   jumpQueued = false;
   P.vy -= TUNING.gravity * dt; P.y += P.vy * dt;
   const g = groundAt(P.x, P.z, P.y);
   if (P.y <= g) { if (!P.grounded && P.vy < -4) { P.squash = 1; sound.play('land'); } P.y = g; P.vy = 0; P.grounded = true; } else P.grounded = false;
-  if (player.stride(dt, speed, running)) sound.play('step');
+  if (player.stride(dt, rollT >= 0 ? 0 : speed, running) && rollT < 0) sound.play('step');
 
   // town hall: the roof lifts away while the player is inside
-  hall.update(dt, insideHall(P.x, P.z) || (Math.abs(P.x - HALL.doorX) < HALL.doorW / 2 && P.z < HALL.z1 + 0.2), time);
+  hall.update(dt, !underground && insideHall(P.x, P.z) || (Math.abs(P.x - HALL.doorX) < HALL.doorW / 2 && P.z < HALL.z1 + 0.2), time);
   const indoors = hall.openness();
   if (night !== nightTarget) night += Math.sign(nightTarget - night) * Math.min(Math.abs(nightTarget - night), dt / 1.6);
   torch.position.set(P.x, P.visY + 2.2, P.z + 0.6);
   applyMood(time, indoors);
-  player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors));
+  player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors) * (underground ? 0 : 1));
+  cave.update(time); hideout.update(time, ease(night), music.isOn());
+  // walking down the cave stairs, or into the glowing doorway in the Hideout, travels
+  if (!travelling && !underground && inCave(P.x, P.z) && P.z > CAVE.z0 + 1.6) travel(true);
+  if (!travelling && underground && Math.abs(P.x - HIDEOUT_EXIT.x) < 0.7 && P.z < HIDEOUT_EXIT.z0 + 1.1) travel(false);
 
   // camera
   closeUp += Math.sign((ui.wardrobeOpen() ? 1 : 0) - closeUp) * Math.min(Math.abs((ui.wardrobeOpen() ? 1 : 0) - closeUp), dt / 0.7);
@@ -305,33 +370,38 @@ function update(dt) {
   } else if (camera.near !== 1) { camera.near = 1; camera.updateProjectionMatrix(); }
   camera.position.copy(camPos); camera.lookAt(camLook);
   // haze begins a little beyond the player and thickens toward the far trees, at any zoom
-  const reach = camPos.distanceTo(camLook); scene.fog.near = reach + 13; scene.fog.far = reach + 54;
+  const reach = camPos.distanceTo(camLook); scene.fog.near = reach + (underground ? 6 : 13); scene.fog.far = reach + (underground ? 26 : 54);
 
   // what E would do right now: the nearest stall (measured to its edge) or agent
   near = null; let bd = TUNING.interactRange, nearKey = null;
   for (const s of stalls) {
     const d = rectDistance(s.rect, P.x, P.z); if (d < bd) { bd = d; nearKey = s.id; near = s.kind === 'outfits' ? { key: 'changeOutfit', act: () => goTo('outfits') } : { key: 'open', vars: { name: tr(s, 'label') }, act: () => openStall(s) }; }
   }
-  { const n = agents.nearest(P, indoors); if (n) { nearKey = n.id; near = { key: 'talkTo', vars: { name: n.name }, act: () => talkTo(n) }; } }
+  { const n = underground ? null : agents.nearest(P, indoors); if (n) { nearKey = n.id; near = { key: 'talkTo', vars: { name: n.name }, act: () => talkTo(n) }; } }
+  if (!underground && Math.hypot(P.x - cave.top[0], P.z - cave.top[1]) < 2.3) { nearKey = 'cave'; near = { key: 'enterCave', act: () => travel(true) }; }
+  if (underground) { near = null; nearKey = null; bd = TUNING.interactRange; for (const p of hideout.props) { const d = rectDistance(p.rect, P.x, P.z); if (d < Math.min(bd, p.range || bd)) { bd = d; nearKey = 'hx:' + p.id; near = { key: p.key, act: () => useProp(p.id) }; } } }
   // the board wins when you are right up against it
-  if (indoors > 0.5 && nearBoard() && (!near || near.key !== 'talkTo' || rectDistance(hall.board.rect, P.x, P.z) < 1.1)) { nearKey = 'board'; near = { key: 'openBoard', act: openBoard }; }
+  if (!underground && indoors > 0.5 && nearBoard() && (!near || near.key !== 'talkTo' || rectDistance(hall.board.rect, P.x, P.z) < 1.1)) { nearKey = 'board'; near = { key: 'openBoard', act: openBoard }; }
   refreshBoard();
-  if (auto || !near) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
+  if (auto || !near || hx.isOpen() || travelling) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
   if (markerLife > 0) { markerLife = auto ? Math.max(0.35, markerLife - dt * 0.8) : markerLife - dt * 3; marker.material.opacity = Math.max(0, markerLife) * 0.9; marker.scale.setScalar(0.8 + Math.sin(time * 6) * 0.08); marker.rotation.z = time * 1.2; }
-  if (pendingReward && !ui.paused()) { pendingReward = false; wolfUnlocked = true; store.set('pv-wolf', 'yes'); wolf.activate(P); ui.setProgress(visited, true); ui.toast(); sound.play('achieve'); setTimeout(() => sound.play('bark'), 700); }
+  if (pendingReward && !paused()) { pendingReward = false; wolfUnlocked = true; store.set('pv-wolf', 'yes'); wolf.activate(P); ui.setProgress(visited, true); ui.toast(); sound.play('achieve'); setTimeout(() => sound.play('bark'), 700); }
 
   agents.update(dt, time, P, ui.chatId());
   chickens.update(dt, P, () => sound.play('cluck'));
   wolf.update(dt, time, P);
-  ambience.update(time, ease(night), indoors);
-  chirpT -= dt; if (chirpT < 0) { chirpT = 4 + Math.random() * 7; if (sound.started() && indoors < 0.5) sound.play(night > 0.5 ? 'cricket' : 'bird'); }
+  ambience.update(time, ease(night), underground ? 1 : indoors);
+  chirpT -= dt; if (chirpT < 0) { chirpT = 4 + Math.random() * 7; if (sound.started() && indoors < 0.5 && !underground) sound.play(night > 0.5 ? 'cricket' : 'bird'); }
 
   // labels
   const w = window.innerWidth, h = window.innerHeight, hide = closeUp > 0.3 ? 0 : 1;
   const place = (key, x, y, z, isNear, alpha) => { v3.set(x, y, z).project(camera); ui.placeLabel(key, (v3.x * 0.5 + 0.5) * w, (-v3.y * 0.5 + 0.5) * h, isNear, v3.z > 1 ? 0 : alpha * hide); };
-  for (const s of stalls) place(s.id, s.pos[0], s.labelY || 5.3, s.pos[1], s.id === nearKey, 1);
+  const up = underground ? 0 : 1;
+  for (const s of stalls) place(s.id, s.pos[0], s.labelY || 5.3, s.pos[1], s.id === nearKey, up);
+  place('cave', cave.labelAt[0], cave.labelAt[1], cave.labelAt[2], nearKey === 'cave', up);
+  for (const p of hideout.props) place('hx:' + p.id, p.labelAt[0], p.labelAt[1], p.labelAt[2], nearKey === 'hx:' + p.id, 1 - up);
   place('hall', hall.labelAt[0], hall.labelAt[1], hall.labelAt[2], false, 1 - indoors);
-  for (const n of agents.list) { const a = n.outside ? 1 : indoors, top = n.y + 2.75 - n.sit * 0.3; place(n.id, n.x, top, n.z, n.id === nearKey, a); place('say:' + n.id, n.x, top + 1.6, n.z, false, a); }
+  for (const n of agents.list) { const a = (n.outside ? 1 : indoors) * up, top = n.y + 2.75 - n.sit * 0.3; place(n.id, n.x, top, n.z, n.id === nearKey, a); place('say:' + n.id, n.x, top + 1.6, n.z, false, a); }
 }
 // If the first few seconds run slowly, render at a lower resolution from then on.
 let probe = { frames: 0, time: 0 };
@@ -348,7 +418,7 @@ function start(saved) {
   canvas.tabIndex = 0;
   // a returning preview session skips the opening; a fresh visit glides in over about two seconds
   if (saved && typeof saved.x === 'number') ui.endIntro(); else { zoom = TUNING.zoomStart * 1.55; opening = 2.8; titleFor = 1.3; for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); }, { once: true }); }
-  window.__village = { P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR }; // handy in the browser console
+  window.__village = { P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 // Only matters inside the Claude preview: keeps your place when the page is republished.
