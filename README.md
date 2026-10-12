@@ -2,231 +2,163 @@
 
 # MyCraft Dungeon
 
-**A portfolio you walk around in: a small blocky village where every market stall is a project and the town hall is staffed by AI agents.**
+**My portfolio, built as a little blocky village you can walk around.**
 
-*Made by Tun. L*
+[**Play it**](https://mycraft-dungeon.vercel.app) · [Simple version](https://mycraft-dungeon.vercel.app/plain.html) · [Say hello](mailto:tunpyaysonelin@gmail.com)
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-d9a93a)](LICENSE)
 [![three.js r128](https://img.shields.io/badge/three.js-r128-2f66c4)](https://threejs.org)
-[![Vite 5](https://img.shields.io/badge/Vite-5-a23fc4)](https://vitejs.dev)
-[![No backend](https://img.shields.io/badge/backend-none-2f7a3c)](#how-it-works)
-[![Desktop and phone](https://img.shields.io/badge/plays%20on-desktop%20%2B%20phone-c98a2b)](#controls)
+[![Hosted on Vercel](https://img.shields.io/badge/hosted%20on-Vercel-1b2130)](https://mycraft-dungeon.vercel.app)
 
-<!-- Replace https://YOUR-SITE with the deployed address, here and in index.html -->
-**[Visit the village →](https://YOUR-SITE)**
-
-<img src="docs/img/readme/village.jpg" alt="The village square with the project stalls, the movement guide and the player with the wolf" width="100%">
+<a href="https://mycraft-dungeon.vercel.app"><img src="docs/img/readme/hero.gif" alt="Walking across the village square past the stalls and the movement guide" width="100%"></a>
 
 </div>
 
 <br>
 
-A portfolio is usually a page of cards. This one is a place.
+## What is this?
 
-You arrive in a village square with a character you can walk, run and jump with. Each market stall
-stands for one project: walk up, press <kbd>E</kbd>, and it opens with a screenshot, a short
-description and a link. Past the square is a town hall where four villagers sit at their desks.
-Each one is an AI agent I have built or am building, and each will show you what it does.
+Hi, I'm Tun Pyay Sone Lin. I work in real estate and media, and I research how cities expand.
+Instead of a page of project cards, I built a place: a village square where every market stall is
+one of my projects, and a town hall where the AI agents I am building sit at their desks.
 
-It runs in the browser on a phone or a laptop, with no install and no server.
+Walk up to anything and press <kbd>E</kbd>. It runs in the browser on a laptop or a phone, with
+nothing to install.
 
 <br>
 
-## A walk through the village
+## Explore the village
 
 <table>
 <tr>
-<td width="50%" valign="top">
-
-**1. Open a project.** Six stalls ring the square. Walk up to one and press <kbd>E</kbd>, or just
-click or tap it. The menu in the corner will walk you there.
-
-<img src="docs/img/readme/stalls.jpg" alt="Three of the project stalls seen up close">
-
-</td>
-<td width="50%" valign="top">
-
-**2. Change your outfit.** The Outfits stall has twelve characters, from Adventurer to Night Watch,
-each with their own hair, hat and gear. Your pick is remembered.
-
-<img src="docs/img/readme/outfits.jpg" alt="The outfit picker with twelve characters">
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**3. Step into the town hall.** The roof fades as you walk in. The agents type at their desks,
-wander the carpets, and stroll out to the stall they work for.
-
-<img src="docs/img/readme/hall.jpg" alt="Inside the town hall, with the agents and the agent board">
-
-</td>
-<td width="50%" valign="top">
-
-**4. Read the agent board.** Pick an agent to see what they do, when they run, what they deliver
-and where they are right now, then call them to the meeting table.
-
-<img src="docs/img/readme/board.jpg" alt="The agent board menu with the four agents and the activity log">
-
-</td>
+<td width="33%" valign="top"><img src="docs/img/readme/stalls.jpg" alt="Three project stalls around the square"><br><b>The stalls.</b> Each one opens a project with a screenshot, a short story and a link.</td>
+<td width="33%" valign="top"><img src="docs/img/readme/outfits.jpg" alt="The outfit picker"><br><b>The outfits.</b> Twelve characters with their own hats and gear. The village remembers your pick.</td>
+<td width="33%" valign="top"><img src="docs/img/readme/hall.jpg" alt="Inside the town hall"><br><b>The town hall.</b> The roof lifts away as you walk in, and the agents get on with their day.</td>
 </tr>
 </table>
 
-Open every stall and a wolf starts following you around.
+A few small things to find: an **About Me** signpost above the movement guide, a day and night
+switch, a meeting table you can call the agents to, and a wolf that starts following you once you
+have opened every stall.
 
 <br>
 
-## The projects
+## On display
 
-| Stall | What it is | Link |
+| Stall | What it is | |
 |---|---|---|
 | **Mingalar News** | A media organization for Myanmar migrants in Thailand, expanding into data-driven market insights on this community. | [mingalar.news](https://mingalar.news) |
 | **Alacrity Research** | An internal CRM to visualize and manage real estate projects, with an AI voice assistant that learns as you use it. | [map.alacrityresearch.xyz](https://map.alacrityresearch.xyz) |
 | **Urban Expansion** | A mathematical framework for how cities grow outward, tested on Yangon. | [Read the paper](https://drive.google.com/file/d/12T6Tg6l2Z3MKGV9wCo5UdtmauGHceIt2/view?usp=sharing) |
 | **Urban Simulation** | A simulated heat map for investments based on the findings of Urban Research. | Coming soon |
-| **Contact Me** | Want to work together or talk through an idea? | [tunpyaysonelin@gmail.com](mailto:tunpyaysonelin@gmail.com) |
 
 <br>
 
-## Meet the agents
+## The town hall
+
+<img src="docs/img/readme/board.jpg" alt="The agent board menu" width="100%">
+
+Four villagers work in the hall, one for each project. The **agent board** at the end of the room
+shows who is at their desk, who is on a break and what they did last. Talk to any of them to try
+what they do.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/img/readme/demo-friday.jpg" alt="Friday answering a question about plots in progress"></td>
-<td width="50%"><img src="docs/img/readme/demo-sally.jpg" alt="Sally's city growth demo with a year slider"></td>
+<td width="50%"><img src="docs/img/readme/demo-bobby.jpg" alt="Bobby ranking news stories"></td>
+<td width="50%"><img src="docs/img/readme/demo-friday.jpg" alt="Friday answering a question about plots"></td>
 </tr>
 <tr>
-<td><b>Friday</b> answers a question about the Alacrity Research map.</td>
-<td><b>Sally</b> grows a city year by year and checks the model against it.</td>
+<td><b>Bobby</b>, news scraper. Ranks the day's Thai and Myanmar news for Mingalar News. Runs every day at 10:30am Bangkok time.</td>
+<td><b>Friday</b>, personal assistant. Answers questions about the Alacrity Research map, by text or by voice.</td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/img/readme/demo-sally.jpg" alt="Sally's city growth demo"></td>
+<td width="50%"><img src="docs/img/readme/demo-edwin.jpg" alt="Edwin comparing a portfolio with its target"></td>
+</tr>
+<tr>
+<td><b>Sally</b>, researcher. Grows a city year by year and checks the urban expansion model against it.</td>
+<td><b>Edwin</b>, financial advisor. Compares a portfolio with its target and writes a weekday morning brief.</td>
 </tr>
 </table>
 
-| Agent | Role | Works for | Runs |
-|---|---|---|---|
-| **Bobby** | News scraper. Reads Thai and Myanmar news sources, removes duplicates, and ranks what matters to Myanmar migrants in Thailand. | Mingalar News | Every day at 10:30am Bangkok time |
-| **Friday** | Personal assistant. Answers questions about plots, tasks and progress, by text or by voice. | Alacrity Research | Whenever she is asked |
-| **Sally** | Researcher. Gathers city growth data and tests the urban expansion model against it. | Urban Expansion | Whenever she is asked |
-| **Edwin** | Financial advisor. Watches a portfolio against its targets and flags what needs attention. | Urban Simulation | Every weekday at 8:00am Bangkok time |
-
-Walk up to an agent and press <kbd>E</kbd> to try their demo. Their name tags show whether they
-are working, on a break or on their way to the table, and speech bubbles pop up as they finish a
-piece of work.
-
-> **What is real and what is a demo.** The projects and their links are real. Inside the hall,
-> every demo, the activity log and the "last run" lines run in your browser on sample data.
-> Nothing is fetched, sent or triggered. Connecting the villagers to the real agents is the next
-> step (see [Status](#status)).
-
-<br>
-
-## Quick start
-
-**You need:** [Node.js](https://nodejs.org) 18 or newer.
-
-```bash
-git clone https://github.com/Tun-PS-Lin/MyCraft_Dungeon
-cd MyCraft_Dungeon
-
-npm install
-npm run dev      # local preview at http://localhost:5173
-npm run build    # production build in dist/
-```
-
-**Put it online.** On [Vercel](https://vercel.com), choose *Add New → Project*, pick this
-repository and press Deploy. Vercel detects Vite on its own (build command `npm run build`, output
-folder `dist`). For GitHub Pages or any other static host, run `npm run build` and upload the
-contents of `dist/`.
+> **Good to know:** the demos in the hall run in your browser on sample data. Nothing is sent
+> anywhere. Bobby and Friday exist as real automations outside this site, and connecting them to
+> the village is on the [roadmap](#roadmap).
 
 <br>
 
 ## Controls
 
-| Action | Keyboard and mouse | Phone |
+| | Keyboard and mouse | Phone |
 |---|---|---|
-| Move | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrow keys | On-screen stick |
-| Walk to a spot | Click the ground | Tap the ground |
-| Run | Hold <kbd>Shift</kbd> | Push the stick to its edge |
-| Jump | <kbd>Space</kbd> | Jump button |
-| Open a stall, talk to an agent, read the board | <kbd>E</kbd> when near, or click it | The yellow button, or tap it |
-| Close | <kbd>Esc</kbd>, <kbd>E</kbd> or × | × |
-| Zoom a little | Scroll, or <kbd>+</kbd> and <kbd>-</kbd> | Pinch |
+| Move | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrow keys, or click the ground | Stick, or tap the ground |
+| Run and jump | Hold <kbd>Shift</kbd>, <kbd>Space</kbd> | Push the stick to its edge, Jump button |
+| Open, talk, read | <kbd>E</kbd> when near, or click it | The yellow button, or tap it |
+| Close | <kbd>Esc</kbd> | × |
+| Zoom a little | Scroll, <kbd>+</kbd> and <kbd>-</kbd> | Pinch |
 
-The buttons in the top-right corner are music, sound effects, day or night, and the menu. On
-phones, music and sound move into the menu under Settings. A fresh visit opens in day or night to
-match the visitor's clock. Music and sound settings, the chosen outfit, explored stalls and the
-wolf are remembered in the visitor's browser.
+The menu in the top-right corner lists every place in the village and walks you there.
 
 <br>
 
-## How it works
+## Run it yourself
 
-```mermaid
-flowchart LR
-    Config["src/config.js<br/>stalls, agents, links, tuning"]
-    subgraph scene ["3D scene (three.js)"]
-        World["Village, stalls,<br/>town hall"]
-        People["Player, agents,<br/>chickens, wolf"]
-    end
-    subgraph overlay ["Interface (HTML and CSS)"]
-        UI["Labels, popups, menu,<br/>outfits, agent board, demos"]
-    end
-    Config --> scene
-    Config --> overlay
-    scene <-->|"position, range, status"| overlay
+You need [Node.js](https://nodejs.org) 18 or newer.
+
+```bash
+git clone https://github.com/Tun-PS-Lin/MyCraft_Dungeon
+cd MyCraft_Dungeon
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # the finished site, in dist/
 ```
 
-- **Everything is built in code.** There are no model or texture files: every block texture is a
-  16 pixel canvas painted at start-up, and every stall, villager and outfit is assembled from boxes.
-- **The 3D scene** is plain three.js with a fixed camera that follows the player. Collision, the
-  walk-to path finding and the agents' behaviour are small hand-written modules, not a game engine.
-- **The interface** is ordinary HTML and CSS on top of the canvas, so popups and menus stay sharp
-  and readable at any size.
-- **Built to run on phones.** Repeated blocks are drawn as instances, static buildings are merged
-  into a few meshes, and the world's shadows are rendered once at start-up.
+The live site deploys from this repository on [Vercel](https://mycraft-dungeon.vercel.app): every push to the main branch
+goes live in about a minute. Any static host works too; upload the contents of `dist/`.
+
+**Visitor numbers.** The site reports page views to Vercel Web Analytics, which sets no cookies.
+Turn it on once in the Vercel project under **Analytics**; until then it does nothing.
 
 <br>
 
 ## Make it yours
 
-Everything you are likely to edit is in **`src/config.js`**:
+Almost everything you would change lives in **`src/config.js`**:
 
 | Setting | What it changes |
 |---|---|
-| `STALLS` | Each stall's name, description, link, popup picture, map position and facing. An empty `url` shows "Link coming soon". |
-| `AGENTS` | Each agent's name, role, desk, greeting, and the text on the agent board. |
-| `CONTACT_EMAIL` | The address in the Contact popup. |
-| `INTRO_NAME`, `CREDIT`, `REPO_URL` | The opening title card and the credit line at the bottom of the screen. |
-| `MUSIC_FILE`, `MUSIC_VOLUME`, `SOUND_FILES` | The background track and real sound effects. |
-| `TUNING` | Walk and run speed, jump height, camera angle and distance, zoom range. |
-| `LANGUAGE_TOGGLE` | Set to `true` to bring back the English and Burmese button. All the Burmese text is in place. |
-| `LIVE_STATUS_URL` | A JSON endpoint for real "last run" lines on the agent board. |
+| `STALLS` | Each stall's name, description, link, picture, position and facing. The About Me signpost is the entry with `about: true`. |
+| `AGENTS` | Each agent's name, role, desk, greeting and the text on the agent board. |
+| `SITE_NAME`, `INTRO_BY`, `CREDIT` | The title card and the credit line. |
+| `CONTACT_EMAIL`, `REPO_URL` | Where Contact Me and the credit line point. |
+| `MUSIC_FILE`, `SOUND_FILES` | The background track and real sound effects. |
+| `TUNING` | Walking speed, jump height, camera angle and zoom range. |
+| `LANGUAGE_TOGGLE` | `true` brings back the English and Burmese button. The Burmese text is all in place. |
 
-Interface wording in both languages is in **`src/i18n.js`**. How each agent looks is set in
-`LOOKS` and their work lines in `WORK`, both at the top of **`src/agents.js`**. Each agent's demo
-is a small function in **`src/demos.js`**.
+How the agents look is set in `LOOKS` at the top of `src/agents.js`; their demos are in
+`src/demos.js`. The simple version (`plain.html`) is built from the same config, so it never falls
+out of step with the village.
 
 <details>
-<summary><b>Link preview image</b></summary>
+<summary><b>Changing the address or the link preview</b></summary>
 
 <br>
 
-This is the card shown when the site address is pasted into Telegram, LinkedIn, Facebook, X and so on.
-
-1. The picture is already in place as **`public/og-image.jpg`** (1200 × 630 pixels). Replace that file to change it.
-2. Deploy the site once so you know its address.
-3. Open **`index.html`** and replace `https://YOUR-SITE` with your real address in the two `og:` lines near the top (for example `https://mycraft.vercel.app`). The image address must be the full address, not a relative path.
-4. Commit, push, and let Vercel redeploy.
-5. Check it by pasting your address into https://www.opengraph.xyz or by sending the link to yourself on Telegram. Apps cache previews; on Telegram, send the link to `@WebpageBot` to refresh it.
+The address `https://mycraft-dungeon.vercel.app` appears in `index.html` (the `canonical` and two `og:` lines),
+in `plain.html`, in `SITE_URL` in `src/config.js` and at the top of this README. If the site moves
+to its own domain, change it in those places. The preview picture is `public/og-image.jpg`
+(1200 × 630). Paste the address into [opengraph.xyz](https://www.opengraph.xyz) to check it, and
+send it to `@WebpageBot` on Telegram to refresh Telegram's cached preview.
 
 </details>
 
 <details>
-<summary><b>Add your own sounds and visuals</b></summary>
+<summary><b>Adding your own sounds and pictures</b></summary>
 
 <br>
 
-Until you add files, every sound effect is a small synthesized placeholder and every texture is
-generated in code, so the site works with nothing but the music track in `public/assets/`.
+Every texture is painted in code and every sound effect has a small synthesized stand-in, so the
+site works with nothing in `public/assets/` except the music.
 
 ### Sounds
 
@@ -269,18 +201,20 @@ Use original or CC0 assets. Do not ship Mojang's own textures, sounds or font on
 
 </details>
 
+<details>
+<summary><b>Where everything lives</b></summary>
+
 <br>
 
-## Project layout
-
 ```
-index.html          page markup (canvas, popup, menu, touch controls)
+index.html          the village page (canvas, popups, menu, touch controls, title card)
+plain.html          the simple version: every project on one page, no 3D
 src/config.js       content, links, sounds, tuning
 src/i18n.js         interface wording in English and Burmese
 src/main.js         renderer, lights, input, camera, game loop
 src/world.js        ground, paving stones, fences, forest, guide slab
-src/stalls.js       the six stalls and their roofs
-src/hall.js         the town hall, its fading roof, the desks and the agent board
+src/stalls.js       the six stalls, their roofs and the About Me signpost
+src/hall.js         the town hall, its fading roof, the desks, the dais and the agent board
 src/agents.js       the agents: desk work, breaks outside, being called to the board
 src/demos.js        the demo each agent shows when you talk to them (sample data only)
 src/figures.js      the blocky people: outfits, painting, posing
@@ -294,35 +228,48 @@ src/ui.js           labels, popup, menu, wardrobe, chat panel, agent board menu,
 src/audio.js        sound effects and music
 src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)
 src/style.css       interface styling
+src/plain.js        builds the simple version from the same config
+src/plain.css       styling for the simple version
 scripts/build-preview.mjs   optional: bundles everything into one HTML file
 docs/img/readme/    the screenshots used in this README
 ```
 
-<br>
-
-## Status
-
-The village is complete and playable. Today it is:
-
-- **A front end only.** The agents in the hall are demos on sample data. Connecting Bobby and
-  Friday to their real workflows, and building Sally and Edwin, comes next.
-- **English only.** The Burmese translation is written and switched off.
-- **Developed on desktop Chrome.** Phone layouts and touch controls are built in; reports from
-  Safari and real phones are welcome.
-- **Pinned to three.js 0.128.** The lighting and colour handling are tuned for that version;
-  upgrading changes how the scene looks and needs a pass over `src/main.js` and `src/textures.js`.
-
-Issues and ideas are welcome.
+</details>
 
 <br>
 
-## Credits
+## Under the hood
 
-Designed and directed by [Tun. L](https://github.com/Tun-PS-Lin). The look is inspired by
-Minecraft Dungeons, but every model, texture and icon here is original and generated by the code
-in `src/`. No Mojang assets are used, and this project is not affiliated with Mojang or Microsoft.
+- **No game engine.** Plain [three.js](https://threejs.org) and [Vite](https://vitejs.dev).
+  Collision, path finding and the agents' daily routine are small hand-written modules.
+- **No model or texture files.** Every block is a 16-pixel canvas painted at start-up, and every
+  stall, villager and outfit is assembled from boxes in code.
+- **Light enough for phones.** Repeated blocks are drawn as instances, buildings are merged into a
+  few meshes, the sun's shadows are drawn once, and the picture sharpness drops automatically on
+  slow devices.
+- **A way out.** Devices without WebGL are sent to the simple version, and the title card offers it
+  too.
+- **Pinned to three.js 0.128.** The lighting is tuned for that version; upgrading needs a pass over
+  `src/main.js` and `src/textures.js`.
 
-<div align="center">
 <br>
-<sub>Built with Claude.</sub>
-</div>
+
+## Roadmap
+
+- [x] The village, six stalls and the outfit picker
+- [x] The town hall, four agents and their demos
+- [x] The simple version, a loading screen and visitor analytics
+- [ ] Connect Bobby and Friday to their real workflows
+- [ ] Build Sally and Edwin
+- [ ] Launch Urban Simulation and link its stall
+- [ ] Switch the Burmese translation back on
+
+Ideas and bug reports are welcome in [Issues](https://github.com/Tun-PS-Lin/MyCraft_Dungeon/issues).
+
+<br>
+
+## License
+
+Released under the [MIT License](LICENSE), © 2026 Tun Pyay Sone Lin. The look is inspired by Minecraft
+Dungeons, but every model, texture and icon is original and generated by the code in `src/`. This
+project is not affiliated with Mojang or Microsoft.

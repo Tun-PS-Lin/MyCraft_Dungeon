@@ -175,9 +175,7 @@ export function buildHall(scene) {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const x = cx + sx * 3.4, z = cz + sz * 3.6; B(inner, 1.4, 0.03, 1.4, flat('#34333a'), x, F + 0.016, z); B(inner, 0.9, 0.035, 0.9, flat('#6a6871'), x, F + 0.018, z); B(inner, 0.3, 0.04, 0.3, gold, x, F + 0.02, z); }
   AGENTS.forEach((a) => buildDesk(inner, a));
 
-  // back wall: a bookcase in each corner, with the agent board between them (built further down)
-  [x0 + 3.2, x1 - 3.2].forEach((x) => bookcase(inner, x, F, nz + 0.3, 3, 3.5));
-  for (const s of [-1, 1]) banner(inner, doorX + s * 6.3, F + 4.5, nz + 0.06, 0.9, 1.4, '#8a2026', 'tree');
+  // back wall: the agent board takes its full width (built further down)
   // left wall: a fireplace in the middle with bookcases either side. Every face sits at its
   // own depth, so nothing shares a plane and flickers.
   B(inner, 1, 2.9, 3.6, M.brick, wx + 0.5, F + 1.45, cz); B(inner, 1.3, 0.24, 4, M.stone, wx + 0.62, F + 3.02, cz); B(inner, 1.3, 0.2, 3.8, M.stone, wx + 0.65, F + 0.1, cz);
@@ -201,45 +199,72 @@ export function buildHall(scene) {
 
   /* the agent board: a big lit screen at the end of the hall, leaning back toward the camera.
      It is drawn on a canvas, so main.js can repaint it whenever an agent's status changes. */
-  // the board stands on a raised stone dais, up one step
-  const DH = 0.3;
-  B(inner, 10.6, DH, 3.4, M.stone, doorX, F + DH / 2, nz + 1.7); B(inner, 6.8, 0.15, 0.6, M.stone, doorX, F + 0.075, nz + 3.7);
-  B(inner, 2.2, 0.04, 1.5, M.carpet, doorX, F + DH + 0.02, nz + 2.65); B(inner, 2.2, 0.04, 0.6, M.carpet, doorX, F + 0.17, nz + 3.7);
-  collide(doorX - 5.3, doorX + 5.3, nz, nz + 3.4, F + DH); collide(doorX - 3.4, doorX + 3.4, nz + 3.4, nz + 4, F + 0.15);
+  // the board stands on a raised dais, up one step: a checkered stone floor with a gold border,
+  // a runner up the middle, and a coloured inlay in dz of each agent's card
+  const DH = 0.3, DW = 14.2, dz = nz + 3.4, edge = flat('#4a4450');
+  B(inner, DW, DH, 3.4, flat('#6e6670'), doorX, F + DH / 2, nz + 1.7);
+  { const cols = 14, rows = 2, tw = (DW - 0.4) / cols, td = 1.3 / rows;
+    for (let i = 0; i < cols; i++) for (let k = 0; k < rows; k++) B(inner, tw - 0.04, 0.02, td - 0.04, flat((i + k) % 2 ? '#8c8279' : '#a99e90'), doorX - (DW - 0.4) / 2 + tw * (i + 0.5), F + DH + 0.01, dz - 0.2 - td * (k + 0.5)); }
+  B(inner, DW + 0.1, 0.06, 0.16, edge, doorX, F + DH + 0.01, dz - 0.06); B(inner, DW - 0.3, 0.035, 0.07, gold, doorX, F + DH + 0.02, dz - 0.2);
+  for (const sx of [-1, 1]) B(inner, 0.07, 0.035, 1.4, gold, doorX + sx * (DW / 2 - 0.15), F + DH + 0.02, dz - 0.85);
+  B(inner, 12.4, 0.15, 0.7, flat('#5f5862'), doorX, F + 0.075, dz + 0.35); B(inner, 12.5, 0.05, 0.1, edge, doorX, F + 0.15, dz + 0.68);
+  B(inner, 1.8, 0.04, 1.5, M.carpet, doorX, F + DH + 0.035, dz - 0.75); B(inner, 1.8, 0.04, 0.7, M.carpet, doorX, F + 0.17, dz + 0.35);
+  for (const sx of [-1, 1]) { B(inner, 0.09, 0.045, 1.5, gold, doorX + sx * 0.95, F + DH + 0.037, dz - 0.75); B(inner, 0.09, 0.045, 0.7, gold, doorX + sx * 0.95, F + 0.172, dz + 0.35); }
+  AGENTS.forEach((a, i) => { const ix = doorX + (i - 1.5) * 3.02; if (Math.abs(ix - doorX) < 1.3) return;
+    B(inner, 0.8, 0.03, 0.8, gold, ix, F + DH + 0.025, dz - 0.72); B(inner, 0.62, 0.035, 0.62, flat(a.color), ix, F + DH + 0.028, dz - 0.72); });
+  // iron candle stands at the ends of the step
+  for (const sx of [-1, 1]) { const x = doorX + sx * 6.55; B(inner, 0.36, 0.1, 0.36, M.dark, x, F + DH + 0.05, dz - 0.4); B(inner, 0.12, 1.1, 0.12, M.dark, x, F + DH + 0.6, dz - 0.4); B(inner, 0.4, 0.08, 0.4, M.dark, x, F + DH + 1.16, dz - 0.4); candle(inner, x, F + DH + 1.2, dz - 0.4); collide(x - 0.25, x + 0.25, dz - 0.65, dz - 0.15, 2); }
+  collide(doorX - DW / 2, doorX + DW / 2, nz, dz, F + DH); collide(doorX - 6.2, doorX + 6.2, dz, dz + 0.7, F + 0.15);
   // the meeting table at the crossing of the carpets, where called agents gather
   B(inner, 3.6, 0.14, 1.5, M.planks, doorX, F + 0.9, cz); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(inner, 0.2, 0.84, 0.2, M.dark, doorX + sx * 1.6, F + 0.42, cz + sz * 0.55);
   B(inner, 3.8, 0.04, 0.6, wool('#234a9e'), doorX, F + 0.98, cz); candle(inner, doorX, F + 1.0, cz); papers(inner, doorX - 1.1, F + 0.97, cz + 0.1, 2, 0.5, 0.6); B(inner, 0.5, 0.08, 0.66, flat('#a33b2e'), doorX + 1.1, F + 1.01, cz - 0.05);
   collide(doorX - 1.85, doorX + 1.85, cz - 0.8, cz + 0.8, F + 1);
   // lanterns hanging over each quarter of the hall (their beams lift away with the roof)
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const lx2 = cx + sx * 3.6, lz2 = cz + sz * 4.2; B(inner, 0.06, 1.1, 0.06, M.dark, lx2, F + 5, lz2); B(inner, 0.5, 0.1, 0.5, M.dark, lx2, F + 4.48, lz2); B(inner, 0.4, 0.44, 0.4, glow('#ffc76a'), lx2, F + 4.22, lz2); }
-  const BW = 9.1, BH = 3.9, board = new THREE.Group(); board.position.set(doorX, F + DH + 0.55, nz + 1.75); board.rotation.x = -0.24; // far enough out that the leaning top clears the wall
-  const bc = document.createElement('canvas'); bc.width = 840; bc.height = 360;
-  const btex = new THREE.CanvasTexture(bc); btex.encoding = THREE.sRGBEncoding; btex.magFilter = THREE.NearestFilter;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const lx2 = cx + sx * 3.6, lz2 = cz + (sz < 0 ? -2.4 : 4.2); /* the back pair hangs a little forward, clear of the board */ B(inner, 0.06, 1.1, 0.06, M.dark, lx2, F + 5, lz2); B(inner, 0.5, 0.1, 0.5, M.dark, lx2, F + 4.48, lz2); B(inner, 0.4, 0.44, 0.4, glow('#ffc76a'), lx2, F + 4.22, lz2); }
+  const BW = 12.2, BH = 4.6, CW = 1220, CH = 460, board = new THREE.Group(); board.position.set(doorX, F + DH + 0.75, nz + 1.75); board.rotation.x = -0.24; // far enough out that the leaning top clears the wall
+  const bc = document.createElement('canvas'); bc.width = CW; bc.height = CH;
+  const btex = new THREE.CanvasTexture(bc); btex.encoding = THREE.sRGBEncoding; btex.anisotropy = 4;
   B(board, BW + 0.5, BH + 0.5, 0.24, M.dark, 0, BH / 2 + 0.1, -0.13, true); B(board, BW + 0.7, 0.2, 0.34, gold, 0, BH + 0.42, -0.1, true);
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), new THREE.MeshBasicMaterial({ map: btex })); screen.position.set(0, BH / 2 + 0.1, 0); screen.userData.board = true; board.add(screen);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), new THREE.MeshBasicMaterial({ map: btex, color: lin('#d8d2c4') })); screen.position.set(0, BH / 2 + 0.1, 0); screen.userData.board = true; board.add(screen);
   scene.add(board);
-  B(inner, BW + 0.9, 0.55, 1.9, M.stone, doorX, F + DH + 0.275, nz + 1.0); for (const s of [-1, 1]) { B(inner, 0.4, 4.9, 0.4, M.log, doorX + s * (BW / 2 + 0.5), F + 2.45, nz + 0.6); B(inner, 0.3, 0.3, 0.3, glow('#bfe0ff'), doorX + s * (BW / 2 + 0.5), F + 5.05, nz + 0.6); }
+  B(inner, BW + 0.9, 0.55, 1.9, M.stone, doorX, F + DH + 0.275, nz + 1.0); for (const s of [-1, 1]) { B(inner, 0.4, 5.6, 0.4, M.log, doorX + s * (BW / 2 + 0.5), F + 2.8, nz + 0.6); B(inner, 0.6, 0.12, 0.6, M.dark, doorX + s * (BW / 2 + 0.5), F + 5.66, nz + 0.6); B(inner, 0.34, 0.34, 0.34, glow('#ffd9a0'), doorX + s * (BW / 2 + 0.5), F + 5.9, nz + 0.6); }
   collide(doorX - BW / 2 - 0.7, doorX + BW / 2 + 0.7, nz, nz + 2, 4);
-  addLamp(scene, doorX, F + 2.6, nz + 3.6, 1.1, 1.3, 9, '#bfe0ff');
-  // rows: [{ name, role, color, status, live, sprite (a 20×40 canvas) }]; log: the latest activity lines
+  addLamp(scene, doorX, F + 2.6, nz + 3.6, 1.1, 1.3, 10, '#ffe2b8');
+  // rows: [{ name, role, color, status, live, sprite (20×40 canvas), face (16×16 canvas), about, palette }]; log: the latest activity lines
+  const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16), c = (k) => Math.max(0, Math.min(255, Math.round((n >> k & 255) * f))).toString(16).padStart(2, '0'); return '#' + c(16) + c(8) + c(0); };
   function drawBoard(rows, log) {
-    const g = bc.getContext('2d'), font = (px, bold) => { g.font = (bold ? '700 ' : '500 ') + px + 'px "Pixelify Sans","Courier New",monospace'; };
-    g.imageSmoothingEnabled = false; g.fillStyle = '#0d1420'; g.fillRect(0, 0, 840, 360); g.fillStyle = '#17233a'; g.fillRect(0, 0, 840, 46);
-    g.textBaseline = 'middle'; g.textAlign = 'left'; font(28, true); g.fillStyle = '#ffc93c'; g.fillText('AGENT BOARD', 18, 25);
-    g.textAlign = 'right'; font(17); g.fillStyle = '#a9b3c6'; g.fillText(rows.filter((r) => r.live).length + ' OF ' + rows.length + ' IN THE HALL', 822, 25);
+    const g = bc.getContext('2d'), px = (n, bold) => { g.font = (bold ? '700 ' : '500 ') + n + 'px "Pixelify Sans","Courier New",monospace'; }, sans = (n, bold) => { g.font = (bold ? '700 ' : '500 ') + n + 'px "Nunito","Segoe UI",sans-serif'; };
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = '#d8ccb2'; g.fillRect(0, 0, CW, CH);
+    g.textBaseline = 'middle'; g.textAlign = 'left'; px(30, true); g.fillStyle = '#2a1c14'; g.fillText('AGENT BOARD', 18, 25);
+    g.textAlign = 'right'; px(18); g.fillStyle = '#6b5a44'; g.fillText(rows.filter((r) => r.live).length + ' OF ' + rows.length + ' IN THE HALL', CW - 18, 25);
+    const cw = (CW - 32 - 36) / 4, ch = 330, y = 48;
     rows.forEach((r, i) => {
-      const x = 14 + i * 204, y = 56, wd = 200, ht = 222;
-      g.fillStyle = '#1d2638'; g.fillRect(x, y, wd, ht); g.fillStyle = r.color; g.fillRect(x, y, wd, 6);
-      g.textAlign = 'center'; font(25, true); g.fillStyle = '#f3f1ea'; g.fillText(r.name.toUpperCase(), x + wd / 2, y + 28);
-      font(13); g.fillStyle = '#a9b3c6'; g.fillText(r.role.toUpperCase(), x + wd / 2, y + 48);
-      g.fillStyle = '#131a28'; g.fillRect(x + 62, y + 60, 76, 128); g.drawImage(r.sprite, x + 70, y + 64, 60, 120);
-      font(16, true); const sw = g.measureText(r.status.toUpperCase()).width;
-      g.fillStyle = r.live ? '#57d47c' : '#ffc93c'; g.fillRect(x + wd / 2 - sw / 2 - 11, y + 198, 12, 12); g.textAlign = 'left'; g.fillText(r.status.toUpperCase(), x + wd / 2 - sw / 2 + 7, y + 205);
+      const x = 16 + i * (cw + 12), ink = shade(r.color, 0.72);
+      g.fillStyle = 'rgba(42,28,20,.25)'; g.fillRect(x + 4, y + 4, cw, ch);
+      g.fillStyle = '#f4efe3'; g.fillRect(x, y, cw, ch); g.fillStyle = ink; g.fillRect(x, y, cw, 8);
+      // status, top left
+      px(15, true); g.textAlign = 'left'; g.fillStyle = r.live ? '#2f8f4a' : '#b7791f'; g.fillRect(x + 14, y + 22, 10, 10); g.fillText(r.status.toUpperCase(), x + 30, y + 28);
+      // the full figure, standing on a soft shadow
+      g.fillStyle = 'rgba(60,45,30,.18)'; g.fillRect(x + cw / 2 - 30, y + 170, 60, 6);
+      g.drawImage(r.sprite, Math.round(x + cw / 2 - 36), y + 28, 72, 144);
+      // name, role and a framed portrait
+      px(30, true); g.fillStyle = '#1b1b22'; g.fillText(r.name, x + 14, y + 198);
+      px(16, true); g.fillStyle = ink; g.fillText(r.role, x + 14, y + 224);
+      const fx = x + cw - 58, fy = y + 180; g.fillStyle = '#c9a227'; g.fillRect(fx - 3, fy - 3, 46, 46); g.fillStyle = '#e9dfc9'; g.fillRect(fx, fy, 40, 40); if (r.face) g.drawImage(r.face, fx + 2, fy + 2, 36, 36);
+      // a short description, wrapped to three lines
+      sans(14); g.fillStyle = '#4a4640'; const words = (r.about || '').split(' '), lines = []; let line = '';
+      for (const wd of words) { const tst = line ? line + ' ' + wd : wd; if (g.measureText(tst).width > cw - 28 && line) { lines.push(line); line = wd; } else line = tst; } if (line) lines.push(line);
+      if (lines.length > 3) { lines.length = 3; lines[2] = lines[2].replace(/\s*\S*$/, '') + '…'; }
+      lines.forEach((l, k) => g.fillText(l, x + 14, y + 250 + k * 19));
+      // colour swatches, like a palette card
+      (r.palette || []).forEach((c, k) => { g.fillStyle = shade(c, 0.85); g.fillRect(x + 14 + k * 20, y + ch - 24, 16, 14); g.fillStyle = c; g.fillRect(x + 14 + k * 20, y + ch - 24, 16, 11); });
     });
-    g.fillStyle = '#17233a'; g.fillRect(14, 286, 812, 64); g.textAlign = 'left';
-    (log.length ? log.slice(0, 2) : [{ time: '', name: '', text: 'Waiting for the first report of the day', color: '#a9b3c6' }]).forEach((e, k) => {
-      const y = 303 + k * 28; font(17); g.fillStyle = '#a9b3c6'; g.fillText(e.time, 26, y); font(17, true); g.fillStyle = e.color; g.fillText(e.name.toUpperCase(), 90, y);
-      const nw = e.name ? g.measureText(e.name.toUpperCase() + ' ').width + 4 : 0; font(17); g.fillStyle = '#f3f1ea'; g.fillText(e.text.length > 62 ? e.text.slice(0, 60) + '…' : e.text, 90 + nw, y);
+    // the latest activity, along the bottom
+    g.fillStyle = '#c9bb9c'; g.fillRect(16, 392, CW - 32, 58); g.textAlign = 'left';
+    (log.length ? log.slice(0, 2) : [{ time: '', name: '', text: 'Waiting for the first report of the day', color: '#6b5a44' }]).forEach((e, k) => {
+      const ly = 407 + k * 28; px(17); g.fillStyle = '#6b5a44'; g.fillText(e.time, 30, ly); px(17, true); g.fillStyle = shade(e.color || '#6b5a44', 0.7); g.fillText(e.name.toUpperCase(), 96, ly);
+      const nw = e.name ? g.measureText(e.name.toUpperCase() + ' ').width + 4 : 0; sans(16, true); g.fillStyle = '#2a1c14'; g.fillText(e.text.length > 90 ? e.text.slice(0, 88) + '…' : e.text, 96 + nw, ly);
     });
     btex.needsUpdate = true;
   }

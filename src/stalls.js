@@ -214,6 +214,42 @@ const BUILD = {
   },
 };
 
+// The About Me signpost: two posts, a carved board, a little roof and a lantern.
+function signText(c) {
+  const x = c.getContext('2d'), W = c.width, H = c.height, q = (n) => { let s = n; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
+  const r = q(7);
+  for (let j = 0; j < H; j += 8) for (let i = 0; i < W; i += 8) { x.fillStyle = ['#b98552', '#b3804e', '#be8a57', '#ad7a49'][r() * 4 | 0]; x.fillRect(i, j, 8, 8); }
+  for (let j = 0; j < H; j += 40) { x.fillStyle = '#8f5f33'; x.fillRect(0, j, W, 3); }
+  x.strokeStyle = '#5b3a1e'; x.lineWidth = 8; x.strokeRect(12, 12, W - 24, H - 24);
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  const text = (s, px, y, col, sh) => { x.font = '700 ' + px + 'px "Pixelify Sans","Courier New",monospace'; x.fillStyle = sh; x.fillText(s, W / 2 + 3, y + 3); x.fillStyle = col; x.fillText(s, W / 2, y); };
+  text('ABOUT ME', 78, H * 0.4, '#3a2413', '#d9a56a');
+  text('TUN PYAY SONE LIN', 34, H * 0.75, '#5b3a1e', '#d9a56a');
+}
+BUILD.about = (g, s, col) => {
+  B(g, 3.1, 0.18, 0.9, M.stone, 0, 0.09, 0);
+  for (const sx of [-1, 1]) { B(g, 0.26, 3.0, 0.26, M.log, sx * 1.25, 1.5, 0); B(g, 0.4, 0.22, 0.4, M.dark, sx * 1.25, 0.28, 0); }
+  B(g, 2.9, 1.56, 0.2, M.dark, 0, 2.0, 0.02);
+  const c = document.createElement('canvas'); c.width = 520; c.height = 260;
+  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
+  const paint = () => { signText(c); tex.needsUpdate = true; }; paint();
+  if (document.fonts && document.fonts.load) document.fonts.load('700 40px "Pixelify Sans"').then(paint).catch(() => {});
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(2.66, 1.33), new THREE.MeshLambertMaterial({ map: tex }));
+  face.position.set(0, 2.0, 0.13); face.receiveShadow = true; face.userData.keep = true; g.add(face);
+  // a small stepped roof over the board
+  B(g, 3.3, 0.14, 0.62, M.planks, 0, 2.9, 0.04); B(g, 2.7, 0.14, 0.44, M.planks, 0, 3.04, 0.04); B(g, 3.4, 0.08, 0.08, flat('#d9a93a'), 0, 2.84, 0.36);
+  // lantern on an arm to the right
+  B(g, 0.9, 0.1, 0.1, M.dark, 1.75, 2.6, 0.1); B(g, 0.05, 0.22, 0.05, M.dark, 2.1, 2.44, 0.1, true);
+  B(g, 0.26, 0.3, 0.26, glow('#ffc76a'), 2.1, 2.2, 0.1, true); B(g, 0.34, 0.07, 0.34, M.dark, 2.1, 2.38, 0.1, true);
+  addLamp(g, 2.1, 2.1, 0.5, 0, 1.4, 7, '#ffc27a'); addLamp(g, 0, 1.8, 1.6, 0, 1.0, 6, '#ffc27a');
+  // planters with flowers either side
+  for (const sx of [-1, 1]) {
+    B(g, 0.7, 0.4, 0.5, M.planks, sx * 1.95, 0.2, 0.25); B(g, 0.6, 0.06, 0.4, flat('#5a3a1f'), sx * 1.95, 0.41, 0.25);
+    ['#e9627a', '#ffd84a', '#f1efe6'].forEach((fc, i) => { const fx = sx * 1.95 + (i - 1) * 0.18; B(g, 0.05, 0.2, 0.05, flat('#3d7d40'), fx, 0.52, 0.25, true); B(g, 0.14, 0.12, 0.14, flat(fc), fx, 0.66, 0.25, true); });
+  }
+  col(-2.8, 2.8, -0.55, 0.6, 0.5); // (the signpost is drawn 1.2x, see buildStalls)
+};
+
 const TURN = { south: 0, east: Math.PI / 2, west: -Math.PI / 2 };
 
 export function buildStalls(scene) {
@@ -225,6 +261,7 @@ export function buildStalls(scene) {
     const col = (x0, x1, z0, z1, h) => { const r = box(x0, x1, z0, z1); collide(r.x0, r.x1, r.z0, r.z1, h + 0.1); };
     g.position.set(p.pos[0], 0.1, p.pos[1]); g.rotation.y = th; g.userData.id = p.id;
     BUILD[p.id](g, s, col);
+    if (p.about) { g.scale.setScalar(1.2); s.rect = box(-1.8, 1.8, -0.5, 0.6); collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 3.2); s.front = world(0, 2.3); bake(g); scene.add(g); s.group = g; return s; }
     // night lighting: a lantern hung on each front post, a pool of light in front, and a glow over and behind the stall
     for (const sx of [-1, 1]) { B(g, 0.06, 0.3, 0.06, M.dark, sx * 2.55, 2.5, 1.95, true); B(g, 0.26, 0.3, 0.26, glow('#ffc76a'), sx * 2.55, 2.22, 1.95, true); B(g, 0.34, 0.07, 0.34, M.dark, sx * 2.55, 2.4, 1.95, true); }
     addLamp(g, 0, 2.3, 1.7, 0, 2.0, 9, '#ffc27a'); addLamp(g, 0, 1.7, 4.6, 0, 1.3, 9, '#ffc27a'); addLamp(g, 0, 5.2, -0.6, 0, 1.2, 11, '#ffd9a0');

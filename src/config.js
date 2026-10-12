@@ -9,8 +9,12 @@ export const CONTACT_EMAIL = 'tunpyaysonelin@gmail.com';
 
 // Small credit line at the bottom of the screen. Leave REPO_URL empty for plain text.
 export const CREDIT = 'Made by Tun. L';
-// The name on the short title card when the page opens.
-export const INTRO_NAME = 'Tun. L';
+// The site's name: the title card when the page opens, and the simple version's heading.
+// (The browser tab title and link preview are written in index.html and plain.html.)
+export const SITE_NAME = 'MyCraft Dungeon';
+export const INTRO_NAME = SITE_NAME;
+export const INTRO_BY = 'A portfolio by Tun. L';
+export const SITE_URL = 'https://mycraft-dungeon.vercel.app';
 export const REPO_URL = 'https://github.com/Tun-PS-Lin/MyCraft_Dungeon';
 
 // The stalls.
@@ -21,6 +25,19 @@ export const REPO_URL = 'https://github.com/Tun-PS-Lin/MyCraft_Dungeon';
 //   image  optional picture shown in the popup, a file in public/assets/images/
 //   url    '' shows "Link coming soon"
 export const STALLS = [
+  {
+    // The signpost above the movement guide. about: true keeps it out of the "stalls explored" count,
+    // and its button opens the village map instead of a link.
+    id: 'about', kind: 'project', about: true, face: 'south',
+    label: 'About Me', title: 'About Me',
+    pos: [0, -4.8], labelY: 4.4,
+    color: '#d9a93a', glow: '#ffd84a',
+    image: '',
+    desc: "I'm Tun Pyay Sone Lin. I work in real estate and media, and I research how cities expand. Have a wander around the village and check out my projects.",
+    url: '',
+    cta: 'See my projects', sub: 'Opens the village map',
+    my: { label: 'ကျွန်တော့်အကြောင်း', title: 'ကျွန်တော့်အကြောင်း', desc: 'ကျွန်တော် Tun Pyay Sone Lin ပါ။ အိမ်ခြံမြေနှင့် မီဒီယာ လုပ်ငန်းများတွင် လုပ်ကိုင်နေပြီး မြို့ပြများ မည်သို့ ကျယ်ပြန့်လာသည်ကို သုတေသနပြုနေပါသည်။ ရွာထဲ လျှောက်ကြည့်ပြီး ကျွန်တော့် ပရောဂျက်များကို လေ့လာကြည့်ပါ။', cta: 'ပရောဂျက်များ ကြည့်ရန်', sub: 'ရွာမြေပုံကို ဖွင့်ပါမည်' },
+  },
   {
     id: 'mingalar', kind: 'project', face: 'south',
     label: 'Mingalar News', title: 'Mingalar News',

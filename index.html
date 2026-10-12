@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>James's Portfolio Village</title>
-<meta name="description" content="A small explorable village. Walk up to a market stall to open one of James's projects, or visit the town hall to meet the agents.">
+<title>MyCraft Dungeon · Tun Pyay Sone Lin</title>
+<meta name="description" content="The portfolio of Tun Pyay Sone Lin as a small blocky village you can walk around. Open a market stall to see a project, or visit the town hall to meet the AI agents.">
+<link rel="canonical" href="https://mycraft-dungeon.vercel.app/">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <!-- keep the browser's own bars and tab light, whatever the visitor's system setting -->
 <meta name="color-scheme" content="light">
@@ -13,12 +14,13 @@
 
 <!-- Link preview (the card shown when the site is pasted into Telegram, LinkedIn, etc.).
      The picture is public/og-image.jpg (1200 x 630 pixels).
-     Replace https://YOUR-SITE below with your real address, in both places. -->
+     If the site moves to its own domain, change the address here (3 places, counting canonical above) and in README.md. -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="James's Portfolio Village">
-<meta property="og:description" content="A small explorable village. Walk up to a market stall to open a project, or visit the town hall to meet the agents.">
-<meta property="og:url" content="https://YOUR-SITE/">
-<meta property="og:image" content="https://YOUR-SITE/og-image.jpg">
+<meta property="og:site_name" content="MyCraft Dungeon">
+<meta property="og:title" content="MyCraft Dungeon · Tun Pyay Sone Lin">
+<meta property="og:description" content="A portfolio you walk around in. Open a market stall to see a project, or visit the town hall to meet the AI agents.">
+<meta property="og:url" content="https://mycraft-dungeon.vercel.app/">
+<meta property="og:image" content="https://mycraft-dungeon.vercel.app/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -65,6 +67,7 @@
     <div class="desk-only"><kbd>E</kbd><span data-t="kOpen"></span> <kbd class="gap">Esc</kbd><span data-t="kClose"></span></div>
     <div data-t="kZoom"></div>
   </div>
+  <a class="side-plain" href="./plain.html">Simple version: every project on one page</a>
 </nav>
 
 <div id="toast" role="status" aria-live="polite">
@@ -126,8 +129,15 @@
   <button class="tbtn" id="tUse" hidden></button>
   <button class="tbtn" id="tJump"></button>
 </div>
-<div id="intro"><div><strong id="introName"></strong><span data-t="introSub"></span></div></div>
+<div id="intro"><div><strong id="introName">MyCraft Dungeon</strong><span id="introBy">A portfolio by Tun. L</span>
+  <i id="introLoad" role="progressbar" aria-label="Loading the village"><b></b></i><em id="introState">Building the village…</em></div>
+  <a id="introPlain" href="./plain.html">Simple version</a></div>
+<noscript><p class="noscript">This village needs JavaScript. <a href="./plain.html">Open the simple version</a>.</p></noscript>
 <!-- app:end -->
+<script>
+  // if the village fails to start, offer the simple version on the title card instead of a blank page
+  addEventListener('error', function () { document.documentElement.classList.add('broken'); var s = document.getElementById('introState'); if (s) s.textContent = 'The village could not start on this device.'; });
+</script>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

@@ -15,7 +15,16 @@ import { sound } from './audio.js';
 import { t, tr } from './i18n.js';
 import { lamps, addLamp, MOOD } from './lights.js';
 import { cv } from './textures.js';
-import { drawSprite, SPRITE } from './figures.js';
+import { drawSprite, drawFace, SPRITE } from './figures.js';
+import { inject as analytics } from '@vercel/analytics';
+
+// Page views for Vercel Web Analytics (turn it on in the Vercel project, under Analytics).
+// No cookies are set; on any host other than Vercel this quietly does nothing.
+analytics();
+
+// Devices without WebGL (very old phones, some locked-down work machines) get the simple version.
+const webgl = (() => { try { const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl'))); } catch (e) { return false; } })();
+if (!webgl) { location.replace('./plain.html?from=3d'); throw new Error('WebGL is not available'); }
 
 const canvas = document.getElementById('world');
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } } };
@@ -72,7 +81,7 @@ const visited = new Set((store.get('pv-visited') || '').split(',').filter((id) =
 let wolfUnlocked = store.get('pv-wolf') === 'yes';
 function visit(id) {
   if (visited.has(id)) return; visited.add(id); store.set('pv-visited', [...visited].join(','));
-  if (!wolfUnlocked && STALLS.every((s) => visited.has(s.id))) pendingReward = true;
+  if (!wolfUnlocked && STALLS.every((s) => s.about || visited.has(s.id))) pendingReward = true;
   ui.setProgress(visited, wolfUnlocked);
 }
 let pendingReward = false; // shown once the popup that completed the set is closed
@@ -101,7 +110,7 @@ function openStall(s) {
 function talkTo(n) { auto = null; ui.openChat(n, n.design); }
 
 /* ── the agent board in the hall: repainted whenever somebody's status changes ── */
-const sprites = {}; for (const n of agents.list) { sprites[n.id] = cv(SPRITE.w, SPRITE.h, (g) => drawSprite(g, n.design)); }
+const sprites = {}, faces = {}; for (const n of agents.list) { sprites[n.id] = cv(SPRITE.w, SPRITE.h, (g) => drawSprite(g, n.design)); faces[n.id] = cv(16, 16, (g) => drawFace(g, n.design)); }
 let boardSig = '';
 // each thing an agent does goes to the log on the board and, briefly, into a speech bubble
 agents.onEvent((e) => { if (e.bubble) ui.say(e.id, e.bubble); if (e.id === 'bobby') hall.setPapers(agents.list.find((n) => n.id === 'bobby').done); boardSig = ''; });
@@ -109,7 +118,7 @@ function refreshBoard() {
   const sig = agents.list.map((n) => agents.status(n)).join();
   for (const n of agents.list) ui.setAgentStatus(n.id, agents.status(n));
   if (sig === boardSig) return; boardSig = sig;
-  hall.board.draw(agents.list.map((n) => ({ name: n.name, role: tr(n, 'role'), color: n.color, sprite: sprites[n.id], status: t(agents.status(n)), live: !n.outside && n.task !== 'break' })), agents.log);
+  hall.board.draw(agents.list.map((n) => ({ name: n.name, role: tr(n, 'role'), color: n.color, sprite: sprites[n.id], face: faces[n.id], about: n.about, palette: [n.design.top, n.design.top2, n.design.trim, n.design.pants, n.design.hair], status: t(agents.status(n)), live: !n.outside && n.task !== 'break' })), agents.log);
 }
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardSig = ''; });
 function openBoard() { auto = null; ui.openBoard(); }
@@ -320,7 +329,7 @@ function update(dt) {
   // labels
   const w = window.innerWidth, h = window.innerHeight, hide = closeUp > 0.3 ? 0 : 1;
   const place = (key, x, y, z, isNear, alpha) => { v3.set(x, y, z).project(camera); ui.placeLabel(key, (v3.x * 0.5 + 0.5) * w, (-v3.y * 0.5 + 0.5) * h, isNear, v3.z > 1 ? 0 : alpha * hide); };
-  for (const s of stalls) place(s.id, s.pos[0], 5.3, s.pos[1], s.id === nearKey, 1);
+  for (const s of stalls) place(s.id, s.pos[0], s.labelY || 5.3, s.pos[1], s.id === nearKey, 1);
   place('hall', hall.labelAt[0], hall.labelAt[1], hall.labelAt[2], false, 1 - indoors);
   for (const n of agents.list) { const a = n.outside ? 1 : indoors, top = n.y + 2.75 - n.sit * 0.3; place(n.id, n.x, top, n.z, n.id === nearKey, a); place('say:' + n.id, n.x, top + 1.6, n.z, false, a); }
 }
