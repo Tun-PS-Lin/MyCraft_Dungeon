@@ -14,7 +14,6 @@ import { createUI } from './ui.js';
 import { sound, music } from './audio.js';
 import { buildCave, buildHideout } from './hideout.js';
 import { createHideoutUI } from './hideout-ui.js';
-import { RECORDS } from './hideout-content.js';
 import { t, tr } from './i18n.js';
 import { lamps, addLamp, MOOD } from './lights.js';
 import { cv } from './textures.js';
@@ -67,16 +66,22 @@ sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
 
 /* ── world ── */
+const fixed = scene.children.length; // the sky light and the sun above stay where they are
 buildWorld(scene, renderer);
 const stalls = buildStalls(scene);
 const hall = buildHall(scene);
 const agents = createAgents(scene, hall);
-const player = createPlayer(scene), P = player.state;
 const chickens = createChickens(scene);
-const wolf = createWolf(scene, blocked);
 const ambience = createAmbience(scene);
+const cave = buildCave(scene);
+// Everything built so far is the village. It goes in one group, and the Hideout in another, so
+// only the place the player is in gets drawn (and lit): the other one is switched off entirely.
+const village = new THREE.Group(); for (const o of scene.children.slice(fixed)) village.add(o); scene.add(village);
+const hideoutRoot = new THREE.Group(); hideoutRoot.visible = false; scene.add(hideoutRoot);
+const hideout = buildHideout(hideoutRoot);
+const player = createPlayer(scene), P = player.state;
+const wolf = createWolf(scene, blocked);
 const torch = addLamp(scene, 0, 2, 0, 0, 0.85, 5.5, '#ffd9a0'); // a soft light that follows the player at night
-const cave = buildCave(scene), hideout = buildHideout(scene);
 const pickable = [...stalls.map((s) => s.group), ...agents.groups, hall.board.mesh];
 let bakeFrames = 4; // draw the sun shadows over the first few frames, then keep them
 
@@ -107,8 +112,8 @@ ui.setProgress(visited, wolfUnlocked);
 if (wolfUnlocked) wolf.activate(P);
 
 /* ── the Hideout: the cave at the bottom of the square leads to a private room underground ── */
-const hx = createHideoutUI({ onDisc: (r) => hideout.setDisc(r.disc), focusGame: () => canvas.focus({ preventScroll: true }) });
-{ const r = RECORDS.find((q) => q.id === music.current()); if (r) hideout.setDisc(r.disc); }
+const hx = createHideoutUI({ onDisc: (r) => hideout.setDisc(r.id), focusGame: () => canvas.focus({ preventScroll: true }) });
+hideout.setDisc(music.current()); music.onChange(() => hideout.setDisc(music.current()));
 let underground = false, travelling = false;
 const paused = () => ui.paused() || hx.isOpen() || travelling;
 ui.addPlace('cave', 'The Hideout', '#ffd060', () => goTo('hideout'));
@@ -119,7 +124,7 @@ function travel(down, then) {
   const veil = document.getElementById('travel'); veil.querySelector('strong').textContent = down ? 'The Hideout' : 'The Village'; veil.classList.add('show');
   sound.play('roll');
   setTimeout(() => {
-    underground = down;
+    underground = down; village.visible = !down; hideoutRoot.visible = down;
     if (down) { P.x = hideout.arrive[0]; P.z = hideout.arrive[1]; P.yaw = 0; } else { P.x = cave.top[0]; P.z = cave.top[1] - 0.6; P.yaw = Math.PI; }
     P.vx = P.vz = P.vy = 0; P.y = P.visY = floorAt(P.x, P.z); focus.set(P.x, 0, P.z - 1.5 * zoom);
     setTimeout(() => { veil.classList.remove('show'); travelling = false; if (then) then(); }, 260);
@@ -295,7 +300,7 @@ function resize() {
 window.addEventListener('resize', resize); resize();
 
 /* ── loop ── */
-let last = performance.now(), time = 0, chirpT = 4;
+let last = performance.now(), time = 0, chirpT = 4, idle = 0;
 const v3 = new THREE.Vector3();
 function update(dt) {
   time += dt;
@@ -410,7 +415,11 @@ function frame(now) {
   if (probe && document.visibilityState === 'visible') { probe.frames++; if (probe.frames > 30) probe.time += raw; if (probe.frames === 150) { if (probe.time / 120 > 1 / 42 && pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.5); renderer.setPixelRatio(pixelRatio); resize(); probe = { frames: 0, time: 0 }; } else probe = null; } }
   if (bakeFrames > 0) { bakeFrames--; renderer.shadowMap.needsUpdate = true; }
   else if (titleFor > 0) { titleFor -= Math.min(raw, 0.3); if (titleFor <= 0) ui.endIntro(); }
-  renderer.render(scene, camera); requestAnimationFrame(frame);
+  // while a menu covers the screen the world behind it is only redrawn every third frame,
+  // which leaves the browser free to animate the menu smoothly
+  idle = paused() && !travelling ? idle + 1 : 0;
+  if (idle % 3 === 0 || bakeFrames > 0) renderer.render(scene, camera);
+  requestAnimationFrame(frame);
 }
 
 function start(saved) {

@@ -48,14 +48,17 @@ wolf that starts following you once you have opened every stall.
 At the bottom of the square, a cave glows in the rock. Walk down the steps and you arrive in the
 **Hideout**, a private room underground:
 
-- **The music box.** A jukebox with a shelf of records. Pick one and it becomes the background music
-  for the rest of your visit.
-- **The journal.** An open book on a stand, with my notes and blog posts.
-- **The gallery.** Paintings of my side projects, each with a link.
+- **The CD player.** A shelf of CDs on the wall and a player on the cabinet. Its menu is a chunky
+  retro deck: pick a CD and it swaps into the tray, with play, stop, skip and volume buttons and a
+  little screen showing the track and time. The CD you pick keeps playing as you explore.
+- **The journal.** An open book on a stand with my notes on mental models: second-level thinking,
+  ergodicity, circles of competence, fat pitches, market cycles and more.
+- **The gallery.** Framed paintings of my side projects, each with a link.
+- **The library.** Bookshelves round an enchanting table, its book floating and turning.
 - **The window.** Sunny sky by day, stars by night, so you can tell the time even underground.
 
-Everything in it lives in `src/hideout-content.js`. The records, entries and paintings there now are
-placeholders.
+Everything in it lives in `src/hideout-content.js`: the CDs (`RECORDS`), the journal (`JOURNAL`) and
+the paintings (`GALLERY`). Songs go in `public/assets/sounds/`, CD art in `public/assets/images/cds/`.
 
 <br>
 
@@ -155,7 +158,7 @@ Almost everything you would change lives in **`src/config.js`**:
 
 How the agents look is set in `LOOKS` at the top of `src/agents.js`; their demos are in
 `src/demos.js`. The Hideout's records, journal entries and paintings are in **`src/hideout-content.js`**:
-put your songs in `public/assets/sounds/` and list them under `RECORDS`. The simple version (`plain.html`) is built from the same config, so it never falls
+put your songs in `public/assets/sounds/`, CD art in `public/assets/images/cds/`, and list them under `RECORDS`. The simple version (`plain.html`) is built from the same config, so it never falls
 out of step with the village.
 
 <details>
@@ -244,10 +247,10 @@ src/ambience.js     fireflies and drifting leaves
 src/collision.js    the walkable area, steps and jumping onto things
 src/textures.js     pixel textures, materials, instancing helpers
 src/ui.js           labels, popup, menu, wardrobe, chat panel, agent board menu, achievement badge
-src/audio.js        sound effects, music and the music box's demo tunes
+src/audio.js        sound effects and music (the CD player's controls)
 src/hideout.js      the cave at the bottom of the square and the Hideout room
-src/hideout-ui.js   the music box, journal and gallery menus
-src/hideout-content.js  the records, journal entries and paintings (edit these)
+src/hideout-ui.js   the CD player, journal and gallery menus
+src/hideout-content.js  the CDs, journal entries and paintings (edit these)
 src/pixelart.js     the pixel discs, icons and paintings
 src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)
 src/style.css       interface styling
@@ -284,8 +287,8 @@ docs/img/readme/    the screenshots used in this README
 - [x] The simple version, a loading screen and visitor analytics
 - [ ] Connect Bobby and Friday to their real workflows
 - [ ] Build Sally and Edwin
-- [x] The Hideout: music box, journal and gallery
-- [ ] Fill the Hideout with my own songs, posts and side projects
+- [x] The Hideout: CD player, journal, gallery and library
+- [ ] Write the full journal posts
 - [ ] Launch Urban Simulation and link its stall
 - [ ] Switch the Burmese translation back on
 

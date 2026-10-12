@@ -24,7 +24,7 @@ export const inCave = (x, z) => Math.abs(x - CAVE.x) < CAVE.w / 2 - M - 0.05 && 
 const H = HIDEOUT, hx = (x) => x - H.cx, hz = (z) => z - H.cz;
 export const inHideout = (x, z) => hx(x) > H.x0 - 1 && hx(x) < H.x1 + 1 && hz(z) > H.z0 - 3 && hz(z) < H.z1 + 1;
 const inRoom = (x, z) => hx(x) > H.x0 + M && hx(x) < H.x1 - M && hz(z) > H.z0 + M && hz(z) < H.z1 - M;
-export const HIDEOUT_EXIT = { x: H.cx - 8.5, z0: H.cz + H.z0 - 1.4, z1: H.cz + H.z0 + 0.6 }; // the glowing doorway, back wall left
+export const HIDEOUT_EXIT = { x: H.cx + H.doorX, z0: H.cz + H.z0 - 1.4, z1: H.cz + H.z0 + 0.6 }; // the glowing doorway, back wall left
 const inExit = (x, z) => Math.abs(x - HIDEOUT_EXIT.x) < 0.55 && z > HIDEOUT_EXIT.z0 && z < HIDEOUT_EXIT.z1;
 
 export function blocked(x, z, y) {

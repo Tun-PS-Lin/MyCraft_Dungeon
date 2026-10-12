@@ -1,59 +1,51 @@
 // What lives in the Hideout, the underground room reached through the cave at the bottom
-// of the village: the records in the music box, the journal entries, and the paintings.
-// Everything here is a placeholder for now. Edit it freely; the 3D room and the menus
-// read from these lists, and so does the simple version of the site (plain.html).
+// of the village: the CDs in the music player, the journal entries, and the paintings.
+// The 3D room and the menus read from these lists, and so does the simple version of the
+// site (plain.html).
 
-/* ── the music box ──
-   file:  an .mp3 in public/assets/sounds/ (the village track is the first record)
-   synth: one of the small built-in demo tunes ('cave', 'rain', 'market'), used until you add your own files
-   disc:  the colour of the record's label */
+/* ── the CD player ──
+   file:  an .mp3 in public/assets/sounds/
+   cover: the disc art, an image in public/assets/images/cds/ (square, transparent outside the disc)
+   color: the colour the player's lights and the 3D disc glow take while this CD plays */
 export const RECORDS = [
-  { id: 'village', title: 'Village Theme', by: 'Background music', file: 'background_music.mp3', disc: '#e4b93a' },
-  { id: 'cave', title: 'Cave Lights', by: 'Demo track', synth: 'cave', disc: '#62c8ff' },
-  { id: 'rain', title: 'Rain on the Window', by: 'Demo track', synth: 'rain', disc: '#b68cff' },
-  { id: 'market', title: 'Market Day', by: 'Demo track', synth: 'market', disc: '#57d47c' },
+  { id: 'default', title: 'Village Theme', album: 'MyCraft Dungeon', by: 'Background music', file: 'background_music.mp3', cover: 'default.webp', color: '#e4b93a' },
+  { id: 'igor', title: 'EARFQUAKE', album: 'IGOR', by: 'Tyler, The Creator', file: 'earfquake.mp3', cover: 'igor.webp', color: '#ff6fb5' },
+  { id: 'afterhours', title: 'After Hours', album: 'After Hours', by: 'The Weeknd', file: 'after-hours.mp3', cover: 'after-hours.webp', color: '#d8403a' },
+  { id: 'mbdtf', title: 'Runaway', album: 'My Beautiful Dark Twisted Fantasy', by: 'Kanye West', file: 'runaway.mp3', cover: 'mbdtf.webp', color: '#e4b93a' },
+  { id: 'spiderverse', title: 'Am I Dreaming', album: 'Across the Spider-Verse', by: 'Metro Boomin', file: 'am-i-dreaming.mp3', cover: 'spiderverse.webp', color: '#62e4ff' },
 ];
 
-/* ── the journal ──
-   Each entry: a title, a date, a small icon ('quill', 'map', 'note', 'lamp', 'house', 'disc') and paragraphs of text. */
+/* ── the journal: mental models ──
+   Each entry: a title, a quote and who said it, the key points, and a small icon
+   ('lattice', 'eye', 'dice', 'fork', 'circle', 'ball', 'pig', 'flame', 'seed', 'wave'). */
 export const JOURNAL = [
-  {
-    id: 'village', title: 'Why I built a village', date: 'Demo entry', icon: 'house', tag: 'Notes',
-    body: [
-      'This is a demo journal entry. The real post will go here: a short story about why this portfolio is a place you walk around instead of a page you scroll.',
-      'Placeholder text continues. It might cover the first sketch of the square, choosing the stalls, and what changed after friends tried it on their phones.',
-      'A second paragraph of demo text, so you can see how longer entries scroll inside the book. Use the scroll wheel, drag, or the arrow keys.',
-      'And a closing paragraph. Replace all of this in src/hideout-content.js.',
-    ],
-  },
-  {
-    id: 'cities', title: 'Notes on how cities grow', date: 'Demo entry', icon: 'map', tag: 'Research',
-    body: [
-      'Demo entry. This page will hold notes from the urban expansion research: what a growth ring is, why the edge of a city moves the way it does, and what surprised me in the data.',
-      'More placeholder text sits here to show a second paragraph.',
-    ],
-  },
-  {
-    id: 'field', title: 'Field notes from Bangkok', date: 'Demo entry', icon: 'quill', tag: 'Notes',
-    body: [
-      'Demo entry. A place for short observations from the street: markets, new bus routes, how neighbourhoods change from one visit to the next.',
-      'Placeholder paragraph two.',
-      'Placeholder paragraph three.',
-    ],
-  },
-  {
-    id: 'listening', title: 'What I am listening to', date: 'Demo entry', icon: 'disc', tag: 'Music',
-    body: [
-      'Demo entry. A list of songs and albums on repeat, with a line about each. It pairs with the music box in the corner.',
-    ],
-  },
+  { id: 'models', n: 1, title: 'Mental Models', icon: 'lattice', quote: 'Take a simple idea and take it seriously.', by: 'Charlie Munger',
+    points: ['A latticework of mental models compounds.'] },
+  { id: 'second', n: 2, title: 'Second-Level Thinking', icon: 'eye', quote: 'Outsized returns often come from betting against conventional wisdom, and conventional wisdom is usually right.', by: 'Jeff Bezos',
+    points: ['You must be different and right, though the consensus is usually correct.', 'Visualize the future; connect the dots looking backwards.'] },
+  { id: 'ergodicity', n: 3, title: 'Ergodicity & Skewness', icon: 'dice', quote: 'Never risk ruin.',
+    points: ['Capital preservation and hitting home runs (the Loser’s Game).', 'Mean > Median (positive skewness).'] },
+  { id: 'path', n: 4, title: 'Path Dependency', icon: 'fork', quote: 'Consequences.',
+    points: ['One-way and two-way doors: a decision model.', 'Early choices narrow the future; early events compound.'] },
+  { id: 'circle', n: 5, title: 'Circle of Competence', icon: 'circle', quote: 'Knowing what you don’t know is more useful than being brilliant.', by: 'Charlie Munger',
+    points: ['Invert, always invert: what NOT to do?', 'High-bar conviction inside the circle.'] },
+  { id: 'fat', n: 6, title: 'Fat Pitches', icon: 'ball', quote: 'The stock market is a no-called-strike game.', by: 'Warren Buffett',
+    points: ['The 20-slot punch card: fewer decisions, fewer errors.', 'But remember: vaguely right beats precisely wrong.'] },
+  { id: 'concentrated', n: 7, title: 'Concentrated Bets', icon: 'pig', quote: 'It takes courage to be a pig.', by: 'Stanley Druckenmiller',
+    points: ['Go for the jugular when the fat pitch finally arrives: size to edge and conviction.', 'Concentrate the bets, never the ruin risk (circle of competence).'] },
+  { id: 'hotcold', n: 8, title: 'Hot or Cold', icon: 'flame', quote: 'Press when hot, cut when cold.',
+    points: ['A streak reveals market momentum and your psychology, not decision quality.', 'Know when to take a loss.'] },
+  { id: 'growth', n: 9, title: 'Growth vs Value', icon: 'seed', quote: 'It’s far better to buy a wonderful company at a fair price than a fair company at a wonderful price.', by: 'Warren Buffett',
+    points: ['Time is the friend of the wonderful business, the enemy of the mediocre.', 'Quality is a margin of safety that compounds; a discount is one you pay.'] },
+  { id: 'cycles', n: 10, title: 'Market Cycles', icon: 'wave', quote: 'Being too far ahead of your time is indistinguishable from being wrong.', by: 'Howard Marks',
+    points: ['Don’t forecast: take the market’s temperature. Where do we stand?', 'Three stages: the Innovator → the Imitator → the Idiot.'] },
 ];
 
 /* ── the gallery ──
-   Side projects shown as paintings. art picks the painting: 'voice', 'stars', 'town', 'bot', 'chart'.
-   url '' shows "Link coming soon". These are drafts: check the wording and add the links. */
+   Side projects shown as paintings. art picks the painting: 'world', 'voice', 'stars'.
+   url '' shows "Link coming soon". */
 export const GALLERY = [
-  { id: 'voice', title: 'Burmese Voice', art: 'voice', desc: 'A Burmese text-to-speech project with several voice options, built on an open-source speech model.', url: '' },
-  { id: 'mahabote', title: 'Mahabote Bot', art: 'stars', desc: 'A Burmese Mahabote astrology bot on Telegram that remembers the conversation and asks follow-up questions.', url: '' },
-  { id: 'luxury', title: 'Virtual Luxury Home', art: 'town', desc: 'A small 3D town to explore in the browser, with a garage, mini golf and a luxury home gallery.', url: '' },
+  { id: 'world', title: 'Virtual World', art: 'world', desc: 'Mingalar World: a 3D town in the browser with a virtual mall, a garage, an office and a target range.', url: 'https://mingalar-world.vercel.app/' },
+  { id: 'voice', title: 'Burmese Text-to-Speech', art: 'voice', desc: 'A Burmese text-to-speech project with several voice options.', url: '' },
+  { id: 'mahabote', title: 'Mahabhote Burmese Astrology', art: 'stars', desc: 'A Burmese Mahabhote astrology bot on Telegram that remembers the conversation and asks follow-up questions.', url: '' },
 ];

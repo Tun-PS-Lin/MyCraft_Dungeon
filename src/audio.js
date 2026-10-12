@@ -71,7 +71,7 @@ export const sound = {
 };
 
 /* ── background music ──
-   The music box in the Hideout holds several records (src/hideout-content.js). A record is
+   The CD player in the Hideout holds several CDs (src/hideout-content.js). A record is
    either an audio file, played with an <audio> element, or one of the small built-in demo
    tunes below, played with Web Audio. The chosen record is remembered. */
 const pick = () => { try { return localStorage.getItem('pv-record'); } catch (e) { return null; } };
@@ -115,23 +115,36 @@ function startSynth(name) {
   return { stop() { clearInterval(timer); const t = a.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.linearRampToValueAtTime(0, t + 0.4); setTimeout(() => out.disconnect(), 600); } };
 }
 function stopAll() { if (el) el.pause(); if (synth) { synth.stop(); synth = null; } }
+// volume steps shown on the player's screen, 0 to 20; 10 is the site's normal music level
+let level = (() => { try { const v = parseInt(localStorage.getItem('pv-volume'), 10); return isNaN(v) ? 10 : Math.max(0, Math.min(20, v)); } catch (e) { return 10; } })();
+const gain = () => Math.min(1, MUSIC_VOLUME * level / 10 * (level > 10 ? 1 + (level - 10) * 0.25 : 1));
 function playCurrent() {
   stopAll(); const rec = RECORDS.find((q) => q.id === current); if (!rec || !musicOn) { changed(); return; }
   if (rec.file) {
-    if (!el) { el = new Audio(); el.loop = true; }
+    if (!el) { el = new Audio(); el.loop = true; el.preload = 'auto'; }
     const src = BASE + 'assets/sounds/' + rec.file; if (el.dataset.src !== src) { el.src = src; el.dataset.src = src; }
-    el.volume = MUSIC_VOLUME; el.play().catch(() => { began = false; });
+    el.volume = gain(); el.play().catch(() => { began = false; });
   } else if (rec.synth) synth = startSynth(rec.synth);
   changed();
 }
 export const music = {
-  available: RECORDS.length > 0 && !!(MUSIC_FILE || RECORDS.some((r) => r.synth)),
+  available: RECORDS.length > 0,
   isOn: () => musicOn,
   current: () => current,
   // browsers only allow audio after the visitor has pressed a key or tapped
   start() { if (began || !this.available) return; began = true; playCurrent(); },
-  toggle() { musicOn = !musicOn; write('pv-music', musicOn); if (!began) { began = true; } playCurrent(); return musicOn; },
-  // the music box: put on a record (and switch music on if it was off)
-  play(id) { current = id; try { localStorage.setItem('pv-record', id); } catch (e) { /* ignore */ } began = true; if (!musicOn) { musicOn = true; write('pv-music', true); } playCurrent(); },
+  toggle() { musicOn = !musicOn; write('pv-music', musicOn); began = true; playCurrent(); return musicOn; },
+  // the CD player: put on a CD from the start (and switch music on if it was off)
+  play(id) {
+    if (id !== current && el) { el.dataset.src = ''; } // a new CD starts from the top
+    current = id; try { localStorage.setItem('pv-record', id); } catch (e) { /* ignore */ }
+    began = true; if (!musicOn) { musicOn = true; write('pv-music', true); } playCurrent();
+  },
+  stop() { musicOn = false; write('pv-music', false); stopAll(); if (el) el.currentTime = 0; changed(); },
+  step(dir) { const i = RECORDS.findIndex((q) => q.id === current), n = RECORDS.length; const r = RECORDS[(i + dir + n) % n]; this.play(r.id); return r; },
+  volume: () => level,
+  setVolume(v) { level = Math.max(0, Math.min(20, v)); try { localStorage.setItem('pv-volume', level); } catch (e) { /* ignore */ } if (el) el.volume = gain(); changed(); },
+  // elapsed seconds of the CD that is playing (0 for the built-in tunes)
+  time: () => (el && el.dataset.src ? el.currentTime || 0 : 0),
   onChange: (f) => listeners.push(f),
 };

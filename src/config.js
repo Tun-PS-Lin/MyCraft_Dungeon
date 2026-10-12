@@ -194,4 +194,4 @@ export const FLOOR = 0.08; // the height the player walks at everywhere on the s
 // The cave at the bottom of the square: stairs down from z0 to z1, w wide. Walking down them
 // (or pressing E at the top) travels to the Hideout, an underground room built far to the south.
 export const CAVE = { x: 0, z0: 16, z1: 21, w: 4 };
-export const HIDEOUT = { cx: 0, cz: 170, x0: -11, x1: 11, z0: -7.5, z1: 7.5 };
+export const HIDEOUT = { cx: 0, cz: 170, x0: -12, x1: 12, z0: -7.5, z1: 7.5, doorX: -9.4 };

@@ -66,11 +66,13 @@ if (GALLERY.length) {
 
 /* journal */
 if (JOURNAL.length) {
-  const js = sec('Journal');
+  const js = sec('Journal', 'Notes on the mental models I use.');
   for (const e of JOURNAL) {
     const d = el('details', 'entry'), s2 = el('summary'); const ic = pictureCanvas(16, 16, (g) => drawIcon(g, e.icon)); ic.className = 'pix-icon';
-    const t = el('span'); t.append(el('strong', '', e.title), el('small', '', [e.tag, e.date].filter(Boolean).join(' · ')));
-    s2.append(ic, t); d.appendChild(s2); (e.body || []).forEach((p) => d.appendChild(el('p', '', p))); js.appendChild(d);
+    const t = el('span'); t.append(el('strong', '', e.title), el('small', '', 'Mental model No. ' + String(e.n).padStart(2, '0')));
+    s2.append(ic, t); d.appendChild(s2);
+    const q = el('blockquote'); q.appendChild(el('p', '', '\u201c' + e.quote + '\u201d')); if (e.by) q.appendChild(el('cite', '', '\u2014 ' + e.by)); d.appendChild(q);
+    const ul = el('ul'); (e.points || []).forEach((p) => ul.appendChild(el('li', '', p))); d.appendChild(ul); js.appendChild(d);
   }
 }
 
