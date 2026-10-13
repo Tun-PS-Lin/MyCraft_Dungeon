@@ -88,6 +88,7 @@ const village = new THREE.Group(); for (const o of scene.children.slice(fixed)) 
 const hideoutRoot = new THREE.Group(); hideoutRoot.visible = false; scene.add(hideoutRoot);
 const hideout = buildHideout(hideoutRoot);
 const player = createPlayer(scene), P = player.state;
+pond.setHand((v) => player.hand(v));
 const wolf = createWolf(scene, blocked);
 const torch = addLamp(scene, 0, 2, 0, 0, 0.85, 5.5, '#ffd9a0'); // a soft light that follows the player at night
 const pickable = [...stalls.map((s) => s.group), ...agents.groups, hall.board.mesh];
@@ -174,7 +175,7 @@ let underground = false, travelling = false;
 const pondUI = createPondUI({ focusGame: () => canvas.focus({ preventScroll: true }), onCastAgain: () => goFish() });
 function goFish() {
   if (pond.fishing() && !pond.holding()) return; auto = null; ui.closeMenu(true);
-  P.vx = P.vz = 0; setTimeout(() => sound.play('cast'), pond.holding() ? 250 : 650); // the whoosh lands with the throw
+  P.vx = P.vz = 0; setTimeout(() => sound.play('cast'), pond.holding() ? 300 : 860); // the whoosh lands with the throw
   pond.fish(P, () => { sound.play('splash'); const id = pondUI.next(); pondUI.show(id); disc.add('facts', id); });
 }
 const paused = () => ui.paused() || hx.isOpen() || travelling || pondUI.isOpen() || pond.fishing() || disc.isOpen() || minimap.isBig();
@@ -401,7 +402,7 @@ function resize() {
 window.addEventListener('resize', resize); resize();
 
 /* ── loop ── */
-let last = performance.now(), time = 0, chirpT = 4, idle = 0, overlayOn = false, hudOpen = false;
+let last = performance.now(), time = 0, chirpT = 4, idle = 0, overlayOn = false, hudOpen = false, pondWas = false, pondCalm = 0;
 const v3 = new THREE.Vector3();
 function update(dt) {
   time += dt;
@@ -457,6 +458,7 @@ function update(dt) {
   torch.position.set(P.x, P.visY + 2.2, P.z + 0.6);
   applyMood(time, indoors);
   if (night > 0.9 && !underground && !disc.has('night')) discover('night');
+  player.setHold(pond.hold());
   player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors) * (underground ? 0 : 1));
   cave.update(time); hideout.update(time, ease(night), music.isOn());
   if (!underground) pond.update(time, dt, ease(night));
@@ -476,8 +478,10 @@ function update(dt) {
   // camera
   closeUp += Math.sign((ui.wardrobeOpen() ? 1 : 0) - closeUp) * Math.min(Math.abs((ui.wardrobeOpen() ? 1 : 0) - closeUp), dt / 0.95);
   if (titleFor <= 0) { zoom += (zoomTarget - zoom) * Math.min(1, dt * (opening > 0 ? 1.7 : 7)); if (opening > 0) opening -= dt; }
-  focus.x += (P.x - focus.x) * Math.min(1, dt * 5); focus.z += (P.z - 1.5 * zoom - focus.z) * Math.min(1, dt * 5); focus.y += (P.visY * 0.5 - focus.y) * Math.min(1, dt * 3);
-  camPos.copy(CAM).multiplyScalar(camScale * zoom).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
+  // while fishing the camera leans a little toward the line and closes in, then eases back
+  const lean = underground ? 0 : pond.lean(), [lx, lz] = pond.lookAt(), fx = P.x + (lx - P.x) * 0.38 * lean, fz = P.z + (lz - P.z) * 0.38 * lean;
+  focus.x += (fx - focus.x) * Math.min(1, dt * 5); focus.z += (fz - 1.5 * zoom - focus.z) * Math.min(1, dt * 5); focus.y += (P.visY * 0.5 - focus.y) * Math.min(1, dt * 3);
+  camPos.copy(CAM).multiplyScalar(camScale * zoom * (1 - 0.13 * lean)).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
   if (listen > 0.001) {
     const e = ease(listen), [dx2, dy2, dz2] = hideout.deckAt; deckLook.set(dx2, dy2 + 0.4, dz2 + 0.4);
     deckCam.copy(CAM).multiplyScalar(0.32 * camScale).add(deckLook); camPos.lerp(deckCam, e); camLook.lerp(deckLook, e);
@@ -545,7 +549,9 @@ function frame(now) {
   // (never while the wardrobe is up or the camera is moving: those need every frame)
   minimap.draw(time, Math.min(0.05, raw));
   { const on = disc.isOpen() || minimap.isBig(); if (on !== hudOpen) { hudOpen = on; document.body.classList.toggle('hudopen', on); } }
-  idle = paused() && !travelling && !ui.wardrobeOpen() && closeUp === 0 && listen === 0 ? idle + 1 : 0;
+  // (and never while fishing, or just after the fact card opens or closes)
+  if (pondUI.isOpen() !== pondWas) { pondWas = pondUI.isOpen(); pondCalm = 0.9; } pondCalm -= Math.min(raw, 0.1);
+  idle = paused() && !travelling && !ui.wardrobeOpen() && closeUp === 0 && listen === 0 && !(pond.active() && !pondUI.isOpen()) && pondCalm <= 0 ? idle + 1 : 0;
   if (idle % 3 === 0 || bakeFrames > 0) renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }

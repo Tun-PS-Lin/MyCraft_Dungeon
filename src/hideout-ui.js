@@ -4,6 +4,8 @@ import { RECORDS, JOURNAL, GALLERY, BOOKS } from './hideout-content.js';
 import { drawIcon, drawPainting, pictureCanvas } from './pixelart.js';
 import { music, sound } from './audio.js';
 import { BASE } from './base.js';
+import { createBookViewer } from './book3d.js';
+import { createProjectCube } from './cube3d.js';
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 const closeBtn = () => { const b = el('button', 'xbtn', '×'); b.setAttribute('aria-label', 'Close'); return b; };
@@ -160,47 +162,55 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
     };
   }
 
-  /* ── gallery: a framed painting under a spotlight, with a brass plaque ── */
+  /* ── gallery: a 3D cube with a project behind each window. Turn it with the arrows, the
+     thumbnails or a drag; click the window in front to read about that project ── */
   {
     const wrap = shell('gallery', 'Gallery', 'hx-gallery'), gal = el('div', 'gal'); wrap.appendChild(gal);
     const x = closeBtn(); x.classList.add('gal-x'); x.onclick = () => hide(); gal.appendChild(x);
     const top = el('div', 'gal-top'); top.append(el('strong', '', 'Gallery'), el('span', 'gal-count')); gal.appendChild(top);
     const wall = el('div', 'gal-wall'); gal.appendChild(wall);
+    const host = el('div', 'gal-cube'); host.setAttribute('aria-label', 'A cube of side projects. Drag to turn it.'); wall.appendChild(host);
     const prev = el('button', 'gal-arrow prev'), next = el('button', 'gal-arrow next');
     prev.innerHTML = ICON.prev.replace('M6 6l4-3v6z', ''); next.innerHTML = ICON.next.replace('M6 6l-4-3v6z', '');
-    prev.setAttribute('aria-label', 'Previous painting'); next.setAttribute('aria-label', 'Next painting');
-    const stage = el('div', 'gal-stage'), frame = el('figure', 'gal-frame'), pic = pictureCanvas(32, 24, () => {}); frame.appendChild(pic); stage.appendChild(frame);
-    wall.append(el('i', 'gal-light'), prev, stage, next);
-    const plaque = el('div', 'gal-label'), h = el('h3'), p = el('p'), go = el('a', 'gal-go'); go.target = '_blank'; go.rel = 'noopener';
-    const kicker = el('span', 'gal-kicker'); plaque.append(kicker, h, p, go); wall.appendChild(plaque);
+    prev.setAttribute('aria-label', 'Previous project'); next.setAttribute('aria-label', 'Next project');
+    wall.append(prev, next);
+    // the caption under the cube, and the details panel that slides in when you open a window
+    const cap = el('button', 'gal-cap'), capK = el('span', 'gal-kicker'), capT = el('strong'), capH = el('small', '', 'Click the window to read more');
+    cap.append(capK, capT, capH); wall.appendChild(cap);
+    const infoBox = el('div', 'gal-info'), ik = el('span', 'gal-kicker'), ih = el('h3'), ip = el('p'), go = el('a', 'gal-go'), back = el('button', 'gal-back', '‹ Back to the cube');
+    go.target = '_blank'; go.rel = 'noopener'; infoBox.append(ik, ih, ip, go, back); wall.appendChild(infoBox);
     const rail = el('div', 'gal-rail'), thumbs = [];
-    GALLERY.forEach((g, i) => { const b = el('button', 'gal-thumb'); b.setAttribute('aria-label', g.title); b.title = g.title; b.appendChild(pictureCanvas(32, 24, (c) => drawPainting(c, g.art))); b.onclick = () => go2(i); rail.appendChild(b); thumbs.push(b); });
+    GALLERY.forEach((g, i) => { const b = el('button', 'gal-thumb'); b.setAttribute('aria-label', g.title); b.title = g.title; b.appendChild(pictureCanvas(32, 24, (c) => drawPainting(c, g.art))); b.appendChild(el('span', '', g.title)); b.onclick = () => turnTo(i); rail.appendChild(b); thumbs.push(b); });
     gal.appendChild(rail);
-    let at = 0, moving = false;
+    let at = 0, infoOpen = false;
     function fill() {
-      const g = GALLERY[at]; if (!g) return;
-      drawPainting(pic.getContext('2d'), g.art); h.textContent = g.title; p.textContent = g.desc;
+      const g = GALLERY[at]; if (!g) return; const k = 'Side project No. ' + String(at + 1).padStart(2, '0');
+      capK.textContent = k; capT.textContent = g.title; ik.textContent = k; ih.textContent = g.title; ip.textContent = g.desc;
       if (g.url) { go.href = g.url; go.textContent = 'Visit ' + g.title + ' ↗'; go.classList.remove('off'); go.removeAttribute('aria-disabled'); }
       else { go.removeAttribute('href'); go.textContent = 'Link coming soon'; go.classList.add('off'); go.setAttribute('aria-disabled', 'true'); }
-      kicker.textContent = 'Side project No. ' + String(at + 1).padStart(2, '0');
       thumbs.forEach((b, i) => { b.classList.toggle('on', i === at); b.setAttribute('aria-pressed', String(i === at)); });
       top.lastChild.textContent = (at + 1) + ' / ' + GALLERY.length;
     }
-    async function go2(i, dir) {
-      const n = GALLERY.length; if (!n || moving) return; const to = (i + n) % n; if (to === at) return;
-      const d = dir || (to > at ? 1 : -1); moving = true; sound.play('near');
-      await Promise.all([
-        anim(frame, [{ transform: 'none', opacity: 1 }, { transform: 'translateX(' + (-d * 18) + '%) rotate(' + (-d * 3) + 'deg)', opacity: 0 }], { duration: 240, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).finished,
-        anim(plaque, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).finished,
-      ]);
-      at = to; fill();
-      anim(plaque, [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'ease-out', fill: 'forwards' });
-      await anim(frame, [{ transform: 'translateX(' + (d * 18) + '%) rotate(' + (d * 3) + 'deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.2,.8,.25,1)', fill: 'forwards' }).finished;
-      moving = false;
-    }
-    prev.onclick = () => go2(at - 1, -1); next.onclick = () => go2(at + 1, 1);
-    panels.gallery.key = (e) => { if (e.key === 'ArrowLeft') { go2(at - 1, -1); return true; } if (e.key === 'ArrowRight') { go2(at + 1, 1); return true; } return false; };
-    let sx = null; stage.addEventListener('pointerdown', (e) => { sx = e.clientX; }); stage.addEventListener('pointerup', (e) => { if (sx !== null && Math.abs(e.clientX - sx) > 40) go2(at + (e.clientX < sx ? 1 : -1), e.clientX < sx ? 1 : -1); sx = null; });
+    // swap the words with a quick cross-fade as the cube turns
+    let fadeT = 0;
+    function face(i) { if (i === at) return; at = i; sound.play('near'); cap.classList.add('swap'); infoBox.classList.add('swap'); clearTimeout(fadeT); fadeT = setTimeout(() => { fill(); cap.classList.remove('swap'); infoBox.classList.remove('swap'); }, 180); }
+    function setInfo(on) { infoOpen = on; gal.classList.toggle('reading', on); if (cube) cube.setInfo(on); if (on) sound.play('open'); }
+    const cube = createProjectCube(host, GALLERY, { onFace: face, onOpen: setInfo, onSealed: () => { cap.classList.remove('nudge'); void cap.offsetWidth; cap.classList.add('nudge'); } });
+    if (!cube) { gal.classList.add('flat'); host.appendChild(pictureCanvas(32, 24, () => {})); }
+    const paintFlat = () => { if (!cube) drawPainting(host.firstChild.getContext('2d'), GALLERY[at].art); };
+    function turnTo(i, dir) { if (cube) cube.go(i, dir); else { face(i); setTimeout(paintFlat, 190); } }
+    prev.onclick = () => (cube ? cube.next(-1) : turnTo((at + GALLERY.length - 1) % GALLERY.length));
+    next.onclick = () => (cube ? cube.next(1) : turnTo((at + 1) % GALLERY.length));
+    cap.onclick = () => setInfo(!infoOpen); back.onclick = () => setInfo(false);
+    if (!cube) host.onclick = () => setInfo(!infoOpen);
+    panels.gallery.onShow = () => { if (cube) cube.start(); else paintFlat(); };
+    panels.gallery.onHide = () => { if (cube) cube.stop(); setInfo(false); };
+    panels.gallery.key = (e) => {
+      if (e.key === 'ArrowLeft') { prev.onclick(); return true; } if (e.key === 'ArrowRight') { next.onclick(); return true; }
+      if (e.key === 'Enter' && document.activeElement === document.body) { setInfo(!infoOpen); return true; }
+      if (e.key === 'Escape' && infoOpen) { setInfo(false); return 'stop'; }
+      return false;
+    };
     fill();
   }
 
@@ -209,8 +219,16 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
     const wrap = shell('library', 'Library', 'hx-library'), libp = el('div', 'lib'); wrap.appendChild(libp);
     const x = closeBtn(); x.classList.add('lib-x'); x.onclick = () => hide(); libp.appendChild(x);
     const card = el('div', 'lib-card'), coverBox = el('div', 'lib-cover'), coverImg = el('img'); coverImg.alt = ''; coverImg.draggable = false; coverBox.appendChild(coverImg);
+    // the 3D book (falls back to the flat cover if WebGL isn't available)
+    const stageBox = el('div', 'lib-stage'); stageBox.setAttribute('aria-label', 'The book in 3D. Drag to turn it.');
+    const views = el('div', 'lib-views'); [['front', 'Cover'], ['spine', 'Spine'], ['back', 'Back']].forEach(([v, label]) => { const b = el('button', '', label); b.onclick = () => { if (viewer) viewer.view(v); views.querySelectorAll('button').forEach((q) => q.classList.toggle('on', q === b)); }; views.appendChild(b); });
+    const turnHint = el('span', 'lib-turn', 'Drag to turn');
+    stageBox.append(views, turnHint);
+    const viewer = createBookViewer(stageBox);
+
     const info = el('div', 'lib-info'), lk = el('span', 'lib-kicker'), lt = el('h2'), la = el('p', 'lib-author'), ln = el('p', 'lib-note'), lq = el('p', 'lib-take');
-    info.append(lk, lt, la, ln, el('i', 'lib-rule'), el('h3', '', 'My takeaway'), lq); card.append(coverBox, info); libp.appendChild(card);
+    info.append(lk, lt, la, ln, el('i', 'lib-rule'), el('h3', '', 'My takeaway'), lq); card.append(viewer ? stageBox : coverBox, info); libp.appendChild(card);
+    if (viewer) libp.classList.add('three');
     const shelfBox = el('div', 'lib-shelf'), row = el('div', 'lib-row'); shelfBox.appendChild(row); libp.appendChild(shelfBox);
     libp.appendChild(el('p', 'lib-hint', 'Pick a book from the shelf'));
     const spines = {};
@@ -222,15 +240,24 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
       b.onclick = () => pick(bk.id); row.appendChild(b); spines[bk.id] = b;
       const im = new Image(); im.src = BASE + 'assets/images/books/' + bk.cover; // fetch the covers ahead
     });
-    let current = null, moving = false, queued = null;
+    let current = null, moving = false, queued = null, swapT = 0;
     function fill(bk) {
-      coverImg.src = BASE + 'assets/images/books/' + bk.cover; libp.style.setProperty('--page', bk.page);
+      if (!viewer) coverImg.src = BASE + 'assets/images/books/' + bk.cover; libp.style.setProperty('--page', bk.page);
       // dark pages get light text, light pages dark text, so the card always reads clearly
       const n = parseInt(bk.page.slice(1), 16), lum = (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
       libp.classList.toggle('dark', lum < 0.5);
       lk.textContent = 'From the shelf · No. ' + String(BOOKS.indexOf(bk) + 1).padStart(2, '0'); lt.textContent = bk.title; la.textContent = bk.author; ln.textContent = bk.note || ''; ln.hidden = !bk.note; lq.textContent = bk.takeaway;
     }
     async function pick(id) {
+      if (viewer) { // 3D: the book itself carries the motion; the words cross-fade
+        if (id === current) return; const bk = BOOKS.find((q) => q.id === id); if (!bk) return; sound.play('near');
+        const from = BOOKS.findIndex((q) => q.id === current), to = BOOKS.indexOf(bk);
+        for (const k in spines) spines[k].classList.toggle('on', k === id);
+        libp.classList.add('picked'); viewer.show(bk, to, from < 0 || to > from ? 1 : -1); current = id;
+        views.querySelectorAll('button').forEach((q, i) => q.classList.toggle('on', i === 0));
+        info.classList.add('swap'); clearTimeout(swapT); swapT = setTimeout(() => { fill(bk); info.classList.remove('swap'); }, 200);
+        return;
+      }
       if (moving) { queued = id; return; } if (id === current) return; const bk = BOOKS.find((q) => q.id === id); if (!bk) return; moving = true; sound.play('near');
       for (const k in spines) spines[k].classList.toggle('on', k === id);
       libp.classList.add('picked');
@@ -242,10 +269,11 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
       moving = false;
       if (queued) { const q = queued; queued = null; pick(q); }
     }
-    panels.library.onShow = () => { if (!current) pick(BOOKS[0].id); };
+    panels.library.onShow = () => { if (viewer) viewer.start(); if (!current) pick(BOOKS[0].id); };
+    panels.library.onHide = () => { if (viewer) viewer.stop(); };
     panels.library.key = (e) => { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return false; const i = BOOKS.findIndex((q) => q.id === current) + (e.key === 'ArrowRight' ? 1 : -1); if (i >= 0 && i < BOOKS.length) pick(BOOKS[i].id); return true; };
   }
 
-  window.addEventListener('keydown', (e) => { if (open && panels[open].key && panels[open].key(e)) e.preventDefault(); });
+  window.addEventListener('keydown', (e) => { if (!open || !panels[open].key) return; const r = panels[open].key(e); if (r) e.preventDefault(); if (r === 'stop') e.stopImmediatePropagation(); });
   return { show, hide: () => hide(), isOpen: () => !!open, which: () => open };
 }

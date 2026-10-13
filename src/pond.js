@@ -128,7 +128,13 @@ export function buildPond(scene) {
      lift (take the rod and turn to the water) → wind (pull back) → throw (the bobber arcs out) →
      wait (it bobs; something bites) → reel (the rod comes up, a fish leaps out on the line) →
      hold (while the card is open) → out (the rod is put away) */
-  const STEP = { lift: 0.45, wind: 0.3, throw: 0.6, reel: 0.8, out: 0.5 };
+  const STEP = { lift: 0.55, wind: 0.34, throw: 0.62, reel: 0.85, out: 0.8 };
+  // the rod's angle is pulled toward a target for each step by a critically damped spring, so it
+  // never stops dead between steps: [target angle, stiffness]. 1.3 is raised high, -1.2 hangs down.
+  const ROD = { lift: [0.55, 7], wind: [1.32, 10], throw: [0.28, 16], wait: [0.42, 4], reel: [1.35, 8], hold: [1.26, 3.5], out: [-1.25, 5.5] };
+  const spring = (o, target, w, dt) => { const x = o.v - target, e = Math.exp(-w * dt), q = (o.vel + w * x) * dt; o.v = target + (x + q) * e; o.vel = (o.vel - w * q) * e; return o.v; };
+  const holdS = { v: 0, vel: 0 }, camS = { v: 0, vel: 0 };
+  let hand = null; // fills a vector with the player's right hand, in world space
   const eo = (k) => 1 - Math.pow(1 - k, 3), eio = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2), cl = (k) => Math.max(0, Math.min(1, k));
   const lerp = (a, b, k) => a + (b - a) * k;
   const tip = new THREE.Vector3();
@@ -147,12 +153,20 @@ export function buildPond(scene) {
     // cast the line. If the rod is still in hand from the last catch, go straight to the throw.
     fish(P, done) {
       if (cast && cast.step !== 'hold' && cast.step !== 'out') return;
-      const again = !!cast, rz = again ? cast.rz : -0.25, sc = again ? cast.sc : 0.35;
-      rodRest.visible = false; rod.visible = line.visible = true; bobber.visible = again; caught.visible = false;
-      cast = { step: again ? 'wind' : 'lift', t: 0, P, at: [spot.x + 2.0 + Math.random() * 0.6, dock.z + (Math.random() - 0.5) * 1.2], bite: 1.3 + Math.random() * 1.0, done, rz, rz0: rz, sc, from: bobber.position.clone() };
+      const again = !!cast;
+      rodRest.visible = false; rod.visible = line.visible = true; bobber.visible = again; caught.visible = again && caught.visible;
+      cast = { step: again ? 'wind' : 'lift', t: 0, P, at: [spot.x + 2.0 + Math.random() * 0.6, dock.z + (Math.random() - 0.5) * 1.2], bite: 1.3 + Math.random() * 1.0, done,
+        rzS: again ? cast.rzS : { v: -1.2, vel: 0 }, scS: again ? cast.scS : { v: 0.55, vel: 0 } };
     },
     // the card has closed: put the rod away
-    release() { if (cast && cast.step === 'hold') { cast.step = 'out'; cast.t = 0; cast.rz0 = cast.rz; } },
+    release() { if (cast && cast.step === 'hold') { cast.step = 'out'; cast.t = 0; } },
+    // true from the first move until the rod is back on its stand (the world draws every frame then)
+    active: () => !!cast,
+    // how far the player's arms are raised to hold the rod, and the rod's angle
+    hold: () => ({ k: holdS.v, rz: cast ? cast.rzS.v : -1.2 }),
+    // 0..1, how much the camera leans toward the line, and where it looks
+    lean: () => camS.v, lookAt: () => (cast ? cast.at : [spot.x + 2.2, dock.z]),
+    setHand(fn) { hand = fn; },
     update(time, dt, night) {
       wTex.offset.set((time * 0.03) % 1, (time * 0.018) % 1); rTex.offset.set((-time * 0.05) % 1, (time * 0.04) % 1);
       rippleMat.opacity = 0.55 + Math.sin(time * 0.8) * 0.15;
@@ -164,24 +178,30 @@ export function buildPond(scene) {
       if (fishT >= 0) { fishT += dt; const k = fishT / 0.8; fish.position.set(fishFrom[0] + fishDir * k * 0.9, WATER_Y + Math.sin(Math.PI * Math.min(1, k)) * 0.7, fishFrom[1]); fish.rotation.z = fishDir * (0.9 - k * 1.8); fish.rotation.y = fishDir < 0 ? Math.PI : 0; if (k >= 1) { fish.visible = false; fishT = -1; fishAt = time + 5 + Math.random() * 7; splash(fishFrom[0] + fishDir * 0.9, fishFrom[1]); ring(fishFrom[0] + fishDir * 0.9, fishFrom[1]); } }
       if (splashT >= 0) { splashT += dt; drops.forEach((d) => { d.vy -= 9 * dt; d.m.position.x += d.vx * dt; d.m.position.y += d.vy * dt; d.m.position.z += d.vz * dt; if (d.m.position.y < WATER_Y) d.m.visible = false; }); splashMat.opacity = Math.max(0, 0.9 - splashT); if (splashT > 1) { splashT = -1; drops.forEach((d) => { d.m.visible = false; }); } }
       rings.forEach((k) => { if (k.t < 0) { k.m.visible = false; return; } k.t += dt; const e = k.t / 1.4; k.m.visible = true; k.m.scale.setScalar(0.4 + e * 2.2); k.m.material.opacity = Math.max(0, 0.8 * (1 - e)); if (e >= 1) k.t = -1; });
+      // arms up while the rod is out; the camera leans in while the line is in the water
+      spring(holdS, cast && !(cast.step === 'out' && cast.t > 0.45) ? 1 : 0, 6, dt);
+      spring(camS, cast && cast.step !== 'out' ? 1 : 0, cast ? 2.4 : 2, dt);
       // the cast
       if (cast) {
         const c = cast, P = c.P, [tx, tz] = c.at; c.t += dt;
-        const go = (step) => { c.step = step; c.t = 0; c.rz0 = c.rz; };
+        const go = (step) => { c.step = step; c.t = 0; };
         // turn to face the water, easing round rather than snapping
-        if (c.step !== 'out') { let d = Math.PI / 2 - P.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); P.yaw += d * Math.min(1, dt * 7); }
+        if (c.step !== 'out') { let d = Math.PI / 2 - P.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); P.yaw += d * Math.min(1, dt * 6); }
         const k = c.step === 'wait' || c.step === 'hold' ? 0 : cl(c.t / STEP[c.step]);
-        if (c.step === 'lift') { c.rz = lerp(c.rz0, 0.55, eo(k)); c.sc = lerp(0.35, 1, eo(k)); if (k >= 1) go('wind'); }
-        else if (c.step === 'wind') { c.rz = lerp(c.rz0, 1.25, eio(k)); c.sc = lerp(c.sc, 1, Math.min(1, dt * 8)); if (k >= 1) { bobber.visible = caught.visible = false; bobber.scale.setScalar(1); caught.scale.setScalar(1); go('throw'); } }
-        else if (c.step === 'throw') { c.rz = lerp(c.rz0, 0.32, eo(cl(k * 1.6))); }
-        else if (c.step === 'wait') { c.rz = lerp(c.rz, 0.45 + Math.sin(c.t * 1.6) * 0.03, Math.min(1, dt * 3)); }
-        else if (c.step === 'reel') { c.rz = lerp(c.rz0, 1.3, eo(k)); }
-        else if (c.step === 'hold') { c.rz = lerp(c.rz, 1.3 + Math.sin(c.t * 1.4) * 0.03, Math.min(1, dt * 4)); }
-        else if (c.step === 'out') { c.rz = lerp(c.rz0, -0.3, eio(k)); c.sc = lerp(1, 0.2, eio(cl((k - 0.35) / 0.65))); }
-        rod.scale.setScalar(c.sc);
-        const yaw = P.yaw, hx = P.x + Math.sin(yaw) * 0.35 + Math.cos(yaw) * -0.3, hz = P.z + Math.cos(yaw) * 0.35 - Math.sin(yaw) * -0.3;
-        rod.position.set(hx, P.visY + 1.15, hz); rod.rotation.set(0, yaw - Math.PI / 2, c.rz);
-        tip.set(1.7 * c.sc, 0, 0).applyEuler(rod.rotation).add(rod.position);
+        if (c.step === 'lift' && k >= 1) go('wind');
+        else if (c.step === 'wind' && k >= 1) { bobber.visible = caught.visible = false; bobber.scale.setScalar(1); caught.scale.setScalar(1); go('throw'); }
+        // the rod: a spring toward this step's angle, with a little life added while waiting or holding
+        const [aim, stiff] = ROD[c.step], bite = c.step === 'wait' && c.t > c.bite;
+        const wob = c.step === 'wait' ? Math.sin(c.t * 1.6) * 0.03 + (bite ? Math.sin(c.t * 26) * 0.05 : 0) : c.step === 'hold' ? Math.sin(time * 1.4) * 0.03 : 0;
+        spring(c.rzS, aim + wob, stiff, dt);
+        spring(c.scS, c.step === 'out' && c.t > 0.38 ? 0 : 1, c.step === 'out' ? 7 : 9, dt);
+        const rz = c.rzS.v, sc = Math.max(0.001, c.scS.v);
+        rod.scale.setScalar(sc);
+        // the rod sits in the right hand
+        const yaw = P.yaw;
+        if (hand) { hand(rod.position); rod.position.y -= 0.04; } else rod.position.set(P.x + Math.sin(yaw) * 0.35 - Math.cos(yaw) * 0.3, P.visY + 1.15, P.z + Math.cos(yaw) * 0.35 + Math.sin(yaw) * 0.3);
+        rod.rotation.set(0, yaw - Math.PI / 2, rz);
+        tip.set(1.7 * sc, 0, 0).applyEuler(rod.rotation).add(rod.position);
         // the bobber
         if (c.step === 'wind') {
           // casting again: the last catch slips off the hook and the bobber comes back to the tip
@@ -204,9 +224,9 @@ export function buildPond(scene) {
           if (c.step === 'reel' && k > 0.5 && !c.told) { c.told = true; c.done(); }
           if (c.step === 'reel' && k >= 1) go('hold');
         } else if (c.step === 'out') {
-          const f = eio(k); bobber.position.lerp(tip, Math.min(1, dt * 10)); caught.position.set(bobber.position.x, bobber.position.y - 0.08, bobber.position.z);
+          const f = eio(cl(c.t / 0.5)); bobber.position.lerp(tip, Math.min(1, dt * 10)); caught.position.set(bobber.position.x, bobber.position.y - 0.08, bobber.position.z);
           caught.scale.setScalar(Math.max(0.01, 1 - f * 1.4)); bobber.scale.setScalar(Math.max(0.01, 1 - f * 1.2));
-          if (k >= 1) { cast = null; rod.visible = line.visible = bobber.visible = caught.visible = false; caught.scale.setScalar(1); bobber.scale.setScalar(1); rod.scale.setScalar(1); rodRest.visible = true; }
+          if (c.t > STEP.out && c.scS.v < 0.02) { cast = null; rod.visible = line.visible = bobber.visible = caught.visible = false; caught.scale.setScalar(1); bobber.scale.setScalar(1); rod.scale.setScalar(1); rodRest.visible = true; }
         }
         if (cast) { line.visible = bobber.visible; const a = lineGeo.attributes.position.array; a[0] = tip.x; a[1] = tip.y; a[2] = tip.z; a[3] = bobber.position.x; a[4] = bobber.position.y + 0.1; a[5] = bobber.position.z; lineGeo.attributes.position.needsUpdate = true; }
       }

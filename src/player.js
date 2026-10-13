@@ -17,6 +17,7 @@ export function createPlayer(scene) {
   const shadow = makeBlob(scene, 1.25 * TUNING.playerScale);
   const state = { rollK: -1, x: 0, y: FLOOR, z: 4.6, vx: 0, vz: 0, vy: 0, yaw: Math.PI, grounded: true, phase: 0, blend: 0, gait: 0, air: 0, squash: 0, visY: FLOOR };
   const mix = (a, b, t) => a + (b - a) * t;
+  let hold = { k: 0, rz: 0 };
 
   // Advance the stride. Its pace follows the real ground speed, so feet never slide, and
   // walk and run are blended rather than switched. Returns true on each footfall.
@@ -42,6 +43,12 @@ export function createPlayer(scene) {
       fig.pose(s * mix(0.72, 0.98, P.gait) * P.blend, P.air, time, 0, 0, s * 0.1 * P.blend);
       rig.scale.set(1 + P.squash * 0.08, 1 - P.squash * 0.16, 1 + P.squash * 0.08); rig.position.set(0, 0, 0);
     }
+    // holding the fishing rod: the right arm follows the rod's angle, the left comes in to help
+    if (hold.k > 0.001) {
+      const k = hold.k, a = -(0.55 + Math.max(-1.2, Math.min(1.4, hold.rz)) * 0.55), pr = fig.parts;
+      pr.armR.rotation.x += (a - pr.armR.rotation.x) * k; pr.armR.rotation.z += (-0.1 - pr.armR.rotation.z) * k;
+      pr.armL.rotation.x += (a * 0.75 - pr.armL.rotation.x) * k; pr.armL.rotation.z += (-0.32 - pr.armL.rotation.z) * k;
+    }
     if (P.grounded) P.visY += (P.y - P.visY) * Math.min(1, dt * 18); else P.visY = P.y;
     // a smooth rise and fall twice per stride, and a forward lean that grows with the run
     const bob = (1 - Math.cos(P.phase * 2)) * 0.5 * mix(0.045, 0.085, P.gait) * P.blend;
@@ -61,7 +68,11 @@ export function createPlayer(scene) {
   { const P = 0.0625, dark = new THREE.MeshLambertMaterial({ color: new THREE.Color('#2a2019').convertSRGBToLinear() }), lit = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffd27a').convertSRGBToLinear() });
     const box = (w, h, d, m, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w * P, h * P, d * P), m); b.position.y = y * P; lantern.add(b); };
     box(0.8, 2, 0.8, dark, 0); box(3.4, 0.8, 3.4, dark, -1.4); box(2.6, 3.2, 2.6, lit, -3.4); box(3.4, 0.8, 3.4, dark, -5.4); }
-  return { state, group, stride, animate, setOutfit, outfit: () => fig.design.id, setLantern(on) { lantern.visible = on; } };
+  const handAt = new THREE.Vector3(0, -10.5 * 0.0625, 0.4 * 0.0625);
+  return { state, group, stride, animate, setOutfit, outfit: () => fig.design.id, setLantern(on) { lantern.visible = on; },
+    setHold(h) { hold = h; },
+    // where the right hand is in the world (for things the player holds)
+    hand(v) { group.updateMatrixWorld(true); return fig.parts.armR.localToWorld(v.copy(handAt)); } };
 }
 
 // Round soft shadow, the same trick the original blocky games use for moving things.
