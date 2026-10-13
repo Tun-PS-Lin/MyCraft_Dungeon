@@ -56,6 +56,8 @@ const SYNTH = {
   cricket: () => { for (let i = 0; i < 3; i++) tone(4300, 4300, 0.045, 'sine', 0.008, i * 0.07); },
   // a nasal "hrmm", in the spirit of a grumbling villager
   villager: () => { const f = 150 + Math.random() * 50; tone(f, f * 0.78, 0.34, 'sawtooth', 0.16, 0, 820); tone(f * 1.5, f * 1.1, 0.22, 'sawtooth', 0.05, 0.02, 1500); },
+  cast: () => { tone(900, 300, 0.25, 'triangle', 0.04); thud(0.2, 2600, 0.05); },
+  splash: () => { thud(0.3, 1800, 0.18); thud(0.18, 900, 0.12); tone(420, 180, 0.2, 'sine', 0.05, 0.05); },
   meow: () => { tone(560, 820, 0.16, 'sawtooth', 0.07, 0, 1500); tone(820, 470, 0.34, 'sawtooth', 0.07, 0.14, 1150); tone(1120, 640, 0.3, 'triangle', 0.02, 0.16); },
   crackle: () => { for (let i = 0; i < 3; i++) setTimeout(() => thud(0.03, 2400 + Math.random() * 1800, 0.05 + Math.random() * 0.05), i * (40 + Math.random() * 90)); },
   roll: () => { thud(0.22, 1400, 0.12); tone(200, 110, 0.2, 'triangle', 0.05); },

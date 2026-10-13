@@ -124,6 +124,7 @@ export function createUI(canvas, handlers) {
   STALLS.forEach((p) => navItem(p.id, p.color, p.email || p.about ? 'navContact' : p.kind === 'outfits' ? 'navVillage' : 'navProjects'));
   navItem('hall', '#8b8a86', 'navVillage'); nav.hall.b.classList.add('noTick');
   navItem('hideout', '#ffd060', 'navVillage'); nav.hideout.b.classList.add('noTick');
+  navItem('pond', '#62c8ff', 'navVillage'); nav.pond.b.classList.add('noTick');
 
   /* top buttons */
   const toggleBtn = (id, isOn, flip, onWord, offWord) => {
@@ -150,7 +151,7 @@ export function createUI(canvas, handlers) {
   /* wardrobe */
   const grid = $('wardGrid'), cards = {};
   OUTFITS.forEach((o) => {
-    const b = el('button', 'wcard'); const c = document.createElement('canvas'); c.width = SPRITE.w; c.height = SPRITE.h; drawSprite(c.getContext('2d'), o);
+    const b = el('button', 'wcard'); b.style.setProperty('--i', grid.children.length); const c = document.createElement('canvas'); c.width = SPRITE.w; c.height = SPRITE.h; drawSprite(c.getContext('2d'), o);
     const name = el('span', 'wname'), tag = el('em'); b.appendChild(c); b.appendChild(name); b.appendChild(tag);
     b.onclick = () => { select(o.id); handlers.pickOutfit(o.id); sound.play('near'); }; grid.appendChild(b); cards[o.id] = { b, name, tag };
   });
@@ -237,7 +238,7 @@ export function createUI(canvas, handlers) {
   function paintText() {
     document.querySelectorAll('[data-t]').forEach((e) => { e.textContent = t(e.dataset.t); });
     STALLS.forEach((p) => { labelText[p.id].textContent = tr(p, 'label'); nav[p.id].name.textContent = tr(p, 'title'); });
-    labelText.hall.textContent = hallName(); nav.hall.name.textContent = t('townHall', { name: hallName() }); nav.hideout.name.textContent = t('hideoutNav');
+    labelText.hall.textContent = hallName(); nav.hall.name.textContent = t('townHall', { name: hallName() }); nav.hideout.name.textContent = t('hideoutNav'); nav.pond.name.textContent = t('pondNav');
     AGENTS.forEach((a) => { agentStatus[a.id].textContent = t(agentState[a.id]); });
     OUTFITS.forEach((o) => { cards[o.id].name.textContent = t('o.' + o.id); cards[o.id].tag.textContent = t('selected'); });
     $('chatHint').textContent = t(isTouch ? 'chatHintTouch' : 'chatHint'); $('toastTitle').textContent = t('achTitle'); $('toastText').textContent = t('achText');

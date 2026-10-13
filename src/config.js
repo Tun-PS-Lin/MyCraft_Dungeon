@@ -194,4 +194,7 @@ export const FLOOR = 0.08; // the height the player walks at everywhere on the s
 // The cave at the bottom of the square: stairs down from z0 to z1, w wide. Walking down them
 // (or pressing E at the top) travels to the Hideout, an underground room built far to the south.
 export const CAVE = { x: 0, z0: 16, z1: 21, w: 4 };
+// The fishing pond to the right of the cave: an oval of water (rx by rz) with a bridge across
+// its east end (bridgeX) and a dock from the west shore (dock: x0 to x1 along z).
+export const POND = { x: 10.6, z: 11.6, rx: 3.6, rz: 2.5, bridgeX: 12.8, bridgeW: 1.4, dock: { x0: 6.0, x1: 9.4, z: 11.5, w: 1.0 } };
 export const HIDEOUT = { cx: 0, cz: 170, x0: -12, x1: 12, z0: -7.5, z1: 7.5, doorX: -9.4 };

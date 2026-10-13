@@ -14,6 +14,8 @@ import { createUI } from './ui.js';
 import { sound, music } from './audio.js';
 import { buildCave, buildHideout } from './hideout.js';
 import { createHideoutUI } from './hideout-ui.js';
+import { buildPond } from './pond.js';
+import { createPondUI } from './pond-ui.js';
 import { RECORDS } from './hideout-content.js';
 import { BASE } from './base.js';
 import { t, tr } from './i18n.js';
@@ -76,6 +78,7 @@ const agents = createAgents(scene, hall);
 const chickens = createChickens(scene);
 const ambience = createAmbience(scene);
 const cave = buildCave(scene);
+const pond = buildPond(scene);
 // Everything built so far is the village. It goes in one group, and the Hideout in another, so
 // only the place the player is in gets drawn (and lit): the other one is switched off entirely.
 const village = new THREE.Group(); for (const o of scene.children.slice(fixed)) village.add(o); scene.add(village);
@@ -132,8 +135,16 @@ document.body.appendChild(nowPlaying);
 const deckLook = new THREE.Vector3(), deckCam = new THREE.Vector3();
 hideout.setDisc(music.current()); music.onChange(() => hideout.setDisc(music.current()));
 let underground = false, travelling = false;
-const paused = () => ui.paused() || hx.isOpen() || travelling;
+/* the fishing pond: cast from the end of the dock and something about me bites */
+const pondUI = createPondUI({ focusGame: () => canvas.focus({ preventScroll: true }), onCastAgain: () => goFish() });
+function goFish() {
+  if (pond.fishing()) return; auto = null; ui.closeMenu(true);
+  P.vx = P.vz = 0; P.yaw = Math.PI / 2; sound.play('cast');
+  pond.fish(P, () => { sound.play('splash'); setTimeout(() => pondUI.show(pondUI.next()), 280); });
+}
+const paused = () => ui.paused() || hx.isOpen() || travelling || pondUI.isOpen() || pond.fishing();
 ui.addPlace('cave', 'The Hideout', '#ffd060', () => goTo('hideout'));
+ui.addPlace('pond', 'Fishing Pond', '#62c8ff', () => goTo('pond'));
 for (const p of hideout.props) ui.addPlace('hx:' + p.id, p.label, p.color, () => goTo('hx:' + p.id));
 // a short fade through dark, then the character is in the other place
 function travel(down, then) {
@@ -193,6 +204,7 @@ function tapGround() {
   }
 }
 function goTo(id) {
+  if (id === 'pond') { if (underground) { travel(false, () => goTo('pond')); return; } if (rectDistance(pond.rect, P.x, P.z) < 0.9) goFish(); else walkTo(pond.front[0], pond.front[1], goFish); return; }
   if (id === 'hideout') { if (!underground) walkTo(cave.top[0], cave.top[1], () => travel(true)); return; }
   if (id.startsWith('hx:')) {
     const p = hideout.props.find((q) => 'hx:' + q.id === id); if (!p) return;
@@ -245,8 +257,8 @@ const rollDir = [0, 1];
 function pressJump() { if (time - lastJumpPress < 0.3) { rollQueued = true; lastJumpPress = -9; } else { jumpQueued = true; lastJumpPress = time; } }
 window.addEventListener('keydown', (e) => {
   const k = e.code;
-  if (k === 'Escape') { if (!ui.escape()) hx.hide(); return; }
-  if (k === 'KeyE' && !e.repeat) { if (ui.openId() || ui.chatId() || ui.boardOpen()) ui.escape(); else if (hx.isOpen()) hx.hide(); else if (near && !paused()) near.act(); return; }
+  if (k === 'Escape') { if (pondUI.isOpen()) { pondUI.hide(); return; } if (!ui.escape()) hx.hide(); return; }
+  if (k === 'KeyE' && !e.repeat) { if (ui.openId() || ui.chatId() || ui.boardOpen()) ui.escape(); else if (hx.isOpen()) hx.hide(); else if (pondUI.isOpen()) pondUI.hide(); else if (near && !paused()) near.act(); return; }
   if (k === 'Space' || k.startsWith('Arrow')) { if (paused()) return; e.preventDefault(); } // leave these keys to buttons and sliders while a panel is open
   if (k === 'Space' && !e.repeat) pressJump();
   keys[k] = true; sound.unlock();
@@ -319,7 +331,7 @@ function resize() {
 window.addEventListener('resize', resize); resize();
 
 /* ── loop ── */
-let last = performance.now(), time = 0, chirpT = 4, idle = 0;
+let last = performance.now(), time = 0, chirpT = 4, idle = 0, overlayOn = false;
 const v3 = new THREE.Vector3();
 function update(dt) {
   time += dt;
@@ -376,6 +388,7 @@ function update(dt) {
   applyMood(time, indoors);
   player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors) * (underground ? 0 : 1));
   cave.update(time); hideout.update(time, ease(night), music.isOn());
+  if (!underground) pond.update(time, dt, ease(night));
   // listening mode
   const byDeck = underground && music.isOn() && rectDistance(hideout.musicRect, P.x, P.z) < 2.8;
   if (byDeck && mag <= 0.15 && !auto && speed < 0.2 && rollT < 0 && !paused()) listenT += dt; else listenT = 0;
@@ -389,7 +402,7 @@ function update(dt) {
   if (!travelling && underground && Math.abs(P.x - HIDEOUT_EXIT.x) < 0.7 && P.z < HIDEOUT_EXIT.z0 + 1.1) travel(false);
 
   // camera
-  closeUp += Math.sign((ui.wardrobeOpen() ? 1 : 0) - closeUp) * Math.min(Math.abs((ui.wardrobeOpen() ? 1 : 0) - closeUp), dt / 0.7);
+  closeUp += Math.sign((ui.wardrobeOpen() ? 1 : 0) - closeUp) * Math.min(Math.abs((ui.wardrobeOpen() ? 1 : 0) - closeUp), dt / 0.95);
   if (titleFor <= 0) { zoom += (zoomTarget - zoom) * Math.min(1, dt * (opening > 0 ? 1.7 : 7)); if (opening > 0) opening -= dt; }
   focus.x += (P.x - focus.x) * Math.min(1, dt * 5); focus.z += (P.z - 1.5 * zoom - focus.z) * Math.min(1, dt * 5); focus.y += (P.visY * 0.5 - focus.y) * Math.min(1, dt * 3);
   camPos.copy(CAM).multiplyScalar(camScale * zoom).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
@@ -398,11 +411,15 @@ function update(dt) {
     deckCam.copy(CAM).multiplyScalar(0.32 * camScale).add(deckLook); camPos.lerp(deckCam, e); camLook.lerp(deckLook, e);
   }
   if (closeUp > 0) {
-    const wide = camera.aspect >= 1, dist = wide ? 8 : 13, e = ease(closeUp), shift = wide ? 2.1 : 0;
+    // smootherstep, so the move starts and settles without a jolt
+    const wide = camera.aspect >= 1, dist = wide ? 8 : 13, c = closeUp, e = c * c * c * (c * (c * 6 - 15) + 10), shift = wide ? 2.1 : 0;
     closePos.set(P.x + sinY * dist + cosY * shift, P.visY + 2.2, P.z + cosY * dist - sinY * shift);
     closeLook.set(P.x + cosY * shift, P.visY + (wide ? 1.35 : -0.9), P.z - sinY * shift);
     camPos.lerp(closePos, e); camLook.lerp(closeLook, e);
-    camera.near = mix(1, dist - 1.2, e); camera.updateProjectionMatrix(); // clip the fence that would stand in front
+    // lift the arc a little mid-move so the camera swings round rather than sliding through things
+    camPos.y += Math.sin(Math.PI * e) * 1.6;
+    // clip the fence that would stand in front, but only once the camera is nearly there
+    const nearT = Math.max(0, (e - 0.55) / 0.45); camera.near = mix(1, dist - 1.2, nearT * nearT); camera.updateProjectionMatrix();
   } else if (camera.near !== 1) { camera.near = 1; camera.updateProjectionMatrix(); }
   camera.position.copy(camPos); camera.lookAt(camLook);
   // haze begins a little beyond the player and thickens toward the far trees, at any zoom
@@ -415,11 +432,12 @@ function update(dt) {
   }
   { const n = underground ? null : agents.nearest(P, indoors); if (n) { nearKey = n.id; near = { key: 'talkTo', vars: { name: n.name }, act: () => talkTo(n) }; } }
   if (!underground && Math.hypot(P.x - cave.top[0], P.z - cave.top[1]) < 2.3) { nearKey = 'cave'; near = { key: 'enterCave', act: () => travel(true) }; }
+  if (!underground && rectDistance(pond.rect, P.x, P.z) < 0.9) { nearKey = 'pond'; near = { key: 'goFishing', act: goFish }; }
   if (underground) { near = null; nearKey = null; bd = TUNING.interactRange; for (const p of hideout.props) { const d = rectDistance(p.rect, P.x, P.z); if (d < Math.min(bd, p.range || bd)) { bd = d; nearKey = 'hx:' + p.id; near = { key: p.key, act: () => useProp(p.id) }; } } }
   // the board wins when you are right up against it
   if (!underground && indoors > 0.5 && nearBoard() && (!near || near.key !== 'talkTo' || rectDistance(hall.board.rect, P.x, P.z) < 1.1)) { nearKey = 'board'; near = { key: 'openBoard', act: openBoard }; }
   refreshBoard();
-  if (auto || !near || hx.isOpen() || travelling || listen > 0.3) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
+  if (auto || !near || hx.isOpen() || travelling || listen > 0.3 || pondUI.isOpen() || pond.fishing()) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
   if (markerLife > 0) { markerLife = auto ? Math.max(0.35, markerLife - dt * 0.8) : markerLife - dt * 3; marker.material.opacity = Math.max(0, markerLife) * 0.9; marker.scale.setScalar(0.8 + Math.sin(time * 6) * 0.08); marker.rotation.z = time * 1.2; }
   if (pendingReward && !paused()) { pendingReward = false; wolfUnlocked = true; store.set('pv-wolf', 'yes'); wolf.activate(P); ui.setProgress(visited, true); ui.toast(); sound.play('achieve'); setTimeout(() => sound.play('bark'), 700); }
 
@@ -430,11 +448,12 @@ function update(dt) {
   chirpT -= dt; if (chirpT < 0) { chirpT = 4 + Math.random() * 7; if (sound.started() && indoors < 0.5 && !underground) sound.play(night > 0.5 ? 'cricket' : 'bird'); }
 
   // labels
-  const w = window.innerWidth, h = window.innerHeight, hide = closeUp > 0.3 ? 0 : 1;
+  const w = window.innerWidth, h = window.innerHeight, hide = Math.max(0, 1 - closeUp * 3);
   const place = (key, x, y, z, isNear, alpha) => { v3.set(x, y, z).project(camera); ui.placeLabel(key, (v3.x * 0.5 + 0.5) * w, (-v3.y * 0.5 + 0.5) * h, isNear, v3.z > 1 ? 0 : alpha * hide); };
   const up = underground ? 0 : 1, quiet = 1 - listen;
   for (const s of stalls) place(s.id, s.pos[0], s.labelY || 5.3, s.pos[1], s.id === nearKey, up);
   place('cave', cave.labelAt[0], cave.labelAt[1], cave.labelAt[2], nearKey === 'cave', up);
+  place('pond', pond.labelAt[0], pond.labelAt[1], pond.labelAt[2], nearKey === 'pond', up * (pond.fishing() ? 0 : 1));
   for (const p of hideout.props) place('hx:' + p.id, p.labelAt[0], p.labelAt[1], p.labelAt[2], nearKey === 'hx:' + p.id, (1 - up) * quiet);
   place('hall', hall.labelAt[0], hall.labelAt[1], hall.labelAt[2], false, 1 - indoors);
   for (const n of agents.list) { const a = (n.outside ? 1 : indoors) * up, top = n.y + 2.75 - n.sit * 0.3; place(n.id, n.x, top, n.z, n.id === nearKey, a); place('say:' + n.id, n.x, top + 1.6, n.z, false, a); }
@@ -448,7 +467,10 @@ function frame(now) {
   else if (titleFor > 0) { titleFor -= Math.min(raw, 0.3); if (titleFor <= 0) ui.endIntro(); }
   // while a menu covers the screen the world behind it is only redrawn every third frame,
   // which leaves the browser free to animate the menu smoothly
-  idle = paused() && !travelling ? idle + 1 : 0;
+  // while a panel covers the screen, hide the touch controls behind it (and on short screens the top buttons)
+  { const over = hx.isOpen() || pondUI.isOpen() || !!ui.openId() || !!ui.chatId() || ui.boardOpen() || ui.wardrobeOpen(); if (over !== overlayOn) { overlayOn = over; document.body.classList.toggle('overlay', over); } }
+  // (never while the wardrobe is up or the camera is moving: those need every frame)
+  idle = paused() && !travelling && !ui.wardrobeOpen() && closeUp === 0 && listen === 0 ? idle + 1 : 0;
   if (idle % 3 === 0 || bakeFrames > 0) renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
@@ -458,7 +480,7 @@ function start(saved) {
   canvas.tabIndex = 0;
   // a returning preview session skips the opening; a fresh visit glides in over about two seconds
   if (saved && typeof saved.x === 'number') ui.endIntro(); else { zoom = TUNING.zoomStart * 1.55; opening = 2.8; titleFor = 1.3; for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); }, { once: true }); }
-  window.__village = { P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen }; // handy in the browser console
+  window.__village = { P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 // Only matters inside the Claude preview: keeps your place when the page is republished.

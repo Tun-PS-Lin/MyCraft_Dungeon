@@ -1,15 +1,17 @@
 // The map: ground, raised paving stones, grass, fences, bushes, forest and the guide slab.
 import * as THREE from 'three';
-import { BOUNDS, HALL, STALLS, TUNING, CAVE, frontOf } from './config.js';
+import { BOUNDS, HALL, STALLS, TUNING, CAVE, POND, frontOf } from './config.js';
 import { t } from './i18n.js';
 import { rng, hash, noise, cv, fill, speck, toTex, tiles, M, B, Batch, boxGeo, glow, PAVER_TINTS, DIRT, GRASS } from './textures.js';
-import { collide, inHallRect } from './collision.js';
+import { collide, inHallRect, inPondWater } from './collision.js';
 import { addLamp } from './lights.js';
 
 const HALF = 48, SIZE = HALF * 2;
 const GRASS_T = 0, COBBLE = 1, DIRT_T = 2, HALL_T = 3;
 // the hole in the ground where the cave stairs go down
 const inPit = (x, z, pad = 0) => Math.abs(x - CAVE.x) < CAVE.w / 2 + pad && z > CAVE.z0 - pad && z < CAVE.z1 + pad;
+// the fishing pond and its stone rim
+const inPondRim = (x, z) => ((x - POND.x) / (POND.rx + 1.1)) ** 2 + ((z - POND.z) / (POND.rz + 1.1)) ** 2 < 1;
 const inBounds = (x, z, pad = 0) => x > BOUNDS.x0 - pad && x < BOUNDS.x1 + pad && z > BOUNDS.z0 - pad && z < BOUNDS.z1 + pad;
 // distance from a point to a line segment, for the diagonal road to the town hall
 const segDist = (x, z, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz))); return Math.hypot(x - ax - dx * t, z - az - dz * t); };
@@ -65,7 +67,7 @@ export function buildWorld(scene, renderer) {
     const tex = toTex(c, false); tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
     // one quad per cell; the cells over the cave stairs are left out, leaving a hole
     const geo = new THREE.PlaneGeometry(SIZE, SIZE, SIZE, SIZE), src = geo.index.array, keep = [];
-    for (let j = 0; j < SIZE; j++) for (let i = 0; i < SIZE; i++) { if (inPit(i - HALF + 0.5, j - HALF + 0.5, -0.1)) continue; const o = (j * SIZE + i) * 6; for (let k = 0; k < 6; k++) keep.push(src[o + k]); }
+    for (let j = 0; j < SIZE; j++) for (let i = 0; i < SIZE; i++) { if (inPit(i - HALF + 0.5, j - HALF + 0.5, -0.1) || inPondWater(i - HALF + 0.5, j - HALF + 0.5)) continue; const o = (j * SIZE + i) * 6; for (let k = 0; k < 6; k++) keep.push(src[o + k]); }
     geo.setIndex(keep);
     const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex }));
     m.rotation.x = -Math.PI / 2; m.receiveShadow = true; scene.add(m);
@@ -86,7 +88,7 @@ export function buildWorld(scene, renderer) {
 
   for (let z = -44.5; z < 34; z++) for (let x = -42.5; x < 46; x++) {
     const t = types[idx(x, z)];
-    if (t === HALL_T || inPit(x, z, 0.6)) continue;
+    if (t === HALL_T || inPit(x, z, 0.6) || inPondRim(x, z)) continue;
     if (t === COBBLE) {
       if (Math.abs(x) < 3.2 && Math.abs(z) < 2.1) continue; // hidden under the guide slab
       const k = r();

@@ -2,7 +2,7 @@
 // plus the inside of the town hall, joined by the doorway; everything else is solid.
 // Inside that area, boxes block if they are taller than a step; lower ones can be
 // walked or jumped onto.
-import { BOUNDS, HALL, FLOOR, CAVE, HIDEOUT } from './config.js';
+import { BOUNDS, HALL, FLOOR, CAVE, HIDEOUT, POND } from './config.js';
 
 export const boxes = [];
 export const RADIUS = 0.4;
@@ -27,7 +27,14 @@ const inRoom = (x, z) => hx(x) > H.x0 + M && hx(x) < H.x1 - M && hz(z) > H.z0 + 
 export const HIDEOUT_EXIT = { x: H.cx + H.doorX, z0: H.cz + H.z0 - 1.4, z1: H.cz + H.z0 + 0.6 }; // the glowing doorway, back wall left
 const inExit = (x, z) => Math.abs(x - HIDEOUT_EXIT.x) < 0.55 && z > HIDEOUT_EXIT.z0 && z < HIDEOUT_EXIT.z1;
 
+// the pond: water is the block cells whose centres fall inside the oval; the bridge and the dock cross it
+export const inPondWater = (x, z) => { const cx = Math.floor(x) + 0.5, cz = Math.floor(z) + 0.5; return ((cx - POND.x) / POND.rx) ** 2 + ((cz - POND.z) / POND.rz) ** 2 < 1; };
+const BR = { x0: POND.bridgeX - POND.bridgeW / 2 + 0.2, x1: POND.bridgeX + POND.bridgeW / 2 - 0.2, z0: POND.z - POND.rz - 1.6, z1: POND.z + POND.rz + 1.6 };
+const onWalkway = (x, z) => (x > BR.x0 && x < BR.x1 && z > BR.z0 && z < BR.z1) || (x > POND.dock.x0 - 1 && x < POND.dock.x1 - 0.2 && Math.abs(z - POND.dock.z) < POND.dock.w / 2 - 0.12);
+const nearWater = (x, z) => inPondWater(x + RADIUS, z) || inPondWater(x - RADIUS, z) || inPondWater(x, z + RADIUS) || inPondWater(x, z - RADIUS) || inPondWater(x, z);
+
 export function blocked(x, z, y) {
+  if (nearWater(x, z) && !onWalkway(x, z)) return true;
   if (!(inSquare(x, z) || insideHall(x, z) || inDoor(x, z) || inCave(x, z) || inRoom(x, z) || inExit(x, z))) return true;
   for (const b of boxes) if (over(b, x, z) && b.h - y > STEP) return true;
   return false;

@@ -45,25 +45,47 @@ wolf that starts following you once you have opened every stall.
 
 ## The Hideout
 
-At the bottom of the square, a cave glows in the rock. Walk down the steps and you arrive in the
-**Hideout**, a private room underground:
+<img src="docs/img/readme/hideout.jpg" alt="The Hideout, an underground room with a fireplace, a lounge, a CD player, a gallery and a library" width="100%">
 
-- **The CD player.** A shelf of CDs on the wall and a player on the cabinet. Its menu is a chunky
-  retro deck: pick a CD and it swaps into the tray, with play, stop, skip and volume buttons and a
-  little screen showing the track and time. The CD you pick keeps playing as you explore.
-- **The journal.** An open book on a stand with my notes on mental models: second-level thinking,
-  ergodicity, circles of competence, fat pitches, market cycles and more.
-- **The gallery.** Framed paintings of my side projects, each with a link.
-- **The library.** Bookshelves round an enchanting table. Browse the shelf, pull a book out, and read
-  its title, author and my one-line takeaway. Ten books, from Poor Charlie's Almanack to The Martian.
+At the bottom of the square, a cave glows in the rock. Walk down the steps and you arrive in the
+**Hideout**, a private room underground.
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="docs/img/readme/cd-player.jpg" alt="The CD player menu"><br><b>The CD player.</b> Pick a CD and it swaps into the tray, with play, stop, skip and volume buttons and a little screen for the track and time. The CD keeps playing as you explore.</td>
+<td width="50%" valign="top"><img src="docs/img/readme/journal.jpg" alt="The journal of mental models"><br><b>The journal.</b> My notes on ten mental models: second-level thinking, ergodicity, circles of competence, fat pitches, market cycles and more.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/img/readme/gallery-menu.jpg" alt="The gallery of side projects"><br><b>The gallery.</b> Framed paintings of my side projects, each with a link.</td>
+<td width="50%" valign="top"><img src="docs/img/readme/library.jpg" alt="The library shelf with The Martian pulled out"><br><b>The library.</b> Bookshelves round an enchanting table. Pull a book off the shelf to read its title, author and my one-line takeaway.</td>
+</tr>
+</table>
+
 - **Small rewards.** Read every journal entry (each gets a wax seal) to earn the **Scholar's Lantern**.
   Stand by the CD player while a CD plays and the room dims into **listening mode**.
-- **The room.** A fireplace with a sleeping cat you can pet (it meows), a raised lounge, string lights at night, maps on the
-  walls, and window light that moves with the time of day.
-- **The window.** Sunny sky by day, stars by night, so you can tell the time even underground.
+- **The room.** A fireplace with a sleeping cat you can pet (it meows), a raised lounge, string
+  lights at night, maps on the walls, and a window that shows sun by day and stars by night.
 
-Everything in it lives in `src/hideout-content.js`: the CDs (`RECORDS`), the journal (`JOURNAL`) and
-the paintings (`GALLERY`) and the books (`BOOKS`). Book covers go in `public/assets/images/books/`. Songs go in `public/assets/sounds/`, CD art in `public/assets/images/cds/`.
+Everything in it lives in `src/hideout-content.js`: the CDs (`RECORDS`), the journal (`JOURNAL`),
+the paintings (`GALLERY`) and the books (`BOOKS`). Book covers go in `public/assets/images/books/`.
+Songs go in `public/assets/sounds/`, CD art in `public/assets/images/cds/`.
+
+<br>
+
+## The fishing pond
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="docs/img/readme/pond.jpg" alt="The fishing pond with its bridge, dock and benches"></td>
+<td width="50%" valign="top"><img src="docs/img/readme/pond-fact.jpg" alt="A fact card with a slow carousel of travel photos"></td>
+</tr>
+</table>
+
+Just right of the Hideout's cave there is a pond with a wooden bridge, a dock, benches and
+lanterns that light up at night. Stand on the dock and press <kbd>E</kbd> to cast. Every catch is a
+fact about me: my travel photos in a slow-moving carousel (tap one to see it full size), my coffee
+habit, or the research I write about, with a link to the article. The facts and photo captions are
+in `src/pond-content.js`, and the photos in `public/assets/images/photos/`.
 
 <br>
 
@@ -106,8 +128,7 @@ what they do.
 </table>
 
 > **Good to know:** the demos in the hall run in your browser on sample data. Nothing is sent
-> anywhere. Bobby and Friday exist as real automations outside this site, and connecting them to
-> the village is on the [roadmap](#roadmap).
+> anywhere. Bobby and Friday exist as real automations outside this site.
 
 <br>
 
@@ -162,7 +183,7 @@ Almost everything you would change lives in **`src/config.js`**:
 | `LANGUAGE_TOGGLE` | `true` brings back the English and Burmese button. The Burmese text is all in place. |
 
 How the agents look is set in `LOOKS` at the top of `src/agents.js`; their demos are in
-`src/demos.js`. The Hideout's records, journal entries and paintings are in **`src/hideout-content.js`**:
+`src/demos.js`. The Hideout's records, journal entries, paintings and books are in **`src/hideout-content.js`**, and the pond's facts in **`src/pond-content.js`**:
 put your songs in `public/assets/sounds/`, CD art in `public/assets/images/cds/`, and list them under `RECORDS`. The simple version (`plain.html`) is built from the same config, so it never falls
 out of step with the village.
 
@@ -254,8 +275,11 @@ src/textures.js     pixel textures, materials, instancing helpers
 src/ui.js           labels, popup, menu, wardrobe, chat panel, agent board menu, achievement badge
 src/audio.js        sound effects and music (the CD player's controls)
 src/hideout.js      the cave at the bottom of the square and the Hideout room
-src/hideout-ui.js   the CD player, journal and gallery menus
-src/hideout-content.js  the CDs, journal entries and paintings (edit these)
+src/hideout-ui.js   the CD player, journal, gallery and library menus
+src/hideout-content.js  the CDs, journal entries, paintings and books (edit these)
+src/pond.js         the fishing pond: water, bridge, dock, benches, lanterns and the fishing line
+src/pond-ui.js      the fact card and the full-size photo viewer
+src/pond-content.js the facts about me and the photo captions (edit these)
 src/pixelart.js     the pixel discs, icons and paintings
 src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)
 src/style.css       interface styling
@@ -282,22 +306,6 @@ docs/img/readme/    the screenshots used in this README
   too.
 - **Pinned to three.js 0.128.** The lighting is tuned for that version; upgrading needs a pass over
   `src/main.js` and `src/textures.js`.
-
-<br>
-
-## Roadmap
-
-- [x] The village, six stalls and the outfit picker
-- [x] The town hall, four agents and their demos
-- [x] The simple version, a loading screen and visitor analytics
-- [ ] Connect Bobby and Friday to their real workflows
-- [ ] Build Sally and Edwin
-- [x] The Hideout: CD player, journal, gallery and library
-- [ ] Write the full journal posts
-- [ ] Launch Urban Simulation and link its stall
-- [ ] Switch the Burmese translation back on
-
-Ideas and bug reports are welcome in [Issues](https://github.com/Tun-PS-Lin/MyCraft_Dungeon/issues).
 
 <br>
 

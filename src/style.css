@@ -312,13 +312,15 @@ kbd.gap{margin-left:8px}
 .bubble::after{content:"";position:absolute;left:50%;bottom:-8px;width:8px;height:6px;margin-left:-4px;background:var(--ink);box-shadow:2px 0 0 #000,-2px 0 0 #000,0 2px 0 #000}
 
 /* wardrobe */
-#wardrobe{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .3s ease,visibility 0s .34s;
+#wardrobe{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .45s ease,visibility 0s .5s;will-change:opacity;
   background:linear-gradient(to right,rgba(6,9,14,0) 28%,rgba(6,9,14,.72) 62%)}
-#wardrobe.show{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .34s ease}
+#wardrobe.show{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .6s ease}
 .ward-panel{position:absolute;top:calc(var(--edge) + env(safe-area-inset-top,0px));right:var(--edge);bottom:calc(var(--edge) + env(safe-area-inset-bottom,0px));width:min(560px,48vw);box-sizing:border-box;
   background:rgba(20,27,41,.94);border:4px solid var(--frame);box-shadow:inset 0 0 0 3px var(--frame-dark);padding:16px;display:flex;flex-direction:column;gap:14px;
-  transform:translateX(40px);transition:transform .3s ease-in}
-#wardrobe.show .ward-panel{transform:none;transition:transform .5s var(--ease)}
+  transform:translateX(56px);opacity:0;transition:transform .32s cubic-bezier(.5,0,.75,0),opacity .26s ease-in;will-change:transform,opacity}
+#wardrobe.show .ward-panel{transform:none;opacity:1;transition:transform .62s var(--ease) .12s,opacity .4s ease .12s}
+#wardrobe.show .wcard{animation:wardIn .5s var(--ease) both;animation-delay:calc(.18s + var(--i,0) * .035s)}
+@keyframes wardIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .ward-head{display:flex;align-items:center;justify-content:space-between}
 #wardTitle{font-family:var(--display);font-size:24px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
 #wardGrid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;align-content:start;padding:4px;touch-action:pan-y}
@@ -332,8 +334,8 @@ kbd.gap{margin-left:8px}
 .wcard.sel .wname{color:var(--ink)}
 #wardDone{position:absolute;left:clamp(24px,13vw,220px);bottom:calc(11vh + env(safe-area-inset-bottom,0px));min-width:200px;padding:13px 18px 14px;border:0;color:#fff;background:var(--emerald);
   box-shadow:inset 0 5px 0 var(--emerald-hi),inset 0 -6px 0 var(--emerald-lo),0 0 0 3px #fff;font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.14em;text-transform:uppercase;
-  transform:translateY(20px);transition:transform .3s ease-in,filter .15s}
-#wardrobe.show #wardDone{transform:none;transition:transform .5s var(--ease) .08s,filter .15s}
+  transform:translateY(24px);opacity:0;transition:transform .3s ease-in,opacity .25s ease-in,filter .15s}
+#wardrobe.show #wardDone{transform:none;opacity:1;transition:transform .6s var(--ease) .3s,opacity .4s ease .3s,filter .15s}
 #wardDone:hover{filter:brightness(1.12)}
 
 /* achievement badge */
@@ -666,4 +668,146 @@ body:not(.touch) .touch-only,body.touch .desk-only{display:none}
   .lib-take{font-size:15.5px}
   .lib-rule{margin:10px 0 8px}
   .lib-hint{padding:6px 0 8px}
+}
+
+/* ── the pond's fact card: a deep-water panel with a foam-white face, framed in dock wood ── */
+.pond-card{--deep:#123a4a;--water:#1d5a6e;--foam:#eaf6f2;--wood:#6b4422;position:relative;box-sizing:border-box;width:min(760px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;
+  background:var(--deep);border:4px solid #2a1a10;box-shadow:inset 0 0 0 3px var(--wood),0 14px 0 rgba(0,0,0,.35);color:var(--foam);
+  transform:translateY(18px) scale(.97);opacity:0;transition:opacity .2s ease,transform .26s ease-in;will-change:transform,opacity}
+.hx.show .pond-card{opacity:1;transform:none;transition:opacity .3s ease,transform .46s var(--ease)}
+.pond-card > *{flex-shrink:0}
+.pond-x{position:absolute;top:12px;right:12px;z-index:2}
+.pond-head{display:flex;align-items:center;gap:16px;padding:20px 64px 16px 22px;background:linear-gradient(180deg,var(--water),var(--deep));
+  box-shadow:inset 0 -4px 0 rgba(234,246,242,.12)}
+.pond-fish{flex:none;width:48px;height:48px;padding:6px;box-sizing:border-box;image-rendering:pixelated;background:rgba(234,246,242,.12);box-shadow:inset 0 0 0 3px rgba(234,246,242,.3);animation:pondFish 2.6s ease-in-out infinite}
+@keyframes pondFish{50%{transform:translateY(-3px) rotate(-4deg)}}
+.pond-kicker{display:block;font-family:var(--display);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#8fd0d8}
+.pond-title{margin:4px 0 0;font-family:var(--display);font-size:clamp(19px,2.6vw,26px);line-height:1.2;letter-spacing:.02em;color:var(--foam);text-shadow:3px 3px 0 #0a2430}
+.pond-body{padding:18px 22px 6px;display:flex;flex-direction:column;gap:12px}
+.pond-note{margin:0;font-size:15px;line-height:1.5;color:#c6e0e0}
+.pond-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 22px 18px}
+.pond-dots{display:flex;gap:8px}
+.pond-dots i{width:10px;height:10px;background:rgba(234,246,242,.25);box-shadow:2px 2px 0 rgba(0,0,0,.3)}
+.pond-dots i.on{background:#ffc76a}
+.pond-again{font-family:var(--display);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--deep);background:#ffc76a;border:0;padding:10px 16px;box-shadow:inset 0 -4px 0 #c98a2b,4px 4px 0 rgba(0,0,0,.35);transition:transform .1s}
+.pond-again:hover{background:#ffd88a}
+.pond-again:active{transform:translate(2px,2px)}
+/* photos: a slow, endless strip */
+.pond-strip{overflow:hidden;margin:0 -22px;padding:6px 0 10px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.pond-track{display:flex;gap:14px;width:max-content;animation:pondLoop 60s linear infinite}
+.pond-strip:hover .pond-track,.pond-strip:focus-within .pond-track{animation-play-state:paused}
+@keyframes pondLoop{to{transform:translateX(calc(-50% - 7px))}}
+.pond-photo{flex:none;display:flex;flex-direction:column;gap:6px;padding:8px 8px 10px;background:var(--foam);border:0;color:#24313a;box-shadow:5px 5px 0 rgba(0,0,0,.35);transform:rotate(var(--tilt,-1deg));transition:transform .25s var(--ease)}
+.pond-photo:nth-child(even){--tilt:1.2deg}
+.pond-photo:hover{transform:translateY(-4px) rotate(0)}
+.pond-photo img{display:block;height:min(230px,30vh);width:auto;max-width:none}
+.pond-photo span{font-family:var(--display);font-size:12px;letter-spacing:.03em;text-align:left}
+/* coffee: the pixel cup with steam rising */
+.pond-coffee{position:relative;align-self:center;width:min(240px,56vw);aspect-ratio:1;background:radial-gradient(circle at 50% 60%,rgba(255,199,106,.18),transparent 65%)}
+.pond-cup{width:100%;height:100%;image-rendering:pixelated;display:block}
+.pond-steam{position:absolute;left:28%;right:28%;top:2%;height:30%;pointer-events:none}
+.pond-steam i{position:absolute;bottom:0;left:calc(var(--i) * 16%);width:6%;aspect-ratio:1;background:rgba(240,240,244,.85);animation:pondSteam 2.8s linear infinite;animation-delay:calc(var(--i) * -.47s)}
+@keyframes pondSteam{0%{transform:translate(0,0);opacity:0}15%{opacity:.9}50%{transform:translate(6px,-120%)}100%{transform:translate(-4px,-260%);opacity:0}}
+/* writing: the article cover beside its title */
+.pond-article{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:center}
+.pond-cover{display:block;box-shadow:0 0 0 4px #0a2430,0 0 0 7px #8fd0d8,8px 10px 0 7px rgba(0,0,0,.35);transition:transform .25s var(--ease)}
+.pond-cover:hover{transform:translateY(-3px)}
+.pond-cover img{display:block;width:100%;height:auto;image-rendering:pixelated}
+.pond-art-info{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.pond-art-where{font-family:var(--display);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#8fd0d8}
+.pond-art-info h3{margin:0;font-family:var(--display);font-size:20px;line-height:1.25;color:var(--foam)}
+.pond-read{margin-top:4px;font-family:var(--display);font-size:14px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--foam);border:3px solid #8fd0d8;padding:8px 14px;box-shadow:4px 4px 0 rgba(0,0,0,.35);transition:background-color .15s}
+.pond-read:hover{background:#8fd0d8;color:var(--deep)}
+/* the full-size photo viewer */
+.pond-lb{position:fixed;inset:0;z-index:12;display:grid;place-items:center;padding:clamp(12px,4vw,48px);box-sizing:border-box;background:rgba(6,10,14,.9);opacity:0;visibility:hidden;transition:opacity .25s ease,visibility 0s .3s}
+.pond-lb.show{opacity:1;visibility:visible;transition:opacity .3s ease}
+.pond-lb-fig{margin:0;display:flex;flex-direction:column;align-items:center;gap:10px;max-width:100%;max-height:100%}
+.pond-lb-fig img{display:block;max-width:min(100%,1400px);max-height:calc(100vh - 120px);max-height:calc(100dvh - 120px);width:auto;height:auto;object-fit:contain;box-shadow:0 18px 50px rgba(0,0,0,.6);opacity:0;transform:scale(.98);transition:opacity .35s ease,transform .45s var(--ease)}
+.pond-lb-fig img.in{opacity:1;transform:none}
+.pond-lb-cap{margin:0;font-family:var(--display);font-size:14px;letter-spacing:.04em;color:#d9e8ec}
+.pond-lb-x{position:absolute;top:16px;right:16px}
+.pond-lb-arrow{position:absolute;top:50%;width:52px;height:72px;margin-top:-36px;font-family:var(--display);font-size:40px;line-height:1;color:#eaf6f2;background:rgba(18,58,74,.75);border:3px solid #8fd0d8;padding:0 0 6px}
+.pond-lb-arrow.prev{left:12px}.pond-lb-arrow.next{right:12px}
+.pond-lb-arrow:hover{background:#1d5a6e}
+@media (max-width:700px){
+  .pond-head{padding:16px 56px 12px 16px;gap:12px}
+  .pond-fish{width:38px;height:38px;padding:4px}
+  .pond-body{padding:14px 16px 4px}
+  .pond-strip{margin:0 -16px}
+  .pond-photo img{height:min(180px,26vh)}
+  .pond-article{grid-template-columns:1fr}
+  .pond-foot{padding:10px 16px 14px}
+  .pond-lb-arrow{width:40px;height:56px;margin-top:-28px;font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){ .pond-track{animation-duration:200s} .pond-steam i,.pond-fish{animation:none} }
+
+/* ── phones and short screens ── */
+body.overlay #touch{opacity:0;pointer-events:none}
+#touch{transition:opacity .25s ease}
+/* small phones: the library card sits beside a small cover, and the shelf stays in view */
+@media (max-width:700px){
+  .lib{max-height:100%}
+  .lib-card{grid-template-columns:auto 1fr!important;justify-items:start!important;text-align:left!important;gap:14px!important;padding:16px 16px 14px!important;align-items:start}
+  .lib-cover{width:86px!important;transform:none!important}
+  .lib-info h2{font-size:18px!important;margin:4px 0 2px}
+  .lib-author{font-size:14px}.lib-note{font-size:12px}
+  .lib-rule{margin:8px 0 6px!important}
+  .lib-take{font-size:14px;line-height:1.45}
+  .lib-kicker,.lib-info h3{font-size:10px}
+  .lib-row{height:150px!important;min-height:150px!important;gap:3px}
+  .lib-shelf{padding:12px 12px 0}
+  .lib-hint{padding:6px 0 8px;font-size:12px}
+  .pond-title{font-size:17px}
+  .pond-kicker{font-size:10px}
+  .pond-cover{max-width:320px}
+}
+/* short screens (a phone held sideways): panels use the full height and lay out side by side */
+@media (max-height:500px){
+  .hx{padding:8px}
+  body.overlay .topbtn,body.overlay #menuBtn{opacity:0;pointer-events:none}
+  .topbtn,#menuBtn{transition:opacity .25s ease}
+  .book{height:calc(100vh - 54px);height:calc(100dvh - 54px);padding:8px}
+  .page{padding:12px 16px 10px}
+  .page .orn{display:none}
+  .page h2{font-size:18px}
+  .jsub{margin:0 0 6px;font-size:11px}
+  .jrow{padding:4px 8px}.jrow canvas{width:28px;height:28px}
+  .jquote{padding:8px 12px;margin-bottom:10px}.jquote p{font-size:15px}
+  .jhead{margin:0 0 8px}.jicon{width:44px;height:44px}
+  .book-foot{display:none}
+  .lib{flex-direction:row;width:min(980px,100%);height:calc(100vh - 16px);height:calc(100dvh - 16px)}
+  .lib-card{flex:1 1 55%;min-width:0;min-height:0;overflow:auto;grid-template-columns:auto 1fr!important;gap:16px!important;padding:16px!important;align-items:start}
+  .lib-cover{width:min(110px,22vh)!important;transform:none!important}
+  .lib-info h2{font-size:18px!important}
+  .lib-take{font-size:14px}
+  .lib-shelf{flex:1 1 45%;display:flex;flex-direction:column;justify-content:flex-end;padding:10px 10px 0;min-width:0}
+  .lib-row{height:calc(100% - 4px)!important;min-height:0!important;overflow-x:auto;justify-content:flex-start;gap:3px}
+  .spine{width:calc(var(--w) * .62)}.sp-title{font-size:10px}.sp-author{font-size:8px}
+  .lib-hint{display:none}
+  .lib-shelf{padding-top:52px}
+  .lib-x{top:8px;right:8px}
+  .gal{padding:10px;gap:6px}
+  .gal-top strong{font-size:18px}
+  .gal-wall{grid-template-columns:auto auto 1fr auto;grid-template-rows:1fr;padding:10px;gap:12px}
+  .gal-arrow{width:36px;height:48px}
+  .gal-stage{grid-column:2}
+  .gal-frame{width:auto;height:calc(100vh - 150px);height:calc(100dvh - 150px);min-width:0;padding:10px}
+  .gal-label{grid-column:3;grid-row:1;align-items:flex-start;text-align:left;justify-self:stretch}
+  .gal-label h3::after{margin-left:0}
+  .gal-kicker{display:block}
+  .gal-arrow.next{grid-column:4}
+  .gal-rail .gal-thumb{width:40px}
+  .pond-card{max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px)}
+  .pond-head{padding:10px 56px 8px 14px}
+  .pond-fish{width:34px;height:34px;padding:3px}
+  .pond-title{font-size:16px}
+  .pond-body{padding:8px 14px 2px;gap:6px}
+  .pond-photo img{height:calc(100vh - 256px);height:calc(100dvh - 256px);min-height:84px}
+  .pond-strip{padding:4px 0 6px}
+  .pond-coffee{width:min(150px,36vh)}
+  .pond-article{grid-template-columns:auto 1fr}
+  .pond-cover{width:calc((100dvh - 150px) * 1.37);max-width:46vw}
+  .pond-foot{padding:6px 14px 10px}
+  .cdp-wrap{font-size:min(9px,calc((100vh - 40px) / 96))}
+  .cdp-x{top:-.6em;right:-.6em}
 }
