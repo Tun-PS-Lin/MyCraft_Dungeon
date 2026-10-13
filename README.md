@@ -54,11 +54,16 @@ At the bottom of the square, a cave glows in the rock. Walk down the steps and y
 - **The journal.** An open book on a stand with my notes on mental models: second-level thinking,
   ergodicity, circles of competence, fat pitches, market cycles and more.
 - **The gallery.** Framed paintings of my side projects, each with a link.
-- **The library.** Bookshelves round an enchanting table, its book floating and turning.
+- **The library.** Bookshelves round an enchanting table. Browse the shelf, pull a book out, and read
+  its title, author and my one-line takeaway.
+- **Small rewards.** Read every journal entry (each gets a wax seal) to earn the **Scholar's Lantern**.
+  Stand by the CD player while a CD plays and the room dims into **listening mode**.
+- **The room.** A fireplace with a sleeping cat, a raised lounge, string lights at night, maps on the
+  walls, and window light that moves with the time of day.
 - **The window.** Sunny sky by day, stars by night, so you can tell the time even underground.
 
 Everything in it lives in `src/hideout-content.js`: the CDs (`RECORDS`), the journal (`JOURNAL`) and
-the paintings (`GALLERY`). Songs go in `public/assets/sounds/`, CD art in `public/assets/images/cds/`.
+the paintings (`GALLERY`) and the books (`BOOKS`). Book covers go in `public/assets/images/books/`. Songs go in `public/assets/sounds/`, CD art in `public/assets/images/cds/`.
 
 <br>
 

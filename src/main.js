@@ -14,6 +14,8 @@ import { createUI } from './ui.js';
 import { sound, music } from './audio.js';
 import { buildCave, buildHideout } from './hideout.js';
 import { createHideoutUI } from './hideout-ui.js';
+import { RECORDS } from './hideout-content.js';
+import { BASE } from './base.js';
 import { t, tr } from './i18n.js';
 import { lamps, addLamp, MOOD } from './lights.js';
 import { cv } from './textures.js';
@@ -112,7 +114,22 @@ ui.setProgress(visited, wolfUnlocked);
 if (wolfUnlocked) wolf.activate(P);
 
 /* ── the Hideout: the cave at the bottom of the square leads to a private room underground ── */
-const hx = createHideoutUI({ onDisc: (r) => hideout.setDisc(r.id), focusGame: () => canvas.focus({ preventScroll: true }) });
+// the Scholar's Lantern: earned by reading every journal entry; the player carries it and it lights the way
+let lantern = store.get('pv-lantern') === 'yes';
+const torchLamp = lamps.find((l) => l.light === torch);
+function lightLantern() { player.setLantern(true); torchLamp.day = 0.45; torchLamp.night = 1.7; torch.distance = 8.5; torch.color.set('#ffd27a'); }
+if (lantern) lightLantern();
+const LANTERN_ICON = (g) => { const f = (c, x, y, w, h) => { g.fillStyle = c; g.fillRect(x, y, w, h); }; f('#2a2019', 7, 0, 2, 2); f('#2a2019', 4, 2, 8, 2); f('#ffd27a', 5, 4, 6, 7); f('#fff2b0', 7, 5, 2, 4); f('#2a2019', 4, 11, 8, 2); f('#2a2019', 4, 4, 1, 7); f('#2a2019', 11, 4, 1, 7); };
+const hx = createHideoutUI({ onDisc: (r) => hideout.setDisc(r.id), focusGame: () => canvas.focus({ preventScroll: true }),
+  onAllRead: () => { if (lantern) return; lantern = true; store.set('pv-lantern', 'yes'); lightLantern(); setTimeout(() => { ui.toast({ title: 'Scholar\u2019s Lantern', text: 'You read every journal entry. A lantern now lights your way.', icon: LANTERN_ICON }); sound.play('achieve'); }, 400); } });
+
+/* listening mode: stand by the CD player while a CD plays, and after a few quiet seconds the camera
+   leans in, the room dims and the record's card appears. Any movement or key ends it. */
+let listenT = 0, listen = 0;
+const nowPlaying = document.createElement('div'); nowPlaying.id = 'nowPlaying'; nowPlaying.setAttribute('aria-live', 'polite');
+nowPlaying.innerHTML = '<div class="np-disc"><img alt=""></div><div class="np-text"><small>Now playing</small><strong></strong><span></span><em>Move to leave listening mode</em></div>';
+document.body.appendChild(nowPlaying);
+const deckLook = new THREE.Vector3(), deckCam = new THREE.Vector3();
 hideout.setDisc(music.current()); music.onChange(() => hideout.setDisc(music.current()));
 let underground = false, travelling = false;
 const paused = () => ui.paused() || hx.isOpen() || travelling;
@@ -212,7 +229,9 @@ function applyMood(time, indoors) {
     sun.color.copy(d.sun).lerp(n.sun, t); sun.intensity = mix(d.sunI, n.sunI, t);
     backdrop.copy(d.back).lerp(n.back, t); scene.fog.color.copy(backdrop);
   }
-  for (const l of lamps) l.light.intensity = mix(l.day, l.night, t) * (1 + Math.sin(time * 9 + l.seed) * 0.05 + Math.sin(time * 23 + l.seed * 2) * 0.035);
+  const dim = 1 - listen * 0.6;
+  for (const l of lamps) l.light.intensity = mix(l.day, l.night, t) * dim * (1 + Math.sin(time * 9 + l.seed) * 0.05 + Math.sin(time * 23 + l.seed * 2) * 0.035);
+  if (underground) hemi.intensity *= 1 - listen * 0.4;
 }
 
 const nearBoard = () => rectDistance(hall.board.rect, P.x, P.z) < 2.3;
@@ -357,6 +376,14 @@ function update(dt) {
   applyMood(time, indoors);
   player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors) * (underground ? 0 : 1));
   cave.update(time); hideout.update(time, ease(night), music.isOn());
+  // listening mode
+  const byDeck = underground && music.isOn() && rectDistance(hideout.musicRect, P.x, P.z) < 2.8;
+  if (byDeck && mag <= 0.15 && !auto && speed < 0.2 && rollT < 0 && !paused()) listenT += dt; else listenT = 0;
+  { const want = listenT > 3 ? 1 : 0; listen += (want - listen) * Math.min(1, dt * (want ? 0.9 : 4)); if (listen < 0.002) listen = 0; }
+  if (listen > 0.01) { const r = RECORDS.find((q) => q.id === music.current()); if (r && nowPlaying.dataset.id !== r.id) { nowPlaying.dataset.id = r.id; nowPlaying.querySelector('img').src = BASE + 'assets/images/cds/' + r.cover; nowPlaying.querySelector('strong').textContent = r.title; nowPlaying.querySelector('span').textContent = r.by + ' \u00b7 ' + r.album; } }
+  nowPlaying.style.opacity = listen.toFixed(3); nowPlaying.classList.toggle('on', listen > 0.5);
+  // a crackle from the fireplace now and then when you are near it
+  if (underground && sound.started() && Math.hypot(P.x - hideout.fireAt[0], P.z - hideout.fireAt[1]) < 5 && Math.random() < dt * 1.4) sound.play('crackle');
   // walking down the cave stairs, or into the glowing doorway in the Hideout, travels
   if (!travelling && !underground && inCave(P.x, P.z) && P.z > CAVE.z0 + 1.6) travel(true);
   if (!travelling && underground && Math.abs(P.x - HIDEOUT_EXIT.x) < 0.7 && P.z < HIDEOUT_EXIT.z0 + 1.1) travel(false);
@@ -366,6 +393,10 @@ function update(dt) {
   if (titleFor <= 0) { zoom += (zoomTarget - zoom) * Math.min(1, dt * (opening > 0 ? 1.7 : 7)); if (opening > 0) opening -= dt; }
   focus.x += (P.x - focus.x) * Math.min(1, dt * 5); focus.z += (P.z - 1.5 * zoom - focus.z) * Math.min(1, dt * 5); focus.y += (P.visY * 0.5 - focus.y) * Math.min(1, dt * 3);
   camPos.copy(CAM).multiplyScalar(camScale * zoom).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
+  if (listen > 0.001) {
+    const e = ease(listen), [dx2, dy2, dz2] = hideout.deckAt; deckLook.set(dx2, dy2 + 0.4, dz2 + 0.4);
+    deckCam.copy(CAM).multiplyScalar(0.32 * camScale).add(deckLook); camPos.lerp(deckCam, e); camLook.lerp(deckLook, e);
+  }
   if (closeUp > 0) {
     const wide = camera.aspect >= 1, dist = wide ? 8 : 13, e = ease(closeUp), shift = wide ? 2.1 : 0;
     closePos.set(P.x + sinY * dist + cosY * shift, P.visY + 2.2, P.z + cosY * dist - sinY * shift);
@@ -388,7 +419,7 @@ function update(dt) {
   // the board wins when you are right up against it
   if (!underground && indoors > 0.5 && nearBoard() && (!near || near.key !== 'talkTo' || rectDistance(hall.board.rect, P.x, P.z) < 1.1)) { nearKey = 'board'; near = { key: 'openBoard', act: openBoard }; }
   refreshBoard();
-  if (auto || !near || hx.isOpen() || travelling) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
+  if (auto || !near || hx.isOpen() || travelling || listen > 0.3) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
   if (markerLife > 0) { markerLife = auto ? Math.max(0.35, markerLife - dt * 0.8) : markerLife - dt * 3; marker.material.opacity = Math.max(0, markerLife) * 0.9; marker.scale.setScalar(0.8 + Math.sin(time * 6) * 0.08); marker.rotation.z = time * 1.2; }
   if (pendingReward && !paused()) { pendingReward = false; wolfUnlocked = true; store.set('pv-wolf', 'yes'); wolf.activate(P); ui.setProgress(visited, true); ui.toast(); sound.play('achieve'); setTimeout(() => sound.play('bark'), 700); }
 
@@ -401,10 +432,10 @@ function update(dt) {
   // labels
   const w = window.innerWidth, h = window.innerHeight, hide = closeUp > 0.3 ? 0 : 1;
   const place = (key, x, y, z, isNear, alpha) => { v3.set(x, y, z).project(camera); ui.placeLabel(key, (v3.x * 0.5 + 0.5) * w, (-v3.y * 0.5 + 0.5) * h, isNear, v3.z > 1 ? 0 : alpha * hide); };
-  const up = underground ? 0 : 1;
+  const up = underground ? 0 : 1, quiet = 1 - listen;
   for (const s of stalls) place(s.id, s.pos[0], s.labelY || 5.3, s.pos[1], s.id === nearKey, up);
   place('cave', cave.labelAt[0], cave.labelAt[1], cave.labelAt[2], nearKey === 'cave', up);
-  for (const p of hideout.props) place('hx:' + p.id, p.labelAt[0], p.labelAt[1], p.labelAt[2], nearKey === 'hx:' + p.id, 1 - up);
+  for (const p of hideout.props) place('hx:' + p.id, p.labelAt[0], p.labelAt[1], p.labelAt[2], nearKey === 'hx:' + p.id, (1 - up) * quiet);
   place('hall', hall.labelAt[0], hall.labelAt[1], hall.labelAt[2], false, 1 - indoors);
   for (const n of agents.list) { const a = (n.outside ? 1 : indoors) * up, top = n.y + 2.75 - n.sit * 0.3; place(n.id, n.x, top, n.z, n.id === nearKey, a); place('say:' + n.id, n.x, top + 1.6, n.z, false, a); }
 }
@@ -427,7 +458,7 @@ function start(saved) {
   canvas.tabIndex = 0;
   // a returning preview session skips the opening; a fresh visit glides in over about two seconds
   if (saved && typeof saved.x === 'number') ui.endIntro(); else { zoom = TUNING.zoomStart * 1.55; opening = 2.8; titleFor = 1.3; for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); }, { once: true }); }
-  window.__village = { P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground }; // handy in the browser console
+  window.__village = { P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 // Only matters inside the Claude preview: keeps your place when the page is republished.

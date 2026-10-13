@@ -1,6 +1,6 @@
 // The Hideout's three menus: the CD player (pick a CD), the journal (read an entry)
 // and the gallery (flip through side projects). Their content is in hideout-content.js.
-import { RECORDS, JOURNAL, GALLERY } from './hideout-content.js';
+import { RECORDS, JOURNAL, GALLERY, BOOKS } from './hideout-content.js';
 import { drawIcon, drawPainting, pictureCanvas } from './pixelart.js';
 import { music, sound } from './audio.js';
 import { BASE } from './base.js';
@@ -18,12 +18,12 @@ const ICON = {
   play: svg('M3 2h1v8H3zM4 3h2v6H4zM6 4h2v4H6zM8 5h1v2H8z'), pause: svg('M3 2h2v8H3zM7 2h2v8H7z'),
 };
 
-export function createHideoutUI({ onDisc, focusGame }) {
+export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
   // small tiled textures: the speckled plastic of the CD player and the grain of the journal's paper
   const tile = (n, pal, seed) => { const c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); let k = seed; for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { k = (k * 16807) % 2147483647; g.fillStyle = pal[k % pal.length]; g.fillRect(x, y, 1, 1); } return 'url(' + c.toDataURL() + ')'; };
   document.documentElement.style.setProperty('--cdp-noise', tile(8, ['#e6dfcc', '#e9e2d0', '#e1dac6', '#ebe5d4', '#e3dcc9'], 7));
   document.documentElement.style.setProperty('--paper-grain', tile(32, ['rgba(241,234,214,0)', 'rgba(241,234,214,0)', 'rgba(241,234,214,0)', 'rgba(200,180,140,.12)', 'rgba(255,250,235,.2)'], 11));
-  let open = null; // 'music' | 'journal' | 'gallery' | null
+  let open = null; // 'music' | 'journal' | 'gallery' | 'library' | null
   const root = el('div'); root.id = 'hideoutUI'; document.body.appendChild(root);
   const panels = {};
   function show(id) { if (open) hide(true); open = id; panels[id].wrap.classList.add('show'); sound.play('open'); if (panels[id].onShow) panels[id].onShow(); }
@@ -42,8 +42,9 @@ export function createHideoutUI({ onDisc, focusGame }) {
     body.append(el('i', 'cdp-hinge l'), el('i', 'cdp-hinge r'));
     const main = el('div', 'cdp-main'), side = el('div', 'cdp-side'); body.append(main, side);
     const well = el('div', 'cdp-well'); for (let i = 0; i < 4; i++) well.appendChild(el('i', 'cdp-clip c' + i));
-    const disc = el('div', 'cdp-disc'), spin = el('div', 'cdp-spin'), img = el('img'); img.alt = ''; img.decoding = 'async'; img.draggable = false;
-    spin.appendChild(img); disc.appendChild(spin); well.appendChild(disc); main.appendChild(well);
+    // the disc in the tray. Changing CD makes a second disc: the old one lifts out while the new one drops in.
+    const makeDisc = (r) => { const d = el('div', 'cdp-disc'), sp = el('div', 'cdp-spin'), im = el('img'); im.alt = ''; im.decoding = 'async'; im.draggable = false; if (r) im.src = cover(r); sp.appendChild(im); d.appendChild(sp); well.appendChild(d); return d; };
+    let disc = makeDisc(null); main.appendChild(well);
     const brand = el('div', 'cdp-brand'); brand.innerHTML = '<b>T</b>L-05'; main.appendChild(brand);
     const lcd = el('div', 'cdp-lcd'), lTrack = el('span', 'lcd-track'), lTime = el('span', 'lcd-time'), lVol = el('span', 'lcd-vol'), lTitle = el('div', 'lcd-title'), lText = el('span');
     lTitle.appendChild(lText); lcd.append(lTrack, lTime, lVol, lTitle); main.appendChild(lcd);
@@ -72,31 +73,35 @@ export function createHideoutUI({ onDisc, focusGame }) {
     const rec = () => RECORDS.find((q) => q.id === music.current()) || RECORDS[0];
     function paint() {
       const r = rec(); if (!r) return; const i = RECORDS.indexOf(r) + 1, on = music.isOn();
-      if (!busy && shown !== r.id) { img.src = cover(r); shown = r.id; }
-      lTrack.textContent = String(i).padStart(3, '0'); lVol.textContent = '♪' + String(music.volume()).padStart(2, '0');
-      const txt = r.title.toUpperCase() + '  ·  ' + r.by.toUpperCase() + '  ·  ' + r.album.toUpperCase();
+      if (!busy && shown !== r.id) { disc.querySelector('img').src = cover(r); shown = r.id; }
+      lTrack.textContent = String(i).padStart(3, '0'); lVol.textContent = '\u266a' + String(music.volume()).padStart(2, '0');
+      const txt = r.title.toUpperCase() + '  \u00b7  ' + r.by.toUpperCase() + '  \u00b7  ' + r.album.toUpperCase();
       if (lText.textContent !== txt) { lText.textContent = txt; lTitle.classList.toggle('run', txt.length > 22); }
       body.classList.toggle('playing', on); body.style.setProperty('--glow', r.color);
       play.innerHTML = on ? ICON.pause : ICON.play; play.parentNode.querySelector('.cdp-mark').innerHTML = on ? ICON.pause : ICON.play;
       for (const id in cds) { cds[id].classList.toggle('on', id === r.id); cds[id].setAttribute('aria-pressed', String(id === r.id)); }
       lTime.textContent = clock(music.time());
     }
-    // changing CD: the disc lifts out of the well and the new one drops in, spinning up
+    // changing CD: the current disc lifts up and away to one side while the new one swings in from
+    // the other and settles into the tray. Both are on screen at once.
     async function swap(r, dir) {
-      busy = true;
-      await anim(disc, [{ transform: 'none', opacity: 1 }, { transform: 'translate(' + (dir * -40) + '%, -18%) rotate(' + (dir * -140) + 'deg) scale(.55)', opacity: 0 }], { duration: 300, easing: 'cubic-bezier(.55,0,.8,.3)', fill: 'forwards' }).finished;
-      img.src = cover(r); shown = r.id; onDisc(r);
-      await anim(disc, [{ transform: 'translate(' + (dir * 40) + '%, 14%) rotate(' + (dir * 160) + 'deg) scale(.6)', opacity: 0 }, { transform: 'translate(0,0) rotate(0) scale(1.04)', opacity: 1, offset: 0.78 }, { transform: 'none', opacity: 1 }], { duration: 460, easing: 'cubic-bezier(.2,.8,.25,1)', fill: 'forwards' }).finished;
-      busy = false; paint();
+      const out = disc, inn = makeDisc(r); disc = inn; shown = r.id; onDisc(r);
+      const spinOut = out.querySelector('.cdp-spin'); spinOut.style.animationPlayState = 'paused';
+      await Promise.all([
+        anim(out, [{ transform: 'none', opacity: 1 }, { transform: 'translate(' + (-dir * 70) + '%, -14%) rotate(' + (-dir * 50) + 'deg) scale(.7)', opacity: 0 }], { duration: 560, easing: 'cubic-bezier(.55,.05,.7,.3)', fill: 'forwards' }).finished,
+        anim(inn, [{ transform: 'translate(' + (dir * 70) + '%, 10%) rotate(' + (dir * 70) + 'deg) scale(.7)', opacity: 0 }, { transform: 'translate(' + (dir * 8) + '%, 0) rotate(' + (dir * 6) + 'deg) scale(1.03)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 720, delay: 120, easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'backwards' }).finished,
+      ]);
+      out.remove(); busy = false; paint();
     }
     function pick(id, dir) {
+      if (busy) return;
       const from = RECORDS.findIndex((q) => q.id === music.current()), to = RECORDS.findIndex((q) => q.id === id);
       if (id === music.current()) { if (!music.isOn()) music.play(id); return; }
-      sound.play('near'); music.play(id); swap(RECORDS[to], dir || (to > from ? 1 : -1));
+      busy = true; sound.play('near'); music.play(id); swap(RECORDS[to], dir || (to > from ? 1 : -1));
     }
     function change(d) { const n = RECORDS.length, i = RECORDS.findIndex((q) => q.id === music.current()); pick(RECORDS[(i + d + n) % n].id, d); }
     music.onChange(paint);
-    panels.music.onShow = () => { paint(); clearInterval(tick); tick = setInterval(() => { lTime.textContent = clock(music.time()); }, 250); };
+    panels.music.onShow = () => { busy = false; paint(); clearInterval(tick); tick = setInterval(() => { lTime.textContent = clock(music.time()); }, 250); };
     panels.music.onHide = () => clearInterval(tick);
     panels.music.key = (e) => { if (e.key === 'ArrowLeft') { change(-1); return true; } if (e.key === 'ArrowRight') { change(1); return true; } return false; };
     paint();
@@ -110,11 +115,22 @@ export function createHideoutUI({ onDisc, focusGame }) {
     left.append(el('h2', '', 'Journal'), el('p', 'jsub', 'Mental models'));
     const list = el('div', 'jlist'); left.appendChild(list);
     const rows = {};
+    // entries the visitor has opened get a wax seal; reading all of them earns the Scholar's Lantern
+    const read = new Set((() => { try { return (localStorage.getItem('pv-read') || '').split(','); } catch (e) { return []; } })().filter((id) => JOURNAL.some((q) => q.id === id)));
+    const seal = () => { const c = pictureCanvas(12, 12, (g) => { const f = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y, w, h); }; f('#8a1d1d', 3, 0, 6, 12); f('#8a1d1d', 0, 3, 12, 6); f('#8a1d1d', 1, 1, 10, 10); f('#b52a26', 2, 2, 8, 8); f('#d8403a', 3, 3, 6, 6); f('#8a1d1d', 5, 4, 2, 4); f('#8a1d1d', 4, 5, 4, 2); f('#f08a7a', 3, 3, 2, 1); }); c.className = 'seal'; return c; };
+    function markRead(id) {
+      if (read.has(id)) return; read.add(id); try { localStorage.setItem('pv-read', [...read].join(',')); } catch (e) { /* ignore */ }
+      if (rows[id]) { const sl = seal(); rows[id].appendChild(sl); anim(sl, [{ transform: 'scale(2.4) rotate(-30deg)', opacity: 0 }, { transform: 'scale(.9) rotate(4deg)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'ease-out' }); }
+      progress.textContent = read.size + ' of ' + JOURNAL.length + ' read';
+      if (read.size === JOURNAL.length && onAllRead) onAllRead();
+    }
     JOURNAL.forEach((e) => {
       const b = el('button', 'jrow'); b.appendChild(pictureCanvas(16, 16, (g) => drawIcon(g, e.icon)));
       const t = el('span'); t.append(el('small', '', 'No. ' + String(e.n).padStart(2, '0')), el('strong', '', e.title)); b.appendChild(t);
       b.onclick = () => { pick(e.id); book.classList.add('reading'); sound.play('near'); }; list.appendChild(b); rows[e.id] = b;
+      if (read.has(e.id)) b.appendChild(seal());
     });
+    const progress = el('p', 'jprogress', read.size + ' of ' + JOURNAL.length + ' read'); left.appendChild(progress);
     const back = el('button', 'jback', '‹ All entries'); back.onclick = () => book.classList.remove('reading'); right.appendChild(back);
     const page = el('div', 'jpage'); right.appendChild(page);
     const head = el('div', 'jhead'), icon = pictureCanvas(16, 16, () => {}); icon.className = 'jicon';
@@ -132,11 +148,11 @@ export function createHideoutUI({ onDisc, focusGame }) {
       qText.textContent = '“' + e.quote + '”'; qBy.textContent = e.by ? '— ' + e.by : ''; qBy.hidden = !e.by;
       body.textContent = ''; body.appendChild(el('h3', '', 'Key ideas')); const ul = el('ul'); (e.points || []).forEach((p) => ul.appendChild(el('li', '', p))); body.appendChild(ul);
       (e.body || []).forEach((p) => body.appendChild(el('p', '', p)));
-      page.scrollTop = 0;
+      page.scrollTop = 0; if (open === 'journal') markRead(id);
       if (changed) anim(page, [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'ease-out' });
     }
     if (current) pick(current);
-    panels.journal.onShow = () => { book.classList.remove('reading'); if (rows[current]) rows[current].focus({ preventScroll: true }); };
+    panels.journal.onShow = () => { book.classList.remove('reading'); markRead(current); if (rows[current]) rows[current].focus({ preventScroll: true }); };
     panels.journal.key = (e) => {
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return false;
       if (document.activeElement && document.activeElement.classList.contains('jrow')) { const ids = JOURNAL.map((q) => q.id), i = ids.indexOf(current) + (e.key === 'ArrowDown' ? 1 : -1); if (i >= 0 && i < ids.length) { pick(ids[i]); rows[ids[i]].focus(); } return true; }
@@ -155,10 +171,10 @@ export function createHideoutUI({ onDisc, focusGame }) {
     prev.setAttribute('aria-label', 'Previous painting'); next.setAttribute('aria-label', 'Next painting');
     const stage = el('div', 'gal-stage'), frame = el('figure', 'gal-frame'), pic = pictureCanvas(32, 24, () => {}); frame.appendChild(pic); stage.appendChild(frame);
     wall.append(el('i', 'gal-light'), prev, stage, next);
-    const plaque = el('div', 'gal-plaque'), h = el('h3'), p = el('p'), go = el('a', 'gal-go'); go.target = '_blank'; go.rel = 'noopener';
-    plaque.append(h, p, go); wall.appendChild(plaque);
+    const plaque = el('div', 'gal-label'), h = el('h3'), p = el('p'), go = el('a', 'gal-go'); go.target = '_blank'; go.rel = 'noopener';
+    const kicker = el('span', 'gal-kicker'); plaque.append(kicker, h, p, go); wall.appendChild(plaque);
     const rail = el('div', 'gal-rail'), thumbs = [];
-    GALLERY.forEach((g, i) => { const b = el('button', 'gal-thumb'); b.setAttribute('aria-label', g.title); b.appendChild(pictureCanvas(32, 24, (c) => drawPainting(c, g.art))); b.appendChild(el('span', '', g.title)); b.onclick = () => go2(i); rail.appendChild(b); thumbs.push(b); });
+    GALLERY.forEach((g, i) => { const b = el('button', 'gal-thumb'); b.setAttribute('aria-label', g.title); b.title = g.title; b.appendChild(pictureCanvas(32, 24, (c) => drawPainting(c, g.art))); b.onclick = () => go2(i); rail.appendChild(b); thumbs.push(b); });
     gal.appendChild(rail);
     let at = 0, moving = false;
     function fill() {
@@ -166,6 +182,7 @@ export function createHideoutUI({ onDisc, focusGame }) {
       drawPainting(pic.getContext('2d'), g.art); h.textContent = g.title; p.textContent = g.desc;
       if (g.url) { go.href = g.url; go.textContent = 'Visit ' + g.title + ' ↗'; go.classList.remove('off'); go.removeAttribute('aria-disabled'); }
       else { go.removeAttribute('href'); go.textContent = 'Link coming soon'; go.classList.add('off'); go.setAttribute('aria-disabled', 'true'); }
+      kicker.textContent = 'Side project No. ' + String(at + 1).padStart(2, '0');
       thumbs.forEach((b, i) => { b.classList.toggle('on', i === at); b.setAttribute('aria-pressed', String(i === at)); });
       top.lastChild.textContent = (at + 1) + ' / ' + GALLERY.length;
     }
@@ -187,6 +204,46 @@ export function createHideoutUI({ onDisc, focusGame }) {
     fill();
   }
 
+  /* ── library: a shelf of book spines; pick one and it slides out, opening its card above ── */
+  {
+    const wrap = shell('library', 'Library', 'hx-library'), libp = el('div', 'lib'); wrap.appendChild(libp);
+    const x = closeBtn(); x.classList.add('lib-x'); x.onclick = () => hide(); libp.appendChild(x);
+    const card = el('div', 'lib-card'), coverBox = el('div', 'lib-cover'), coverImg = el('img'); coverImg.alt = ''; coverImg.draggable = false; coverBox.appendChild(coverImg);
+    const info = el('div', 'lib-info'), lk = el('span', 'lib-kicker'), lt = el('h2'), la = el('p', 'lib-author'), ln = el('p', 'lib-note'), lq = el('p', 'lib-take');
+    info.append(lk, lt, la, ln, el('i', 'lib-rule'), el('h3', '', 'My takeaway'), lq); card.append(coverBox, info); libp.appendChild(card);
+    const shelfBox = el('div', 'lib-shelf'), row = el('div', 'lib-row'); shelfBox.appendChild(row); libp.appendChild(shelfBox);
+    libp.appendChild(el('p', 'lib-hint', 'Pick a book from the shelf'));
+    const spines = {};
+    BOOKS.forEach((bk, i) => {
+      const b = el('button', 'spine'); b.setAttribute('aria-label', bk.title + ' by ' + bk.author);
+      b.style.setProperty('--bg', bk.spine.bg); b.style.setProperty('--fg', bk.spine.fg); b.style.setProperty('--band', bk.spine.band);
+      b.style.setProperty('--h', (86 + ((i * 37) % 14)) + '%'); b.style.setProperty('--w', (54 + ((i * 23) % 16)) + 'px');
+      b.append(el('i', 'sp-band'), el('span', 'sp-title', bk.title), el('span', 'sp-author', bk.author.split(' ').slice(-1)[0]), el('i', 'sp-band b'));
+      b.onclick = () => pick(bk.id); row.appendChild(b); spines[bk.id] = b;
+      const im = new Image(); im.src = BASE + 'assets/images/books/' + bk.cover; // fetch the covers ahead
+    });
+    // a few blank books to fill out the shelf
+    ['#5a3a1f', '#2f4a3a', '#6b2a2a'].forEach((c, i) => { const d = el('i', 'spine blank'); d.style.setProperty('--bg', c); d.style.setProperty('--h', (80 + i * 6) + '%'); d.style.setProperty('--w', (30 + i * 6) + 'px'); row.appendChild(d); });
+    let current = null, moving = false;
+    function fill(bk) {
+      coverImg.src = BASE + 'assets/images/books/' + bk.cover; libp.style.setProperty('--page', bk.page);
+      lk.textContent = 'From the shelf · No. ' + String(BOOKS.indexOf(bk) + 1).padStart(2, '0'); lt.textContent = bk.title; la.textContent = bk.author; ln.textContent = bk.note || ''; ln.hidden = !bk.note; lq.textContent = bk.takeaway;
+    }
+    async function pick(id) {
+      if (moving || id === current) return; const bk = BOOKS.find((q) => q.id === id); if (!bk) return; moving = true; sound.play('near');
+      for (const k in spines) spines[k].classList.toggle('on', k === id);
+      libp.classList.add('picked');
+      if (current) await Promise.all([anim(card, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(12px)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).finished]);
+      current = id; fill(bk); card.style.opacity = '1';
+      await new Promise((r) => (coverImg.complete ? r() : coverImg.addEventListener('load', r, { once: true }))).catch(() => {});
+      anim(card, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.25,1)', fill: 'forwards' });
+      await anim(coverBox, [{ transform: 'perspective(900px) rotateY(-70deg) translateX(-30px)', opacity: 0 }, { transform: 'perspective(900px) rotateY(-14deg)', opacity: 1 }], { duration: 560, easing: 'cubic-bezier(.2,.8,.25,1)', fill: 'forwards' }).finished;
+      moving = false;
+    }
+    panels.library.onShow = () => { if (!current) pick(BOOKS[0].id); };
+    panels.library.key = (e) => { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return false; const i = BOOKS.findIndex((q) => q.id === current) + (e.key === 'ArrowRight' ? 1 : -1); if (i >= 0 && i < BOOKS.length) pick(BOOKS[i].id); return true; };
+  }
+
   window.addEventListener('keydown', (e) => { if (open && panels[open].key && panels[open].key(e)) e.preventDefault(); });
-  return { show, hide: () => hide(), isOpen: () => !!open };
+  return { show, hide: () => hide(), isOpen: () => !!open, which: () => open };
 }

@@ -3,7 +3,7 @@
 import { inject as analytics } from '@vercel/analytics';
 import { STALLS, AGENTS, SITE_NAME, CONTACT_EMAIL, REPO_URL } from './config.js';
 import { BASE } from './base.js';
-import { JOURNAL, GALLERY } from './hideout-content.js';
+import { JOURNAL, GALLERY, BOOKS } from './hideout-content.js';
 import { drawPainting, drawIcon, pictureCanvas } from './pixelart.js';
 
 analytics();
@@ -61,6 +61,16 @@ if (GALLERY.length) {
     const b = el('div', 'body'); b.appendChild(el('h3', '', p.title)); b.appendChild(el('p', '', p.desc));
     if (p.url) b.appendChild(link(p.url, 'Visit ↗', 'go')); else b.appendChild(el('span', 'soon', 'Link coming soon'));
     c.appendChild(b); gg.appendChild(c);
+  }
+}
+
+/* bookshelf */
+if (BOOKS.length) {
+  const bs = sec('Bookshelf', 'Books that shaped how I think, with one line on each.');
+  const bg = el('div', 'books'); bs.appendChild(bg);
+  for (const bk of BOOKS) {
+    const c = el('article', 'book'); const img = el('img'); img.src = BASE + 'assets/images/books/' + bk.cover; img.alt = bk.title; img.loading = 'lazy'; img.width = 480; img.height = 720; c.appendChild(img);
+    const b = el('div', 'body'); b.append(el('h3', '', bk.title), el('p', 'by', bk.author), el('p', '', bk.takeaway)); c.appendChild(b); bg.appendChild(c);
   }
 }
 

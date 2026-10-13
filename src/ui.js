@@ -218,8 +218,10 @@ export function createUI(canvas, handlers) {
 
   /* achievement badge */
   let toastT = 0;
-  function toast() {
-    const g = $('toastArt').getContext('2d'); g.clearRect(0, 0, 16, 16); WOLF_ICON(g);
+  // the wolf badge by default; pass { title, text, icon(g) } for any other achievement
+  function toast(o) {
+    const g = $('toastArt').getContext('2d'); g.clearRect(0, 0, 16, 16); (o && o.icon ? o.icon : WOLF_ICON)(g);
+    $('toastTitle').textContent = o ? o.title : t('achTitle'); $('toastText').textContent = o ? o.text : t('achText');
     toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 6500);
   }
 

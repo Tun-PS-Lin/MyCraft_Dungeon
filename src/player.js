@@ -56,7 +56,12 @@ export function createPlayer(scene) {
     const o = OUTFITS.find((q) => q.id === id); if (!o) return; fig.setDesign(o);
     if (remember) { try { localStorage.setItem('pv-outfit', id); } catch (e) { /* ignore */ } }
   }
-  return { state, group, stride, animate, setOutfit, outfit: () => fig.design.id };
+  // the Scholar's Lantern, carried in the right hand once it has been earned
+  const lantern = new THREE.Group(); lantern.visible = false; lantern.position.set(0, -12.5 * 0.0625, 0.6 * 0.0625); fig.parts.armR.add(lantern);
+  { const P = 0.0625, dark = new THREE.MeshLambertMaterial({ color: new THREE.Color('#2a2019').convertSRGBToLinear() }), lit = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffd27a').convertSRGBToLinear() });
+    const box = (w, h, d, m, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w * P, h * P, d * P), m); b.position.y = y * P; lantern.add(b); };
+    box(0.8, 2, 0.8, dark, 0); box(3.4, 0.8, 3.4, dark, -1.4); box(2.6, 3.2, 2.6, lit, -3.4); box(3.4, 0.8, 3.4, dark, -5.4); }
+  return { state, group, stride, animate, setOutfit, outfit: () => fig.design.id, setLantern(on) { lantern.visible = on; } };
 }
 
 // Round soft shadow, the same trick the original blocky games use for moving things.

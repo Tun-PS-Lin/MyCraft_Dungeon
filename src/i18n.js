@@ -13,7 +13,7 @@ const UI = {
     progress: '{n} of {t} stalls explored', progHint: 'Open every stall to earn a companion', progWon: 'Wolf companion unlocked',
     menuHint: 'Pick a place and the character walks there. Tap or click the ground to walk too.',
     kMove: 'move', kRun: 'run', kJump: 'jump', kRoll: 'twice to roll',
-    hideoutNav: 'The Hideout (down the cave)', enterCave: 'Go down into the cave', goUp: 'Climb back to the village', useMusic: 'Open the CD player', useJournal: 'Read the journal', useGallery: 'Look at the gallery', kOpen: 'open or talk', kClose: 'close', kZoom: 'Scroll or pinch to zoom',
+    hideoutNav: 'The Hideout (down the cave)', enterCave: 'Go down into the cave', goUp: 'Climb back to the village', useMusic: 'Open the CD player', useJournal: 'Read the journal', useGallery: 'Look at the gallery', useLibrary: 'Browse the bookshelves', kOpen: 'open or talk', kClose: 'close', kZoom: 'Scroll or pinch to zoom',
     open: 'Open {name}', changeOutfit: 'Change outfit', talkTo: 'Talk to {name}', use: 'Open', talk: 'Talk', jump: 'Jump',
     soon: 'Link coming soon', soonSub: 'Project link not added yet', copy: 'Copy', copied: 'Copied',
     working: 'Working', chatHint: 'Press E or Esc to close', chatHintTouch: 'Tap × to close',

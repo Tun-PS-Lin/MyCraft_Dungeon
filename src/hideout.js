@@ -119,6 +119,10 @@ export function buildHideout(scene) {
   const core = new THREE.Mesh(new THREE.PlaneGeometry(door.w * 0.6, door.h * 0.8), additive('#fff2c0', 0.3)); core.position.set(door.x, door.h * 0.42, bz + 0.54); core.renderOrder = 5; g.add(core);
   B(g, door.w + 0.6, 0.4, 1.3, M.dark, door.x, door.h + 0.2, bz + 0.1); for (const s of [-1, 1]) B(g, 0.3, door.h, 1.2, M.dark, door.x + s * (door.w / 2 + 0.15), door.h / 2, bz + 0.1);
   addLamp(g, door.x, 1.6, D0 + 1.4, 1.2, 1.5, 7, '#ffcf5a');
+  // a stained-glass panel over the doorway, lit from behind
+  { const sg = toTex(cv(16, 8, (g2) => { const pal = ['#ffd84a', '#62a8ff', '#d8403a', '#57d47c', '#b68cff']; for (let y = 0; y < 8; y++) for (let x = 0; x < 16; x++) fill(g2, (x + y) % 4 === 0 || (x - y + 16) % 4 === 0 ? '#2a1c14' : pal[((x >> 1) + (y >> 1)) % pal.length], x, y, 1, 1); fill(g2, '#fff2b0', 7, 2, 2, 4); }), false);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.85), new THREE.MeshBasicMaterial({ map: sg, fog: false })); m.position.set(door.x, door.h + 1.0, D0 + 0.03); g.add(m);
+    B(g, 1.95, 0.14, 0.12, M.dark, door.x, door.h + 1.48, D0 + 0.06); B(g, 1.95, 0.14, 0.12, M.dark, door.x, door.h + 0.52, D0 + 0.06); for (const sx of [-1, 1]) B(g, 0.14, 1.1, 0.12, M.dark, door.x + sx * 0.92, door.h + 1.0, D0 + 0.06); }
 
   /* the window: stained glass round the edge, the sky in the middle. Two panes cross-fade
      with the theme: a sunny sky by day and a starry one by night. */
@@ -141,11 +145,16 @@ export function buildHideout(scene) {
   for (const [m, z] of [[dayPane, 0], [nightPane, 0.01]]) { m.position.set(win.x, (win.y0 + win.y1) / 2, bz + z); g.add(m); }
   B(g, paneW + 0.6, 0.3, 1.3, M.dark, win.x, win.y0 - 0.1, bz + 0.15); B(g, paneW + 0.5, 0.3, 1.1, M.dark, win.x, win.y1 + 0.1, bz);
   for (const s of [-1, 1]) B(g, 0.3, paneH + 0.5, 1.15, M.dark, win.x + s * (paneW / 2 + 0.15), (win.y0 + win.y1) / 2, bz + 0.05);
+  // a planter box of flowers on the sill
+  B(g, paneW - 0.3, 0.34, 0.42, M.planks, win.x, win.y0 + 0.22, D0 + 0.12); B(g, paneW - 0.4, 0.05, 0.34, flat('#4a2f1a'), win.x, win.y0 + 0.4, D0 + 0.12);
+  ['#e9627a', '#ffd84a', '#f1efe6', '#b68cff', '#ff9a3d', '#e9627a', '#62c8ff', '#ffd84a'].forEach((c, i) => { const fx = win.x - (paneW - 0.8) / 2 + i * ((paneW - 0.8) / 7), fh = 0.22 + ((i * 7) % 3) * 0.07; B(g, 0.05, fh, 0.05, flat('#3d7d40'), fx, win.y0 + 0.42 + fh / 2, D0 + 0.12 + ((i % 2) - 0.5) * 0.12, true); B(g, 0.15, 0.13, 0.15, flat(c), fx, win.y0 + 0.47 + fh, D0 + 0.12 + ((i % 2) - 0.5) * 0.12, true); B(g, 0.14, 0.05, 0.08, flat('#57a84a'), fx + 0.07, win.y0 + 0.5, D0 + 0.12, true); });
   // the light falling through it: a slanted shaft and a bright patch on the floor
   const shaftGeo = new THREE.BufferGeometry(), top = [[-paneW / 2 + 0.2, win.y1 - 0.2, bz + 0.5], [paneW / 2 - 0.2, win.y1 - 0.2, bz + 0.5], [paneW / 2 - 0.2, win.y0 + 0.2, bz + 0.5], [-paneW / 2 + 0.2, win.y0 + 0.2, bz + 0.5]];
-  const foot = [[-1.7, F + 0.02, -1.4], [2.5, F + 0.02, -1.4], [2.5, F + 0.02, -4.6], [-1.7, F + 0.02, -4.6]], pos = [], alpha = [];
-  for (let i = 0; i < 4; i++) { const a = top[i], b = top[(i + 1) % 4], c2 = foot[(i + 1) % 4], d2 = foot[i]; pos.push(...a, ...b, ...c2, ...a, ...c2, ...d2); alpha.push(1, 1, 0.2, 1, 0.2, 0.2); }
-  shaftGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); shaftGeo.setAttribute('color', new THREE.Float32BufferAttribute(alpha.flatMap((a) => [a, a, a]), 3));
+  const foot0 = [[-1.7, F + 0.02, -1.4], [2.5, F + 0.02, -1.4], [2.5, F + 0.02, -4.6], [-1.7, F + 0.02, -4.6]], alpha = [];
+  // the light's foot on the floor slides with the visitor's time of day (morning to the right, evening to the left)
+  const shaftPos = (dx) => { const pos = [], foot = foot0.map(([x, y, z]) => [x + dx, y, z]); for (let i = 0; i < 4; i++) { const a = top[i], b = top[(i + 1) % 4], c2 = foot[(i + 1) % 4], d2 = foot[i]; pos.push(...a, ...b, ...c2, ...a, ...c2, ...d2); } return pos; };
+  for (let i = 0; i < 4; i++) alpha.push(1, 1, 0.2, 1, 0.2, 0.2);
+  shaftGeo.setAttribute('position', new THREE.Float32BufferAttribute(shaftPos(0), 3)); shaftGeo.setAttribute('color', new THREE.Float32BufferAttribute(alpha.flatMap((a) => [a, a, a]), 3));
   const shaftMat = new THREE.MeshBasicMaterial({ color: lin('#ffd98a'), vertexColors: true, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
   const shaft = new THREE.Mesh(shaftGeo, shaftMat); shaft.position.x = win.x; shaft.renderOrder = 6; g.add(shaft);
   const patchTex = toTex(cv(42, 32, (g2) => { g2.fillStyle = '#fff'; for (let y = 0; y < 32; y += 8) for (let x = 0; x < 42; x += 9) g2.fillRect(x + 1, y + 1, 7, 6); }), false);
@@ -235,14 +244,67 @@ export function buildHideout(scene) {
     B(g, 0.12, 2.0, 0.12, M.dark, ax, 1.0 + F, az - 1.25); B(g, 0.5, 0.4, 0.5, wool('#e8d3a0'), ax, 2.1 + F, az - 1.25); B(g, 0.3, 0.06, 0.3, M.dark, ax, 0.03 + F, az - 1.25); solid(ax - 0.3, ax + 0.3, az - 1.5, az - 1, 2);
     B(g, 0.36, 0.08, 2.6, oak, W0 + 0.2, 2.6, az); [[-0.9, '#a3342e'], [-0.6, '#2f66c4'], [-0.35, '#3d7d40'], [0.2, '#c98a2b'], [0.5, '#7a3fb4']].forEach(([o, c]) => B(g, 0.24, 0.42, 0.14, flat(c), W0 + 0.22, 2.85, az + o)); B(g, 0.22, 0.26, 0.22, flat('#62c8ff'), W0 + 0.22, 2.77, az + 0.95);
     addLamp(g, ax + 0.6, 2.1, az - 0.6, 0.6, 1.0, 6, '#ffd9a0'); }
-  // a cosy middle: a big rug, a sofa facing the window and a low table
-  { const rug = cv(48, 32, (g2) => { for (let y = 0; y < 32; y++) for (let x = 0; x < 48; x++) { const e = Math.min(x, y, 47 - x, 31 - y); const k = (Math.abs(x - 23.5) + Math.abs(y - 15.5)) | 0; fill(g2, e < 2 ? '#5a2f22' : e < 3 ? '#e4b93a' : k % 8 < 2 ? '#c98a2b' : k % 8 < 4 ? '#a3342e' : '#7d2622', x, y, 1, 1); } });
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 4.2), lam({ map: toTex(rug, false) })); m.rotation.x = -Math.PI / 2; m.position.set(1.4, F + 0.012, 1.6); g.add(m);
-    B(g, 3.2, 0.45, 0.95, wool('#6b3f22'), 1.4, 0.3 + F, 3.4); B(g, 3.2, 0.7, 0.3, wool('#5a3a1f'), 1.4, 0.75 + F, 3.75); for (const s of [-1, 1]) B(g, 0.3, 0.65, 0.95, wool('#5a3a1f'), 1.4 + s * 1.6, 0.45 + F, 3.4);
-    for (const s of [-1, 1]) B(g, 0.5, 0.45, 0.2, wool(s < 0 ? '#e4b93a' : '#2b9a88'), 1.4 + s * 0.9, 0.7 + F, 3.55);
-    solid(-0.35, 3.15, 2.9, 3.95, 1);
-    B(g, 1.6, 0.1, 0.8, M.planks, 1.4, 0.45 + F, 1.7); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(g, 0.1, 0.4, 0.1, M.dark, 1.4 + sx * 0.7, 0.2 + F, 1.7 + sz * 0.32);
-    B(g, 0.3, 0.06, 0.4, flat('#2f66c4'), 1.1, 0.53 + F, 1.7); B(g, 0.2, 0.2, 0.2, flat('#f1efe6'), 1.8, 0.6 + F, 1.6); solid(0.55, 2.25, 1.25, 2.15, 0.6); }
+  // a cosy middle on a raised wooden floor: a big rug, a sofa facing the window and a low table
+  { const L = 0.16, Y = F + L;
+    const deckTop = lam({ map: tex(16, 16, (g2) => { speck(g2, 16, 16, ['#9a6a3e', '#8f6238', '#a3713f'], rng(61)); for (const y of [3, 7, 11, 15]) fill(g2, '#5a3a1f', 0, y, 16, 1); fill(g2, '#5a3a1f', 5, 0, 1, 3); fill(g2, '#5a3a1f', 11, 4, 1, 3); fill(g2, '#5a3a1f', 3, 8, 1, 3); fill(g2, '#5a3a1f', 9, 12, 1, 3); }) });
+    deckTop.map.wrapS = deckTop.map.wrapT = THREE.RepeatWrapping;
+    const plat = new THREE.Mesh(new THREE.BoxGeometry(7.2, L, 5.0), [M.planks, M.planks, deckTop, M.planks, M.planks, M.planks]); plat.position.set(1.4, F + L / 2 - 0.001, 1.75); g.add(plat);
+    deckTop.map.repeat.set(7.2, 5.0);
+    B(g, 7.3, 0.06, 0.12, rail, 1.4, Y + 0.01, -0.73); for (const sx of [-1, 1]) B(g, 0.12, 0.06, 5.0, rail, 1.4 + sx * 3.6, Y + 0.01, 1.75);
+    solid(-2.2, 5.0, -0.75, 4.25, Y);
+    const rug = cv(48, 32, (g2) => { for (let y = 0; y < 32; y++) for (let x = 0; x < 48; x++) { const e = Math.min(x, y, 47 - x, 31 - y); const k = (Math.abs(x - 23.5) + Math.abs(y - 15.5)) | 0; fill(g2, e < 2 ? '#5a2f22' : e < 3 ? '#e4b93a' : k % 8 < 2 ? '#c98a2b' : k % 8 < 4 ? '#a3342e' : '#7d2622', x, y, 1, 1); } });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(6.0, 3.8), lam({ map: toTex(rug, false) })); m.rotation.x = -Math.PI / 2; m.position.set(1.4, Y + 0.012, 1.55); g.add(m);
+    B(g, 3.2, 0.45, 0.95, wool('#6b3f22'), 1.4, 0.3 + Y, 3.4); B(g, 3.2, 0.7, 0.3, wool('#5a3a1f'), 1.4, 0.75 + Y, 3.75); for (const s2 of [-1, 1]) B(g, 0.3, 0.65, 0.95, wool('#5a3a1f'), 1.4 + s2 * 1.6, 0.45 + Y, 3.4);
+    for (const s2 of [-1, 1]) B(g, 0.5, 0.45, 0.2, wool(s2 < 0 ? '#e4b93a' : '#2b9a88'), 1.4 + s2 * 0.9, 0.7 + Y, 3.55);
+    solid(-0.35, 3.15, 2.9, 3.95, 1 + Y);
+    B(g, 1.6, 0.1, 0.8, M.planks, 1.4, 0.45 + Y, 1.7); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(g, 0.1, 0.4, 0.1, M.dark, 1.4 + sx * 0.7, 0.2 + Y, 1.7 + sz * 0.32);
+    B(g, 0.3, 0.06, 0.4, flat('#2f66c4'), 1.1, 0.53 + Y, 1.7); B(g, 0.2, 0.2, 0.2, flat('#f1efe6'), 1.8, 0.6 + Y, 1.6); solid(0.55, 2.25, 1.25, 2.15, 0.6 + Y);
+    // a floor lamp at each back corner of the lounge
+    for (const sx of [-1, 1]) { const lx = 1.4 + sx * 3.2; B(g, 0.1, 1.9, 0.1, M.dark, lx, Y + 0.95, 3.85); B(g, 0.46, 0.36, 0.46, wool('#e8d3a0'), lx, Y + 2.0, 3.85); B(g, 0.3, 0.06, 0.3, M.dark, lx, Y + 0.03, 3.85); solid(lx - 0.25, lx + 0.25, 3.6, 4.1, 2.2); }
+    addLamp(g, 1.4, Y + 2.2, 3.2, 0.5, 1.0, 7, '#ffd9a0'); }
+  // wall art: a world map with pins on the left wall, an Urban Expansion map over the desk on the right wall
+  const framed = (canvas, w, h, x, y, z, facing) => {
+    const pic = new THREE.Mesh(new THREE.PlaneGeometry(w, h), lam({ map: toTex(canvas, false) })); pic.position.set(x + facing * 0.12, y, z); pic.rotation.y = facing * Math.PI / 2; pic.userData.keep = true; g.add(pic);
+    B(g, 0.08, h + 0.26, w + 0.26, M.dark, x + facing * 0.05, y, z); B(g, 0.1, h + 0.12, w + 0.12, flat('#c98a2b'), x + facing * 0.06, y, z);
+  };
+  framed(cv(48, 28, (g2) => {
+    fill(g2, '#2b5f8a', 0, 0, 48, 28); const r = rng(71); for (let i = 0; i < 40; i++) fill(g2, '#2f6a98', (r() * 48) | 0, (r() * 28) | 0, 2, 1);
+    const land = '#c9b27a', dk = '#a8915a', blobs = [[4, 4, 9, 6], [7, 10, 5, 4], [10, 15, 4, 8], [20, 3, 5, 4], [21, 8, 6, 10], [27, 3, 15, 8], [33, 11, 6, 4], [38, 14, 4, 3], [40, 20, 6, 4], [13, 2, 3, 2]];
+    for (const [x, y, w, h] of blobs) { fill(g2, land, x, y, w, h); fill(g2, dk, x, y + h - 1, w, 1); }
+    for (const [x, y] of [[35, 12], [36, 13]]) { fill(g2, '#d8403a', x, y - 2, 1, 2); fill(g2, '#ff6a5a', x - 0.5 | 0, y - 3, 2, 1); }
+    fill(g2, '#1d3f5e', 0, 27, 48, 1);
+  }), 2.6, 1.5, W0 + 0.02, 2.9, -5.0, 1);
+  framed(cv(40, 28, (g2) => {
+    fill(g2, '#e8dcb6', 0, 0, 40, 28);
+    for (const [r, c] of [[12, '#f3c9a0'], [9, '#e8a070'], [6, '#d8703f'], [3, '#a83a2a']]) for (let y = 0; y < 28; y++) for (let x = 0; x < 40; x++) if (Math.hypot((x - 19.5) * 0.8, y - 13.5) < r + Math.sin(x * 0.7 + y * 0.4) * 0.8) fill(g2, c, x, y, 1, 1);
+    for (let i = 0; i < 28; i++) fill(g2, '#5a9ad0', 25 + Math.sin(i * 0.3) * 2 | 0, i, 2, 1);
+    for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) for (let k = -20; k < 20; k++) { const x = 19 + dx * k, y = 13 + dy * k; if (x >= 0 && x < 40 && y >= 0 && y < 28) fill(g2, '#5a3a1f', x, y, 1, 1); }
+    fill(g2, '#3a2a1f', 0, 0, 40, 1); fill(g2, '#3a2a1f', 0, 27, 40, 1);
+  }), 2.4, 1.6, W1 - 0.02, 3.0, -2.4, -1);
+  B(g, 0.05, 0.16, 0.7, flat('#c99a36'), W1 - 0.06, 2.0, -2.4); B(g, 0.05, 0.16, 0.7, flat('#c99a36'), W0 + 0.06, 1.95, -5.0);
+  // the fireplace in the right wall: a brick chimney breast, a stone mantel, a hearth and a fire
+  const fx = W1, fz = 1.6, fire = [];
+  { B(g, 1.1, H, 2.8, M.brick, fx - 0.55, H / 2, fz); B(g, 1.4, 0.24, 3.2, band, fx - 0.7, 2.3, fz); B(g, 1.2, 0.3, 3.0, M.dark, fx - 0.6, 0.15, fz);
+    B(g, 0.06, 1.2, 1.6, flat('#141418'), fx - 1.12, 0.85, fz);
+    for (const sz of [-1, 1]) B(g, 0.2, 1.5, 0.3, band, fx - 1.15, 0.9, fz + sz * 0.95); B(g, 0.2, 0.3, 2.2, band, fx - 1.15, 1.6, fz);
+    B(g, 1.3, 0.12, 3.4, M.stone, fx - 1.2, F + 0.06, fz);
+    B(g, 0.5, 0.2, 1.0, M.log, fx - 0.75, 0.38, fz); B(g, 0.4, 0.18, 0.9, M.log, fx - 0.8, 0.52, fz + 0.1);
+    [['#ff8a2a', 0.5, 0.44, -0.3], ['#ffc24a', 0.42, 0.66, 0.15], ['#ffe08a', 0.3, 0.32, -0.02], ['#ff6a2a', 0.36, 0.5, 0.4]].forEach(([c, w, h, oz]) => { const f2 = B(g, 0.1, h, w, glow(c), fx - 0.95, 0.5 + h / 2, fz + oz, true); f2.userData.keep = true; fire.push({ m: f2, h }); });
+    // things on the mantel
+    B(g, 0.3, 0.4, 0.3, flat('#e4b93a'), fx - 0.75, 2.62, fz - 1.1); B(g, 0.3, 0.3, 0.6, flat('#2f66c4'), fx - 0.75, 2.57, fz + 0.9); B(g, 0.14, 0.26, 0.14, flat('#f4f1e6'), fx - 0.7, 2.55, fz + 0.2); B(g, 0.16, 0.16, 0.16, glow('#ffc76a'), fx - 0.7, 2.76, fz + 0.2, true);
+    solid(fx - 1.25, fx, fz - 1.6, fz + 1.6, 6);
+    addLamp(g, fx - 1.6, 1.0, fz, 1.2, 1.9, 9, '#ff8a3a'); }
+  // a hearth rug and a cat asleep on it
+  { const hr = cv(24, 16, (g2) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 24; x++) { const e = Math.min(x, y, 23 - x, 15 - y); fill(g2, e < 1 ? '#5a2f22' : (x + y) % 4 < 2 ? '#2b6f9a' : '#234a7a', x, y, 1, 1); } });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2.4), lam({ map: toTex(hr, false) })); m.rotation.x = -Math.PI / 2; m.rotation.z = Math.PI / 2; m.position.set(fx - 2.3, F + 0.012, fz); g.add(m); }
+  const cat = new THREE.Group(); cat.position.set(fx - 2.25, F, fz + 0.1); cat.rotation.y = 0.6; cat.userData.keep = true; g.add(cat);
+  const catBody = new THREE.Group(); cat.add(catBody);
+  { const fur = flat('#e08a3a'), fur2 = flat('#c86a2a'), pale = flat('#f6dcb8');
+    B(catBody, 0.62, 0.24, 0.42, fur, 0, 0.12, 0); B(catBody, 0.62, 0.05, 0.1, fur2, 0, 0.245, 0.06); B(catBody, 0.62, 0.05, 0.1, fur2, 0, 0.245, -0.12);
+    B(catBody, 0.3, 0.24, 0.3, fur, 0.36, 0.13, 0.1); B(catBody, 0.08, 0.1, 0.08, fur2, 0.42, 0.29, 0.02); B(catBody, 0.08, 0.1, 0.08, fur2, 0.42, 0.29, 0.2); B(catBody, 0.04, 0.12, 0.18, pale, 0.52, 0.1, 0.1);
+    B(catBody, 0.04, 0.02, 0.06, flat('#3a2a1f'), 0.515, 0.17, 0.04); B(catBody, 0.04, 0.02, 0.06, flat('#3a2a1f'), 0.515, 0.17, 0.16);
+    B(catBody, 0.5, 0.1, 0.12, fur, -0.05, 0.05, 0.27); B(catBody, 0.12, 0.1, 0.24, fur2, 0.22, 0.05, 0.27); }
+  solid(fx - 2.65, fx - 1.85, fz - 0.3, fz + 0.5, 0.3);
   // the right wall: a writing desk with a chair, the chest, and the barrels and crates in the front corner
   { const ex = W1 - 0.55;
     B(g, 0.8, 0.1, 2.0, oak, ex, 0.95 + F, -2.4); for (const sz of [-1, 1]) B(g, 0.7, 0.9, 0.1, oak, ex, 0.45 + F, -2.4 + sz * 0.92);
@@ -250,11 +312,21 @@ export function buildHideout(scene) {
     B(g, 0.14, 0.24, 0.14, flat('#f4f1e6'), ex, 1.12 + F, -3.2); B(g, 0.16, 0.16, 0.16, glow('#ffc76a'), ex, 1.32 + F, -3.2, true);
     B(g, 0.6, 0.08, 0.6, M.planks, ex - 1.0, 0.55 + F, -2.4); B(g, 0.08, 0.7, 0.6, M.planks, ex - 1.3, 0.9 + F, -2.4); for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(g, 0.08, 0.5, 0.08, M.dark, ex - 1 + sx * 0.24, 0.25 + F, -2.4 + sz * 0.24);
     solid(ex - 0.45, W1, -3.45, -1.35, 1.1); solid(ex - 1.35, ex - 0.65, -2.75, -2.05, 1);
-    B(g, 1.2, 0.8, 0.8, M.planks, W1 - 1, 0.4 + F, 1.6); B(g, 1.24, 0.12, 0.84, flat('#e4b93a'), W1 - 1, 0.62 + F, 1.6); solid(W1 - 1.65, W1 - 0.35, 1.2, 2, 1);
+    B(g, 1.2, 0.8, 0.8, M.planks, 8.2, 0.4 + F, 6.6); B(g, 1.24, 0.12, 0.84, flat('#e4b93a'), 8.2, 0.62 + F, 6.6); solid(7.55, 8.85, 6.15, 7.05, 1);
     [[W1 - 0.9, 5.4], [W1 - 0.9, 6.5], [W1 - 2, 6.4]].forEach(([x, z]) => { B(g, 0.8, 1.0, 0.8, M.log, x, 0.5 + F, z); B(g, 0.84, 0.08, 0.84, M.dark, x, 0.75 + F, z); solid(x - 0.45, x + 0.45, z - 0.45, z + 0.45, 1.2); });
     B(g, 0.9, 0.9, 0.9, M.planks, W1 - 2.1, 0.45 + F, 4.6); B(g, 0.6, 0.6, 0.6, M.planks, W1 - 2.0, 1.2 + F, 4.6); solid(W1 - 2.6, W1 - 1.6, 4.1, 5.1, 1.5); }
 
   bake(g); scene.add(g);
+
+  // string lights along the top of the back wall: they sag between the columns and light up at night
+  const bulbMat = [new THREE.MeshBasicMaterial({ color: lin('#ffd27a'), transparent: true, opacity: 0, fog: false }), new THREE.MeshBasicMaterial({ color: lin('#ffb0d0'), transparent: true, opacity: 0, fog: false }), new THREE.MeshBasicMaterial({ color: lin('#a8e6ff'), transparent: true, opacity: 0, fog: false })];
+  { const pts = [W0 + 0.65, ...columnsAt.slice(1)], wire = flat('#2a1c14'); let k = 0;
+    for (let i = 0; i < pts.length - 1; i++) { const a = pts[i] + 0.5, b = pts[i + 1] - 0.5, n = Math.max(3, Math.round((b - a) / 0.45));
+      for (let j = 0; j <= n; j++) { const t = j / n, x = a + (b - a) * t, y = 5.55 - Math.sin(t * Math.PI) * 0.5; B(g, 0.46, 0.03, 0.03, wire, x, y + 0.05, D0 + 0.22, true); if (j && j < n) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.15, 0.11), bulbMat[k++ % 3]); m.position.set(x, y - 0.04, D0 + 0.24); g.add(m); } } } }
+  const bulbLight = addLamp(g, 0, 5.2, D0 + 1.4, 0, 0.6, 14, '#ffd9a0');
+
+  // the library shelves are one thing you can click
+  const libHit = new THREE.Mesh(new THREE.BoxGeometry(6, 2.2, 5), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false })); libHit.position.set(-9, 1.1, 4.5); libHit.userData.prop = 'library'; g.add(libHit);
 
   /* things you can use, in world coordinates. rect is measured from its edge, like the stalls. */
   const R = (x0, x1, z0, z1) => ({ x0: X(x0), x1: X(x1), z0: Z(z0), z1: Z(z1) });
@@ -262,21 +334,29 @@ export function buildHideout(scene) {
     { id: 'music', key: 'useMusic', label: 'CD Player', color: '#e4b93a', rect: R(mx - 1.4, mx + 1.4, D0, D0 + 1), front: [X(mx), Z(D0 + 2.4)], labelAt: [X(mx), 4.7, Z(D0 + 0.6)] },
     { id: 'journal', key: 'useJournal', label: 'Journal', color: '#c98a4b', rect: R(dx - 0.6, dx + 0.6, D0 + 1.2, D0 + 2), front: [X(dx), Z(D0 + 3.6)], labelAt: [X(dx), 2.9, Z(D0 + 1.6)] },
     { id: 'gallery', key: 'useGallery', label: 'Gallery', color: '#b0409a', rect: R(gx0, gx1, D0, D0 + 0.6), front: [X(7.48), Z(-5.3)], labelAt: [X(7.48), 4.9, Z(D0 + 0.4)] },
+    { id: 'library', key: 'useLibrary', label: 'Library', color: '#b68cff', rect: R(-12, -6.0, 2.0, 7.0), front: [X(-7.4), Z(5.3)], labelAt: [X(-9.2), 3.5, Z(2.6)] },
     { id: 'exit', key: 'goUp', range: 1.4, label: 'Back to the Village', color: '#ffd060', rect: R(door.x - 1, door.x + 1, D0 - 0.6, D0 + 0.1), front: [X(door.x), Z(D0 + 1.4)], labelAt: [X(door.x), 4.3, Z(D0)] },
   ];
-  const pickables = [deck, lectern, ...frames, ...rack.map((r) => r.m)];
+  const pickables = [deck, lectern, libHit, ...frames, ...rack.map((r) => r.m)];
   const v = new THREE.Vector3();
-  let current = null;
+  let current = null, lastSun = -1;
   return {
     props, pickables,
     arrive: [X(door.x), Z(D0 + 2.3)],
+    deckAt: [X(mx), 1.3 + F, Z(mz)],
+    fireAt: [X(fx - 1.2), Z(fz)],
+    musicRect: R(mx - 1.4, mx + 1.4, D0, D0 + 1),
     update(time, night, playing) {
       nightPane.material.opacity = night; dayPane.material.color.setScalar(1 - night * 0.6);
       shaftMat.opacity = 0.16 * (1 - night) + 0.05 * night; shaftMat.color.copy(lin('#ffd98a')).lerp(lin('#8fb0ff'), night);
       patch.material.opacity = 0.42 * (1 - night) + 0.12 * night; patch.material.color.copy(shaftMat.color);
       const p = 0.5 + Math.sin(time * 1.7) * 0.5; portal.material.opacity = 0.42 + p * 0.12; core.material.opacity = 0.18 + (1 - p) * 0.14;
       torches.forEach((t, i) => t.scale.set(1, 0.85 + Math.sin(time * 11 + i * 2) * 0.15, 1));
-      if (playing) deckDisc.rotation.z = -time * 2.4;
+      if (playing) deckDisc.rotation.z = -time * 0.9;
+      bulbMat.forEach((m, i) => { m.opacity = night * (0.75 + Math.sin(time * 2 + i * 2.1) * 0.25); }); bulbLight.visible = night > 0.05;
+      fire.forEach((f2, i) => { f2.m.scale.y = 0.75 + Math.sin(time * (9 + i * 2.3) + i) * 0.18 + Math.sin(time * 23 + i * 5) * 0.07; });
+      catBody.scale.y = 1 + Math.sin(time * 1.4) * 0.04; catBody.position.y = 0;
+      if (time - lastSun > 20 || lastSun < 0) { lastSun = time; const d = new Date(), h = d.getHours() + d.getMinutes() / 60, dx = Math.max(-1.6, Math.min(1.6, (12.5 - h) * 0.32)); shaftGeo.setAttribute('position', new THREE.Float32BufferAttribute(shaftPos(dx), 3)); patch.position.x = win.x + 0.4 + dx; }
       rack.forEach((r) => { r.halo.material.opacity = r.id === current ? (playing ? 0.35 + p * 0.15 : 0.18) : 0; });
       notes.forEach((n) => { const k = (time * 0.32 + n.s) % 1; n.m.visible = playing; v.set(mx - 0.1 + Math.sin(k * 6 + n.s * 9) * 0.45, 1.7 + k * 2.0 + F, mz + 0.5); n.m.position.copy(v); n.m.material.opacity = Math.sin(k * Math.PI); });
       // the enchanting table's book bobs and turns, its pages breathing open and shut; glyphs drift in from the shelves

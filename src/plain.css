@@ -57,3 +57,9 @@ footer{margin-top:56px;padding-top:18px;border-top:3px solid var(--line);color:v
 .entry blockquote cite{display:block;margin-top:4px;font-style:normal;color:var(--ink-dim);font-size:14px}
 .entry ul{margin:0 0 16px;padding-left:20px}
 .entry li{margin:4px 0}
+.books{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-top:22px}
+.book{display:flex;gap:16px;background:#fbfaf4;border:3px solid var(--line);padding:14px}
+.book img{width:84px;height:auto;aspect-ratio:2/3;image-rendering:pixelated;flex:none;box-shadow:4px 4px 0 rgba(0,0,0,.2)}
+.book h3{font-size:18px}
+.book .by{margin:2px 0 8px;color:var(--ink-dim);font-style:italic}
+.book p{margin:0;font-size:15px}
