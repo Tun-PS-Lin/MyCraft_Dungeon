@@ -149,7 +149,7 @@ function travel(down, then) {
 }
 function useProp(id) {
   auto = null;
-  if (id === 'exit') travel(false); else hx.show(id);
+  if (id === 'exit') travel(false); else if (id === 'cat') { hideout.pet(); sound.play('meow'); } else hx.show(id);
 }
 
 function openStall(s) {

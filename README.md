@@ -55,10 +55,10 @@ At the bottom of the square, a cave glows in the rock. Walk down the steps and y
   ergodicity, circles of competence, fat pitches, market cycles and more.
 - **The gallery.** Framed paintings of my side projects, each with a link.
 - **The library.** Bookshelves round an enchanting table. Browse the shelf, pull a book out, and read
-  its title, author and my one-line takeaway.
+  its title, author and my one-line takeaway. Ten books, from Poor Charlie's Almanack to The Martian.
 - **Small rewards.** Read every journal entry (each gets a wax seal) to earn the **Scholar's Lantern**.
   Stand by the CD player while a CD plays and the room dims into **listening mode**.
-- **The room.** A fireplace with a sleeping cat, a raised lounge, string lights at night, maps on the
+- **The room.** A fireplace with a sleeping cat you can pet (it meows), a raised lounge, string lights at night, maps on the
   walls, and window light that moves with the time of day.
 - **The window.** Sunny sky by day, stars by night, so you can tell the time even underground.
 

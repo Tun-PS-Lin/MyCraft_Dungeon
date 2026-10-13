@@ -297,13 +297,30 @@ export function buildHideout(scene) {
   // a hearth rug and a cat asleep on it
   { const hr = cv(24, 16, (g2) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 24; x++) { const e = Math.min(x, y, 23 - x, 15 - y); fill(g2, e < 1 ? '#5a2f22' : (x + y) % 4 < 2 ? '#2b6f9a' : '#234a7a', x, y, 1, 1); } });
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2.4), lam({ map: toTex(hr, false) })); m.rotation.x = -Math.PI / 2; m.rotation.z = Math.PI / 2; m.position.set(fx - 2.3, F + 0.012, fz); g.add(m); }
-  const cat = new THREE.Group(); cat.position.set(fx - 2.25, F, fz + 0.1); cat.rotation.y = 0.6; cat.userData.keep = true; g.add(cat);
+  // the cat: an orange tabby curled up asleep, head on its paws and tail wrapped round.
+  // It breathes, twitches an ear now and then and flicks its tail; pet it and it wakes up and meows.
+  const cat = new THREE.Group(); cat.position.set(fx - 2.25, F + 0.012, fz + 0.1); cat.rotation.y = 0.6; cat.userData.keep = true; g.add(cat);
+  const fur = flat('#e08a3a'), fur2 = flat('#b85f22'), pale = flat('#f6dcb8'), pink = flat('#f08a9a'), ink = flat('#2a1c14');
   const catBody = new THREE.Group(); cat.add(catBody);
-  { const fur = flat('#e08a3a'), fur2 = flat('#c86a2a'), pale = flat('#f6dcb8');
-    B(catBody, 0.62, 0.24, 0.42, fur, 0, 0.12, 0); B(catBody, 0.62, 0.05, 0.1, fur2, 0, 0.245, 0.06); B(catBody, 0.62, 0.05, 0.1, fur2, 0, 0.245, -0.12);
-    B(catBody, 0.3, 0.24, 0.3, fur, 0.36, 0.13, 0.1); B(catBody, 0.08, 0.1, 0.08, fur2, 0.42, 0.29, 0.02); B(catBody, 0.08, 0.1, 0.08, fur2, 0.42, 0.29, 0.2); B(catBody, 0.04, 0.12, 0.18, pale, 0.52, 0.1, 0.1);
-    B(catBody, 0.04, 0.02, 0.06, flat('#3a2a1f'), 0.515, 0.17, 0.04); B(catBody, 0.04, 0.02, 0.06, flat('#3a2a1f'), 0.515, 0.17, 0.16);
-    B(catBody, 0.5, 0.1, 0.12, fur, -0.05, 0.05, 0.27); B(catBody, 0.12, 0.1, 0.24, fur2, 0.22, 0.05, 0.27); }
+  B(catBody, 0.62, 0.25, 0.4, fur, -0.02, 0.125, 0, true); B(catBody, 0.3, 0.3, 0.42, fur, -0.2, 0.15, 0, true);   // torso and haunch
+  B(catBody, 0.2, 0.16, 0.36, pale, 0.2, 0.08, 0.02, true);                                                         // white chest
+  for (const x of [-0.3, -0.16, -0.02, 0.12]) { B(catBody, 0.05, 0.02, 0.42, fur2, x, 0.256, 0, true); B(catBody, 0.05, 0.12, 0.02, fur2, x, 0.17, 0.205, true); B(catBody, 0.05, 0.12, 0.02, fur2, x, 0.17, -0.205, true); }
+  for (const sz of [-1, 1]) B(catBody, 0.18, 0.08, 0.09, pale, 0.42, 0.04, sz * 0.09, true);                       // front paws
+  B(catBody, 0.12, 0.08, 0.1, pale, -0.3, 0.04, 0.2, true);                                                         // a back paw peeking out
+  const head = new THREE.Group(); head.position.set(0.3, 0.12, 0.02); catBody.add(head);
+  B(head, 0.3, 0.24, 0.32, fur, 0.13, 0.08, 0, true); B(head, 0.08, 0.09, 0.17, pale, 0.29, 0.03, 0, true); B(head, 0.03, 0.03, 0.05, pink, 0.335, 0.075, 0, true);
+  for (const sz of [-1, 1]) B(head, 0.06, 0.02, 0.02, flat('#f6f1e3'), 0.33, 0.03, sz * 0.1, true);                // whiskers
+  B(head, 0.18, 0.02, 0.04, fur2, 0.12, 0.205, 0, true); B(head, 0.14, 0.02, 0.04, fur2, 0.12, 0.205, 0.08, true); B(head, 0.14, 0.02, 0.04, fur2, 0.12, 0.205, -0.08, true);
+  const shut = new THREE.Group(), awake = new THREE.Group(); head.add(shut, awake); awake.visible = false;
+  for (const sz of [-1, 1]) { B(shut, 0.02, 0.02, 0.08, ink, 0.285, 0.12, sz * 0.08, true); B(awake, 0.02, 0.07, 0.07, flat('#7ccf4a'), 0.285, 0.12, sz * 0.08, true); B(awake, 0.025, 0.06, 0.025, ink, 0.29, 0.12, sz * 0.08, true); }
+  const ears = [-1, 1].map((sz) => { const e = new THREE.Group(); e.position.set(0.1, 0.2, sz * 0.1); head.add(e); B(e, 0.09, 0.11, 0.09, fur, 0, 0.055, 0, true); B(e, 0.02, 0.07, 0.05, pink, 0.046, 0.045, 0, true); return e; });
+  // the tail: a chain of joints that curls round the front of the body
+  const tail = []; { let parent = catBody, px = -0.33, pz = 0.05;
+    for (let i = 0; i < 5; i++) { const j = new THREE.Group(); j.position.set(i ? 0.14 : px, i ? 0 : 0.06, i ? 0 : pz); j.rotation.y = i ? 0.48 : -2.6; parent.add(j); const w = 0.09 - i * 0.008; B(j, 0.15, w, w, i === 4 ? fur2 : i % 2 ? fur2 : fur, 0.07, 0, 0, true); tail.push(j); parent = j; } }
+  const heartTex = toTex(cv(7, 6, (g2) => { fill(g2, '#ff5a7a', 1, 0, 2, 1); fill(g2, '#ff5a7a', 4, 0, 2, 1); fill(g2, '#ff5a7a', 0, 1, 7, 2); fill(g2, '#ff5a7a', 1, 3, 5, 1); fill(g2, '#ff5a7a', 2, 4, 3, 1); fill(g2, '#ff5a7a', 3, 5, 1, 1); fill(g2, '#ffc0cc', 1, 1, 1, 1); }), false);
+  const hearts = [0, 1, 2].map((i) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: heartTex, transparent: true, depthWrite: false, fog: false })); m.scale.setScalar(0.22); m.visible = false; g.add(m); return { m, s: i * 0.28 }; });
+  const catHit = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.9), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false })); catHit.position.set(fx - 2.25, 0.3, fz + 0.1); catHit.userData.prop = 'cat'; g.add(catHit);
+  let petT = -1, twitch = 0, twitchAt = 3, catT = 0;
   solid(fx - 2.65, fx - 1.85, fz - 0.3, fz + 0.5, 0.3);
   // the right wall: a writing desk with a chair, the chest, and the barrels and crates in the front corner
   { const ex = W1 - 0.55;
@@ -335,9 +352,10 @@ export function buildHideout(scene) {
     { id: 'journal', key: 'useJournal', label: 'Journal', color: '#c98a4b', rect: R(dx - 0.6, dx + 0.6, D0 + 1.2, D0 + 2), front: [X(dx), Z(D0 + 3.6)], labelAt: [X(dx), 2.9, Z(D0 + 1.6)] },
     { id: 'gallery', key: 'useGallery', label: 'Gallery', color: '#b0409a', rect: R(gx0, gx1, D0, D0 + 0.6), front: [X(7.48), Z(-5.3)], labelAt: [X(7.48), 4.9, Z(D0 + 0.4)] },
     { id: 'library', key: 'useLibrary', label: 'Library', color: '#b68cff', rect: R(-12, -6.0, 2.0, 7.0), front: [X(-7.4), Z(5.3)], labelAt: [X(-9.2), 3.5, Z(2.6)] },
+    { id: 'cat', key: 'petCat', range: 1.6, label: 'Cat', color: '#e08a3a', rect: R(fx - 2.65, fx - 1.85, fz - 0.3, fz + 0.5), front: [X(fx - 3.3), Z(fz + 0.1)], labelAt: [X(fx - 2.25), 1.3, Z(fz + 0.1)] },
     { id: 'exit', key: 'goUp', range: 1.4, label: 'Back to the Village', color: '#ffd060', rect: R(door.x - 1, door.x + 1, D0 - 0.6, D0 + 0.1), front: [X(door.x), Z(D0 + 1.4)], labelAt: [X(door.x), 4.3, Z(D0)] },
   ];
-  const pickables = [deck, lectern, libHit, ...frames, ...rack.map((r) => r.m)];
+  const pickables = [deck, lectern, libHit, catHit, ...frames, ...rack.map((r) => r.m)];
   const v = new THREE.Vector3();
   let current = null, lastSun = -1;
   return {
@@ -353,9 +371,19 @@ export function buildHideout(scene) {
       const p = 0.5 + Math.sin(time * 1.7) * 0.5; portal.material.opacity = 0.42 + p * 0.12; core.material.opacity = 0.18 + (1 - p) * 0.14;
       torches.forEach((t, i) => t.scale.set(1, 0.85 + Math.sin(time * 11 + i * 2) * 0.15, 1));
       if (playing) deckDisc.rotation.z = -time * 0.9;
-      bulbMat.forEach((m, i) => { m.opacity = night * (0.75 + Math.sin(time * 2 + i * 2.1) * 0.25); }); bulbLight.visible = night > 0.05;
+      bulbMat.forEach((m, i) => { m.opacity = night * (0.75 + Math.sin(time * 2 + i * 2.1) * 0.25); }); 
       fire.forEach((f2, i) => { f2.m.scale.y = 0.75 + Math.sin(time * (9 + i * 2.3) + i) * 0.18 + Math.sin(time * 23 + i * 5) * 0.07; });
-      catBody.scale.y = 1 + Math.sin(time * 1.4) * 0.04; catBody.position.y = 0;
+      // the cat: breathing, an ear twitch every few seconds and a lazy tail; petting wakes it for a few seconds
+      { const cdt = Math.min(0.1, Math.max(0, time - catT)); catT = time;
+        const pet = petT >= 0 ? Math.min(1, petT / 0.35) * Math.min(1, (3.2 - petT) / 0.6) : 0;
+        if (petT >= 0) { petT += cdt; if (petT > 3.2) petT = -1; }
+        catBody.scale.y = 1 + Math.sin(time * 1.3) * 0.035 * (1 - pet) + pet * 0.06 + (pet > 0 ? Math.sin(time * 40) * 0.006 : 0);
+        head.rotation.z = pet * 0.45 + Math.sin(time * 0.6) * 0.03; head.rotation.y = pet * Math.sin(time * 2) * 0.15;
+        shut.visible = pet < 0.4; awake.visible = pet >= 0.4;
+        if (time > twitchAt) { twitch = 1; twitchAt = time + 3 + Math.random() * 5; }
+        twitch = Math.max(0, twitch - cdt * 3); ears.forEach((e, i) => { e.rotation.x = (i ? -1 : 1) * (Math.sin(twitch * Math.PI * 3) * 0.25 * twitch) ; e.rotation.z = pet * 0.2; });
+        tail.forEach((j, i) => { if (i) j.rotation.y = 0.48 + Math.sin(time * (1.1 + pet * 4) - i * 0.7) * (0.06 + i * 0.03) * (1 + pet * 2.5); });
+        hearts.forEach((h) => { const k = petT >= 0 ? (petT - h.s) / 1.6 : -1; h.m.visible = k > 0 && k < 1; if (h.m.visible) { h.m.position.set(cat.position.x + 0.2 + Math.sin(k * 6 + h.s * 9) * 0.15, F + 0.7 + k * 1.1, cat.position.z + (h.s - 0.28) * 0.6); h.m.material.opacity = Math.sin(k * Math.PI); } }); }
       if (time - lastSun > 20 || lastSun < 0) { lastSun = time; const d = new Date(), h = d.getHours() + d.getMinutes() / 60, dx = Math.max(-1.6, Math.min(1.6, (12.5 - h) * 0.32)); shaftGeo.setAttribute('position', new THREE.Float32BufferAttribute(shaftPos(dx), 3)); patch.position.x = win.x + 0.4 + dx; }
       rack.forEach((r) => { r.halo.material.opacity = r.id === current ? (playing ? 0.35 + p * 0.15 : 0.18) : 0; });
       notes.forEach((n) => { const k = (time * 0.32 + n.s) % 1; n.m.visible = playing; v.set(mx - 0.1 + Math.sin(k * 6 + n.s * 9) * 0.45, 1.7 + k * 2.0 + F, mz + 0.5); n.m.position.copy(v); n.m.material.opacity = Math.sin(k * Math.PI); });
@@ -363,6 +391,7 @@ export function buildHideout(scene) {
       book.position.y = 1.35 + F + Math.sin(time * 1.6) * 0.07; book.rotation.y = Math.sin(time * 0.5) * 0.9; const o = 0.35 + Math.sin(time * 1.2) * 0.3; pageL.rotation.z = o; pageR.rotation.z = -o;
       glyphs.forEach((gl) => { const k = (time * 0.22 + gl.s) % 1; gl.m.position.set(gl.sx + (lib.x - gl.sx) * k, gl.sy + F + Math.sin(k * Math.PI) * 0.6 + (1.2 - gl.sy) * k, gl.sz + (lib.z - gl.sz) * k); gl.m.material.opacity = Math.sin(k * Math.PI) * 0.9; });
     },
+    pet() { petT = 0; },
     setDisc(id) { const r = RECORDS.find((q) => q.id === id) || RECORDS[0]; current = r.id; deckDisc.material = coverMat(r); },
   };
 }

@@ -218,19 +218,20 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
       const b = el('button', 'spine'); b.setAttribute('aria-label', bk.title + ' by ' + bk.author);
       b.style.setProperty('--bg', bk.spine.bg); b.style.setProperty('--fg', bk.spine.fg); b.style.setProperty('--band', bk.spine.band);
       b.style.setProperty('--h', (86 + ((i * 37) % 14)) + '%'); b.style.setProperty('--w', (54 + ((i * 23) % 16)) + 'px');
-      b.append(el('i', 'sp-band'), el('span', 'sp-title', bk.title), el('span', 'sp-author', bk.author.split(' ').slice(-1)[0]), el('i', 'sp-band b'));
+      b.append(el('i', 'sp-band'), el('span', 'sp-title', bk.spineTitle || bk.title), el('span', 'sp-author', bk.author.split(' ').slice(-1)[0]), el('i', 'sp-band b'));
       b.onclick = () => pick(bk.id); row.appendChild(b); spines[bk.id] = b;
       const im = new Image(); im.src = BASE + 'assets/images/books/' + bk.cover; // fetch the covers ahead
     });
-    // a few blank books to fill out the shelf
-    ['#5a3a1f', '#2f4a3a', '#6b2a2a'].forEach((c, i) => { const d = el('i', 'spine blank'); d.style.setProperty('--bg', c); d.style.setProperty('--h', (80 + i * 6) + '%'); d.style.setProperty('--w', (30 + i * 6) + 'px'); row.appendChild(d); });
-    let current = null, moving = false;
+    let current = null, moving = false, queued = null;
     function fill(bk) {
       coverImg.src = BASE + 'assets/images/books/' + bk.cover; libp.style.setProperty('--page', bk.page);
+      // dark pages get light text, light pages dark text, so the card always reads clearly
+      const n = parseInt(bk.page.slice(1), 16), lum = (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
+      libp.classList.toggle('dark', lum < 0.5);
       lk.textContent = 'From the shelf · No. ' + String(BOOKS.indexOf(bk) + 1).padStart(2, '0'); lt.textContent = bk.title; la.textContent = bk.author; ln.textContent = bk.note || ''; ln.hidden = !bk.note; lq.textContent = bk.takeaway;
     }
     async function pick(id) {
-      if (moving || id === current) return; const bk = BOOKS.find((q) => q.id === id); if (!bk) return; moving = true; sound.play('near');
+      if (moving) { queued = id; return; } if (id === current) return; const bk = BOOKS.find((q) => q.id === id); if (!bk) return; moving = true; sound.play('near');
       for (const k in spines) spines[k].classList.toggle('on', k === id);
       libp.classList.add('picked');
       if (current) await Promise.all([anim(card, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(12px)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).finished]);
@@ -239,6 +240,7 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
       anim(card, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.25,1)', fill: 'forwards' });
       await anim(coverBox, [{ transform: 'perspective(900px) rotateY(-70deg) translateX(-30px)', opacity: 0 }, { transform: 'perspective(900px) rotateY(-14deg)', opacity: 1 }], { duration: 560, easing: 'cubic-bezier(.2,.8,.25,1)', fill: 'forwards' }).finished;
       moving = false;
+      if (queued) { const q = queued; queued = null; pick(q); }
     }
     panels.library.onShow = () => { if (!current) pick(BOOKS[0].id); };
     panels.library.key = (e) => { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return false; const i = BOOKS.findIndex((q) => q.id === current) + (e.key === 'ArrowRight' ? 1 : -1); if (i >= 0 && i < BOOKS.length) pick(BOOKS[i].id); return true; };

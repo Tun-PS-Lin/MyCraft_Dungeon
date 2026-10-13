@@ -52,28 +52,37 @@ export const GALLERY = [
 
 /* ── the library ──
    The books on the shelves round the enchanting table. cover: an image in public/assets/images/books/.
-   spine: the colours of the book's spine in the shelf menu. takeaway: one line on why it matters.
+   spine: the colours of the book's spine in the shelf menu; spineTitle: a shorter title for the spine. takeaway: one line on why it matters.
    The takeaways here are drafts: rewrite them in your own words. */
 export const BOOKS = [
-  { id: 'poor-charlie', title: 'Poor Charlie’s Almanack', author: 'Charles T. Munger', note: 'Edited by Peter D. Kaufman', cover: 'poor-charlie.webp',
+  { id: 'poor-charlie', spineTitle: 'Poor Charlie\u2019s Almanack', title: 'Poor Charlie’s Almanack', author: 'Charles T. Munger', note: 'Edited by Peter D. Kaufman', cover: 'poor-charlie.webp',
     spine: { bg: '#d9cf8a', fg: '#2a2f86', band: '#2a2f86' }, page: '#b9b06f',
     takeaway: 'Build a latticework of models from many disciplines, and invert: avoid stupidity before reaching for brilliance.' },
-  { id: 'most-important', title: 'The Most Important Thing', author: 'Howard Marks', note: 'Illuminated edition', cover: 'most-important-thing.webp',
+  { id: 'most-important', spineTitle: 'The Most Important Thing', title: 'The Most Important Thing', author: 'Howard Marks', note: 'Illuminated edition', cover: 'most-important-thing.webp',
     spine: { bg: '#f3ead2', fg: '#1d6b3a', band: '#1d6b3a' }, page: '#e8dcb6',
     takeaway: 'Risk is more things happening than will happen: know where we stand in the cycle, and let second-level thinking set the price.' },
-  { id: 'four-pillars', title: 'The Four Pillars of Investing', author: 'William J. Bernstein', cover: 'four-pillars.webp',
+  { id: 'four-pillars', spineTitle: 'Four Pillars of Investing', title: 'The Four Pillars of Investing', author: 'William J. Bernstein', cover: 'four-pillars.webp',
     spine: { bg: '#f1efe6', fg: '#b52a26', band: '#2b2f9a' }, page: '#d9d4c6',
     takeaway: 'Theory, history, psychology and the business itself: own the market cheaply, and stay the course when it hurts.' },
-  { id: 'invent-wander', title: 'Invent & Wander', author: 'Jeff Bezos', note: 'Introduction by Walter Isaacson', cover: 'invent-wander.webp',
+  { id: 'invent-wander', spineTitle: 'Invent & Wander', title: 'Invent & Wander', author: 'Jeff Bezos', note: 'Introduction by Walter Isaacson', cover: 'invent-wander.webp',
     spine: { bg: '#f6f3ea', fg: '#22a8e0', band: '#c8955a' }, page: '#e6dccb',
     takeaway: 'Focus on what won’t change, treat most decisions as two-way doors, and be willing to be misunderstood for a long time.' },
-  { id: 'zero-to-one', title: 'Zero to One', author: 'Peter Thiel', note: 'With Blake Masters', cover: 'zero-to-one.webp',
+  { id: 'zero-to-one', spineTitle: 'Zero to One', title: 'Zero to One', author: 'Peter Thiel', note: 'With Blake Masters', cover: 'zero-to-one.webp',
     spine: { bg: '#7fb0dc', fg: '#141a24', band: '#f1efe6' }, page: '#a9c8e6',
     takeaway: 'Competition is for losers: build something new for a small market that badly wants it, then expand from a monopoly.' },
-  { id: 'elon-musk', title: 'Elon Musk', author: 'Ashlee Vance', cover: 'elon-musk.webp',
+  { id: 'elon-musk', spineTitle: 'Elon Musk', title: 'Elon Musk', author: 'Ashlee Vance', cover: 'elon-musk.webp',
     spine: { bg: '#141418', fg: '#d9b25a', band: '#d9b25a' }, page: '#3a3a40',
     takeaway: 'Reason from first principles and pick goals big enough to bend the cost curve, then outwork everyone getting there.' },
-  { id: 'aiming-high', title: 'Aiming High', author: 'Atsuo Inoue', note: 'Masayoshi Son, SoftBank, and Disrupting Silicon Valley', cover: 'aiming-high.webp',
+  { id: 'aiming-high', spineTitle: 'Aiming High', title: 'Aiming High', author: 'Atsuo Inoue', note: 'Masayoshi Son, SoftBank, and Disrupting Silicon Valley', cover: 'aiming-high.webp',
     spine: { bg: '#0d0d10', fg: '#f1efe6', band: '#e0303a' }, page: '#2a2a30',
     takeaway: 'Bet early and big on the next technology wave, think in decades, and survive the drawdowns that come with it.' },
+  { id: 'hitchhikers', spineTitle: 'Hitchhiker\u2019s Guide', title: 'The Hitchhiker\u2019s Guide to the Galaxy', author: 'Douglas Adams', note: 'Five novels in one volume', cover: 'hitchhikers.webp',
+    spine: { bg: '#1b2140', fg: '#7ccf4a', band: '#f6f1e3' }, page: '#232a4a',
+    takeaway: 'Don\u2019t panic: the universe is absurd, so ask better questions, keep your sense of humour, and always know where your towel is.' },
+  { id: 'ready-player-one', spineTitle: 'Ready Player One', title: 'Ready Player One', author: 'Ernest Cline', cover: 'ready-player-one.webp',
+    spine: { bg: '#e8194a', fg: '#ffd27a', band: '#ffd27a' }, page: '#f2c46e',
+    takeaway: 'Obsessive curiosity is an edge: know the history of the game better than anyone and the hidden keys start to show.' },
+  { id: 'the-martian', spineTitle: 'The Martian', title: 'The Martian', author: 'Andy Weir', cover: 'the-martian.webp',
+    spine: { bg: '#d8501f', fg: '#fbf1e6', band: '#3a1a10' }, page: '#e8783a',
+    takeaway: 'Work the problem: solve one thing, then the next, and enough of them in a row is how you get home.' },
 ];
