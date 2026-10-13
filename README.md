@@ -4,7 +4,7 @@
 
 **My portfolio, built as a little blocky village you can walk around.**
 
-[**Play it**](https://portfolio.alacrityresearch.xyz) · [Simple version](https://portfolio.alacrityresearch.xyz/plain.html) · [Say hello](mailto:tunpyaysonelin@gmail.com)
+[**Play it at portfolio.alacrityresearch.xyz**](https://portfolio.alacrityresearch.xyz) · [Simple version](https://portfolio.alacrityresearch.xyz/plain.html) · [Say hello](mailto:tunpyaysonelin@gmail.com)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-d9a93a)](LICENSE)
 [![three.js r128](https://img.shields.io/badge/three.js-r128-2f66c4)](https://threejs.org)
@@ -102,12 +102,18 @@ in `src/pond-content.js`, and the photos in `public/assets/images/photos/`.
 
 ## On display
 
-| Stall | What it is | |
-|---|---|---|
-| **Mingalar News** | A media organization for Myanmar migrants in Thailand, expanding into data-driven market insights on this community. | [mingalar.news](https://mingalar.news) |
-| **Alacrity Research** | An internal CRM to visualize and manage real estate projects, with an AI voice assistant that learns as you use it. | [map.alacrityresearch.xyz](https://map.alacrityresearch.xyz) |
-| **Urban Expansion** | A mathematical framework for how cities grow outward, tested on Yangon. | [Read the paper](https://drive.google.com/file/d/12T6Tg6l2Z3MKGV9wCo5UdtmauGHceIt2/view?usp=sharing) |
-| **Urban Simulation** | A simulated heat map for investments based on the findings of Urban Research. | Coming soon |
+Each stall opens a card with a screenshot, a short story and a link.
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="docs/img/readme/stall-mingalar.jpg" alt="The Mingalar News stall card"><br><b>Mingalar News.</b> A media organization for Myanmar migrants in Thailand, expanding into data-driven market insights on this community.<br><a href="https://mingalar.news">mingalar.news</a></td>
+<td width="50%" valign="top"><img src="docs/img/readme/stall-alacrity.jpg" alt="The Alacrity Research stall card"><br><b>Alacrity Research.</b> An internal CRM to visualize and manage real estate projects, with an AI voice assistant that learns as you use it.<br><a href="https://map.alacrityresearch.xyz">map.alacrityresearch.xyz</a></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/img/readme/stall-urban.jpg" alt="The Urban Expansion stall card"><br><b>Urban Expansion.</b> A mathematical framework for how cities grow outward, tested on Yangon.<br><a href="https://drive.google.com/file/d/12T6Tg6l2Z3MKGV9wCo5UdtmauGHceIt2/view?usp=sharing">Read the paper</a></td>
+<td width="50%" valign="top"><img src="docs/img/readme/stall-urbansim.jpg" alt="The Urban Simulation stall card"><br><b>Urban Simulation.</b> A simulated heat map for investments based on the findings of Urban Research.<br>Coming soon</td>
+</tr>
+</table>
 
 <br>
 
@@ -116,8 +122,8 @@ in `src/pond-content.js`, and the photos in `public/assets/images/photos/`.
 <img src="docs/img/readme/board.jpg" alt="The agent board menu" width="100%">
 
 Four villagers work in the hall, one for each project. The **agent board** at the end of the room
-has a card for each of them, with what they do, who is at their desk or on a break, and what they did last. Talk to any of them to try
-what they do.
+has a card for each of them: what they do, whether they are at their desk or on a break, and what
+they did last. Talk to any of them to try what they do.
 
 <table>
 <tr>
@@ -161,7 +167,7 @@ The menu in the top-right corner lists every place in the village and walks you 
 
 ## Run it yourself
 
-You need [Node.js](https://nodejs.org) 18 or newer.
+You need [Node.js](https://nodejs.org) 20.19 or newer.
 
 ```bash
 git clone https://github.com/Tun-PS-Lin/MyCraft_Dungeon
@@ -195,9 +201,10 @@ Almost everything you would change lives in **`src/config.js`**:
 | `LANGUAGE_TOGGLE` | `true` brings back the English and Burmese button. The Burmese text is all in place. |
 
 How the agents look is set in `LOOKS` at the top of `src/agents.js`; their demos are in
-`src/demos.js`. The Hideout's records, journal entries, paintings and books are in **`src/hideout-content.js`**, and the pond's facts in **`src/pond-content.js`**:
-put your songs in `public/assets/sounds/`, CD art in `public/assets/images/cds/`, and list them under `RECORDS`. The simple version (`plain.html`) is built from the same config, so it never falls
-out of step with the village.
+`src/demos.js`. The Hideout's records, journal entries, paintings and books are in
+**`src/hideout-content.js`**, and the pond's facts in **`src/pond-content.js`**. Songs go in
+`public/assets/sounds/` and CD art in `public/assets/images/cds/`, listed under `RECORDS`. The simple
+version (`plain.html`) is built from the same config, so it never falls out of step with the village.
 
 <details>
 <summary><b>Changing the address or the link preview</b></summary>
@@ -299,7 +306,6 @@ src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune ei
 src/style.css       interface styling
 src/plain.js        builds the simple version from the same config
 src/plain.css       styling for the simple version
-scripts/build-preview.mjs   optional: bundles everything into one HTML file
 docs/img/readme/    the screenshots used in this README
 ```
 

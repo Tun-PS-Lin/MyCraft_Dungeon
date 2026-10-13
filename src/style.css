@@ -698,7 +698,15 @@ body:not(.touch) .touch-only,body.touch .desk-only{display:none}
 .pond-card{--deep:#123a4a;--water:#1d5a6e;--foam:#eaf6f2;--wood:#6b4422;position:relative;box-sizing:border-box;width:min(760px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;
   background:var(--deep);border:4px solid #2a1a10;box-shadow:inset 0 0 0 3px var(--wood),0 14px 0 rgba(0,0,0,.35);color:var(--foam);
   transform:translateY(18px) scale(.97);opacity:0;transition:opacity .2s ease,transform .26s ease-in;will-change:transform,opacity}
-.hx.show .pond-card{opacity:1;transform:none;transition:opacity .3s ease,transform .46s var(--ease)}
+.hx.show .pond-card{opacity:1;transform:none;transition:opacity .35s ease .06s,transform .65s var(--ease) .06s}
+/* the catch comes in: a lighter veil so the pond stays in view, then the card rises and its parts follow */
+.hx-pond{background:rgba(6,10,14,.42);transition:opacity .3s ease,visibility 0s .32s}
+.hx-pond.show{transition:opacity .45s ease}
+.hx-pond .pond-card{transform:translateY(34px) scale(.94);transition:opacity .22s ease-in,transform .3s cubic-bezier(.5,0,.75,0)}
+.hx-pond .pond-card > *{opacity:0;transform:translateY(10px);transition:opacity .15s ease,transform .2s ease}
+.hx-pond.show .pond-card > *{opacity:1;transform:none;transition:opacity .4s ease,transform .55s var(--ease)}
+.hx-pond.show .pond-head{transition-delay:.16s}.hx-pond.show .pond-body{transition-delay:.24s}.hx-pond.show .pond-foot{transition-delay:.32s}
+.hx-pond.show .pond-x{transition-delay:.3s}
 .pond-card > *{flex-shrink:0}
 .pond-x{position:absolute;top:12px;right:12px;z-index:2}
 .pond-head{display:flex;align-items:center;gap:16px;padding:20px 64px 16px 22px;background:linear-gradient(180deg,var(--water),var(--deep));
@@ -764,7 +772,7 @@ body:not(.touch) .touch-only,body.touch .desk-only{display:none}
   .pond-foot{padding:10px 16px 14px}
   .pond-lb-arrow{width:40px;height:56px;margin-top:-28px;font-size:30px}
 }
-@media (prefers-reduced-motion:reduce){ .pond-track{animation-duration:200s} .pond-steam img,.pond-fish{animation:none}.pond-steam img:first-child{opacity:.9} }
+@media (prefers-reduced-motion:reduce){ .hx-pond .pond-card,.hx-pond .pond-card > *{transition-duration:.01s!important;transition-delay:0s!important} .pond-track{animation-duration:200s} .pond-steam img,.pond-fish{animation:none}.pond-steam img:first-child{opacity:.9} }
 
 /* ── phones and short screens ── */
 body.overlay #touch,body.hudopen #touch{opacity:0;pointer-events:none}

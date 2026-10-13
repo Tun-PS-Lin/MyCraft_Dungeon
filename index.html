@@ -30,7 +30,6 @@
 <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
-<!-- app:start -->
 <canvas id="world" aria-label="A small blocky village with market stalls and a town hall. Walk to a stall and press E to read about a project."></canvas>
 <div id="atmo"><div class="haze top"></div><div class="haze bottom"></div></div>
 <div id="labels"></div>
@@ -139,7 +138,6 @@
   <i id="introLoad" role="progressbar" aria-label="Loading the village"><b></b></i><em id="introState">Building the village…</em></div>
   <a id="introPlain" href="./plain.html">Simple version</a></div>
 <noscript><p class="noscript">This village needs JavaScript. <a href="./plain.html">Open the simple version</a>.</p></noscript>
-<!-- app:end -->
 <script>
   // if the village fails to start, offer the simple version on the title card instead of a blank page
   addEventListener('error', function () { document.documentElement.classList.add('broken'); var s = document.getElementById('introState'); if (s) s.textContent = 'The village could not start on this device.'; });

@@ -173,9 +173,9 @@ let underground = false, travelling = false;
 /* the fishing pond: cast from the end of the dock and something about me bites */
 const pondUI = createPondUI({ focusGame: () => canvas.focus({ preventScroll: true }), onCastAgain: () => goFish() });
 function goFish() {
-  if (pond.fishing()) return; auto = null; ui.closeMenu(true);
-  P.vx = P.vz = 0; P.yaw = Math.PI / 2; sound.play('cast');
-  pond.fish(P, () => { sound.play('splash'); setTimeout(() => { const id = pondUI.next(); pondUI.show(id); disc.add('facts', id); }, 280); });
+  if (pond.fishing() && !pond.holding()) return; auto = null; ui.closeMenu(true);
+  P.vx = P.vz = 0; setTimeout(() => sound.play('cast'), pond.holding() ? 250 : 650); // the whoosh lands with the throw
+  pond.fish(P, () => { sound.play('splash'); const id = pondUI.next(); pondUI.show(id); disc.add('facts', id); });
 }
 const paused = () => ui.paused() || hx.isOpen() || travelling || pondUI.isOpen() || pond.fishing() || disc.isOpen() || minimap.isBig();
 ui.addPlace('cave', 'The Hideout', '#ffd060', () => goTo('hideout'));
@@ -460,6 +460,7 @@ function update(dt) {
   player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors) * (underground ? 0 : 1));
   cave.update(time); hideout.update(time, ease(night), music.isOn());
   if (!underground) pond.update(time, dt, ease(night));
+  if (pond.holding() && !pondUI.isOpen()) pond.release(); // the card closed: put the rod away
   // listening mode
   const byDeck = underground && music.isOn() && rectDistance(hideout.musicRect, P.x, P.z) < 2.8;
   if (byDeck && mag <= 0.15 && !auto && speed < 0.2 && rollT < 0 && !paused()) listenT += dt; else listenT = 0;
@@ -552,12 +553,9 @@ function frame(now) {
 function start(saved) {
   if (saved && typeof saved.x === 'number' && !blocked(saved.x, saved.z, floorAt(saved.x, saved.z))) { P.x = saved.x; P.z = saved.z; P.y = P.visY = floorAt(P.x, P.z); P.yaw = saved.yaw || 0; focus.set(P.x, 0, P.z - 1.5); }
   canvas.tabIndex = 0;
-  // a returning preview session skips the opening; a fresh visit glides in over about two seconds
+  // a saved position skips the opening; a fresh visit glides in over about two seconds
   if (saved && typeof saved.x === 'number') ui.endIntro(); else { zoom = TUNING.zoomStart * 1.55; opening = 2.8; titleFor = 1.3; for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); }, { once: true }); }
   window.__village = { disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
-// Only matters inside the Claude preview: keeps your place when the page is republished.
-const hot = window.claude && window.claude.hot;
-if (hot && hot.snapshot) hot.snapshot(() => ({ x: P.x, z: P.z, yaw: P.yaw }));
-if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+start({});
