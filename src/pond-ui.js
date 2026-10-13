@@ -49,8 +49,9 @@ export function createPondUI({ focusGame, onCastAgain }) {
       f.photos.forEach((p) => { const pre = new Image(); pre.src = PHOTO(p.file); }); // fetch the full-size ones ahead
     },
     coffee(f) {
-      const stage = el('div', 'pond-coffee'), cup = img(FACT('coffee.webp'), 'A pixel-art cup of coffee with coffee beans', 'pond-cup');
-      const steam = el('div', 'pond-steam'); for (let i = 0; i < 6; i++) { const s = el('i'); s.style.setProperty('--i', i); steam.appendChild(s); }
+      const stage = el('div', 'pond-coffee'), cup = img(FACT('coffee.webp'), 'A pixel-art cup of coffee on a saucer, with coffee beans', 'pond-cup');
+      // two copies of the steam drift up out of step, so there is always a wisp rising
+      const steam = el('div', 'pond-steam'); for (let i = 0; i < 2; i++) steam.appendChild(img(FACT('steam.webp'), ''));
       stage.append(cup, steam); body.append(stage, el('p', 'pond-note', f.note));
     },
     writing(f) {

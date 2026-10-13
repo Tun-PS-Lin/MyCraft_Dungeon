@@ -1,6 +1,7 @@
 // Entry point: builds the scene, reads input and runs the game loop.
 import * as THREE from 'three';
-import { STALLS, TUNING, HALL, FLOOR, CAVE } from './config.js';
+import { STALLS, TUNING, HALL, FLOOR, CAVE, POND } from './config.js';
+import { AGENTS } from './config.js';
 import { buildWorld, refreshSlab } from './world.js';
 import { buildStalls } from './stalls.js';
 import { buildHall } from './hall.js';
@@ -8,7 +9,7 @@ import { createAgents } from './agents.js';
 import { createPlayer } from './player.js';
 import { createChickens, createWolf } from './critters.js';
 import { createAmbience } from './ambience.js';
-import { blocked, groundAt, floorAt, rectDistance, insideHall, inCave, HIDEOUT_EXIT } from './collision.js';
+import { blocked, groundAt, floorAt, rectDistance, insideHall, inCave, inPondWater, HIDEOUT_EXIT } from './collision.js';
 import { findPath } from './nav.js';
 import { createUI } from './ui.js';
 import { sound, music } from './audio.js';
@@ -16,12 +17,14 @@ import { buildCave, buildHideout } from './hideout.js';
 import { createHideoutUI } from './hideout-ui.js';
 import { buildPond } from './pond.js';
 import { createPondUI } from './pond-ui.js';
+import { createDiscoveries } from './discover.js';
+import { createMinimap } from './minimap.js';
 import { RECORDS } from './hideout-content.js';
 import { BASE } from './base.js';
 import { t, tr } from './i18n.js';
 import { lamps, addLamp, MOOD } from './lights.js';
 import { cv } from './textures.js';
-import { drawSprite, drawFace, SPRITE } from './figures.js';
+import { drawSprite, drawFace, SPRITE, createFigure } from './figures.js';
 import { inject as analytics } from '@vercel/analytics';
 
 // Page views for Vercel Web Analytics (turn it on in the Vercel project, under Analytics).
@@ -94,7 +97,9 @@ let bakeFrames = 4; // draw the sun shadows over the first few frames, then keep
 const visited = new Set((store.get('pv-visited') || '').split(',').filter((id) => STALLS.some((s) => s.id === id)));
 let wolfUnlocked = store.get('pv-wolf') === 'yes';
 function visit(id) {
+  if (id === 'about') discover('about');
   if (visited.has(id)) return; visited.add(id); store.set('pv-visited', [...visited].join(','));
+  disc.setStalls([...visited].filter((v) => v !== 'about'));
   if (!wolfUnlocked && STALLS.every((s) => s.about || visited.has(s.id))) pendingReward = true;
   ui.setProgress(visited, wolfUnlocked);
 }
@@ -105,16 +110,46 @@ let wardrobePrev = null;
 const ui = createUI(canvas, {
   goTo,
   pickOutfit: (id) => player.setOutfit(id, false),
-  endWardrobe: (keep) => { player.setOutfit(keep ? player.outfit() : wardrobePrev, true); },
+  endWardrobe: (keep) => { if (keep && player.outfit() !== wardrobePrev) discover('outfit'); player.setOutfit(keep ? player.outfit() : wardrobePrev, true); },
   languageChanged: () => { refreshSlab(); boardSig = ''; },
   agentState: (id) => { const n = agents.list.find((q) => q.id === id); return { status: agents.status(n), where: agents.where(n), last: agents.lastRun(n) }; },
   agentLog: () => agents.log,
   agentDesign: (id) => agents.list.find((q) => q.id === id).design,
-  callAgent: (id) => agents.call(id),
+  callAgent: (id) => { agents.call(id); discover('call'); },
+  agentPortrait,
+  discovered: (id) => discover(id),
   toggleTheme: () => { nightTarget = nightTarget ? 0 : 1; try { sessionStorage.setItem('pv-theme', nightTarget ? 'dark' : 'light'); } catch (e) { /* ignore */ } return nightTarget === 1; },
 });
 ui.setProgress(visited, wolfUnlocked);
 if (wolfUnlocked) wolf.activate(P);
+
+/* ── the discovery checklist and the mini-map, together in the top-left corner ── */
+const focusGame = () => canvas.focus({ preventScroll: true });
+const disc = createDiscoveries({ toast: (o) => ui.toast(o), focusGame, stallCount: STALLS.filter((q) => !q.about).length,
+  go: (to) => {
+    if (to === 'nextStall') { const s = STALLS.find((q) => !q.about && !visited.has(q.id)); if (s) goTo(s.id); }
+    else if (to === 'nextAgent') { const a = AGENTS.find((q) => !disc.collected('agents').has(q.id)); if (a) goTo('agent:' + a.id); }
+    else if (to === 'night') { if (!nightTarget) document.getElementById('themeBtn').click(); }
+    else goTo(to);
+  } });
+function discover(id) { disc.mark(id); }
+disc.setStalls([...visited].filter((v) => v !== 'about'));
+const hud = document.createElement('div'); hud.id = 'hud';
+const minimap = createMinimap({
+  places: () => [
+    ...STALLS.map((s) => ({ id: s.id, x: s.pos[0], z: s.pos[1], color: s.color, label: tr(s, 'label'), found: visited.has(s.id), area: 'village' })),
+    { id: 'hall', x: (HALL.x0 + HALL.x1) / 2, z: (HALL.z0 + HALL.z1) / 2, color: '#b9b6ae', label: 'Town hall', found: disc.has('board'), area: 'village' },
+    { id: 'hideout', x: CAVE.x, z: CAVE.z0 + 0.8, color: '#ffd060', label: 'The Hideout', found: disc.has('hideout'), area: 'village' },
+    { id: 'pond', x: POND.x, z: POND.z, color: '#62c8ff', label: 'Fishing pond', found: disc.has('facts'), area: 'village' },
+    ...hideout.props.map((p) => ({ id: 'hx:' + p.id, x: (p.rect.x0 + p.rect.x1) / 2, z: (p.rect.z0 + p.rect.z1) / 2, color: p.color, label: p.label, found: p.id === 'exit' || disc.has(p.id === 'music' ? 'cd' : p.id), area: 'hideout' })),
+  ],
+  player: () => ({ x: P.x, z: P.z, yaw: P.yaw, under: underground }),
+  others: () => agents.list.map((n) => ({ x: n.x, z: n.z, color: n.color })),
+  go: (id) => goTo(id),
+  walk: (x, z) => { if (walkTo(x, z) && auto) { const end = auto.path[auto.path.length - 1]; marker.position.set(end[0], floorAt(end[0], end[1]) + 0.06, end[1]); markerLife = 1; sound.play('near'); } },
+  focusGame,
+});
+hud.append(disc.button, disc.chip); document.body.append(minimap.el, hud, minimap.scrim);
 
 /* ── the Hideout: the cave at the bottom of the square leads to a private room underground ── */
 // the Scholar's Lantern: earned by reading every journal entry; the player carries it and it lights the way
@@ -123,7 +158,7 @@ const torchLamp = lamps.find((l) => l.light === torch);
 function lightLantern() { player.setLantern(true); torchLamp.day = 0.45; torchLamp.night = 1.7; torch.distance = 8.5; torch.color.set('#ffd27a'); }
 if (lantern) lightLantern();
 const LANTERN_ICON = (g) => { const f = (c, x, y, w, h) => { g.fillStyle = c; g.fillRect(x, y, w, h); }; f('#2a2019', 7, 0, 2, 2); f('#2a2019', 4, 2, 8, 2); f('#ffd27a', 5, 4, 6, 7); f('#fff2b0', 7, 5, 2, 4); f('#2a2019', 4, 11, 8, 2); f('#2a2019', 4, 4, 1, 7); f('#2a2019', 11, 4, 1, 7); };
-const hx = createHideoutUI({ onDisc: (r) => hideout.setDisc(r.id), focusGame: () => canvas.focus({ preventScroll: true }),
+const hx = createHideoutUI({ onDisc: (r) => { hideout.setDisc(r.id); discover('cd'); }, focusGame: () => canvas.focus({ preventScroll: true }),
   onAllRead: () => { if (lantern) return; lantern = true; store.set('pv-lantern', 'yes'); lightLantern(); setTimeout(() => { ui.toast({ title: 'Scholar\u2019s Lantern', text: 'You read every journal entry. A lantern now lights your way.', icon: LANTERN_ICON }); sound.play('achieve'); }, 400); } });
 
 /* listening mode: stand by the CD player while a CD plays, and after a few quiet seconds the camera
@@ -140,9 +175,9 @@ const pondUI = createPondUI({ focusGame: () => canvas.focus({ preventScroll: tru
 function goFish() {
   if (pond.fishing()) return; auto = null; ui.closeMenu(true);
   P.vx = P.vz = 0; P.yaw = Math.PI / 2; sound.play('cast');
-  pond.fish(P, () => { sound.play('splash'); setTimeout(() => pondUI.show(pondUI.next()), 280); });
+  pond.fish(P, () => { sound.play('splash'); setTimeout(() => { const id = pondUI.next(); pondUI.show(id); disc.add('facts', id); }, 280); });
 }
-const paused = () => ui.paused() || hx.isOpen() || travelling || pondUI.isOpen() || pond.fishing();
+const paused = () => ui.paused() || hx.isOpen() || travelling || pondUI.isOpen() || pond.fishing() || disc.isOpen() || minimap.isBig();
 ui.addPlace('cave', 'The Hideout', '#ffd060', () => goTo('hideout'));
 ui.addPlace('pond', 'Fishing Pond', '#62c8ff', () => goTo('pond'));
 for (const p of hideout.props) ui.addPlace('hx:' + p.id, p.label, p.color, () => goTo('hx:' + p.id));
@@ -155,12 +190,12 @@ function travel(down, then) {
     underground = down; village.visible = !down; hideoutRoot.visible = down;
     if (down) { P.x = hideout.arrive[0]; P.z = hideout.arrive[1]; P.yaw = 0; } else { P.x = cave.top[0]; P.z = cave.top[1] - 0.6; P.yaw = Math.PI; }
     P.vx = P.vz = P.vy = 0; P.y = P.visY = floorAt(P.x, P.z); focus.set(P.x, 0, P.z - 1.5 * zoom);
-    setTimeout(() => { veil.classList.remove('show'); travelling = false; if (then) then(); }, 260);
+    setTimeout(() => { veil.classList.remove('show'); travelling = false; if (down) discover('hideout'); if (then) then(); }, 260);
   }, 480);
 }
 function useProp(id) {
   auto = null;
-  if (id === 'exit') travel(false); else if (id === 'cat') { hideout.pet(); sound.play('meow'); } else hx.show(id);
+  if (id === 'exit') travel(false); else if (id === 'cat') { hideout.pet(); sound.play('meow'); discover('cat'); } else { hx.show(id); if (id !== 'music') discover(id); }
 }
 
 function openStall(s) {
@@ -168,7 +203,31 @@ function openStall(s) {
   if (s.kind === 'outfits') { wardrobePrev = player.outfit(); ui.openWardrobe(wardrobePrev); } else ui.openCard(s.id);
   visit(s.id);
 }
-function talkTo(n) { auto = null; ui.openChat(n, n.design); }
+function talkTo(n) { auto = null; ui.openChat(n, n.design); disc.add('agents', n.id); }
+
+/* ── a 3D portrait of an agent for the board menu: the same blocky figure, turned three-quarters,
+   drawn once into an off-screen picture ── */
+const portraits = {};
+function agentPortrait(id) {
+  if (portraits[id]) return portraits[id];
+  const n = agents.list.find((q) => q.id === id), W = 300, H = 420;
+  const fig = createFigure(n.design, { nose: true }); fig.pose(0, 0, 0.4);
+  fig.parts.armL.rotation.x = 0.1; fig.parts.armR.rotation.x = -0.08; fig.parts.head.rotation.y = 0.12;
+  fig.group.rotation.y = -0.5;
+  const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#b8a684', 0.95));
+  const key = new THREE.DirectionalLight('#fff3e0', 0.85); key.position.set(-3, 4, 6); sc.add(key, fig.group);
+  const cam = new THREE.PerspectiveCamera(16, W / H, 0.1, 40); cam.position.set(0, 1.35, 10); cam.lookAt(0, 1.1, 0);
+  const rt = new THREE.WebGLRenderTarget(W, H); rt.texture.encoding = THREE.sRGBEncoding;
+  const prevRT = renderer.getRenderTarget(), prevC = new THREE.Color(), prevA = renderer.getClearAlpha(); renderer.getClearColor(prevC);
+  renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(sc, cam);
+  const buf = new Uint8Array(W * H * 4); renderer.readRenderTargetPixels(rt, 0, 0, W, H, buf);
+  renderer.setRenderTarget(prevRT); renderer.setClearColor(prevC, prevA); rt.dispose();
+  fig.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), img = g.createImageData(W, H);
+  for (let y = 0; y < H; y++) img.data.set(buf.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4); // the picture comes out upside down
+  g.putImageData(img, 0, 0);
+  return (portraits[id] = c);
+}
 
 /* ── the agent board in the hall: repainted whenever somebody's status changes ── */
 const sprites = {}, faces = {}; for (const n of agents.list) { sprites[n.id] = cv(SPRITE.w, SPRITE.h, (g) => drawSprite(g, n.design)); faces[n.id] = cv(16, 16, (g) => drawFace(g, n.design)); }
@@ -195,6 +254,8 @@ marker.rotation.x = -Math.PI / 2; marker.renderOrder = 3; scene.add(marker);
 let markerLife = 0;
 const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitPoint = new THREE.Vector3();
 function tapGround() {
+  // tapping the water goes fishing
+  if (!underground) { ground.constant = -FLOOR; if (ray.ray.intersectPlane(ground, hitPoint) && inPondWater(hitPoint.x, hitPoint.z)) { goTo('pond'); return; } }
   // the ray is already aimed by pick(); try the hall floor first when the roof is off, then the square
   for (const y of hall.openness() > 0.5 ? [HALL.floor, FLOOR] : [FLOOR]) {
     ground.constant = -y; if (!ray.ray.intersectPlane(ground, hitPoint)) continue;
@@ -213,6 +274,8 @@ function goTo(id) {
   }
   if (underground) { travel(false, () => goTo(id)); return; } // everything else is up in the village
   if (id === 'hall') { walkTo(hall.entrance[0], hall.entrance[1]); return; }
+  if (id === 'board') { if (nearBoard()) openBoard(); else walkTo(hall.board.stand[0], hall.board.stand[1], openBoard); return; }
+  if (id.startsWith('agent:')) { const n = agents.list.find((q) => 'agent:' + q.id === id); if (n) { if (Math.hypot(P.x - n.x, P.z - n.z) < TUNING.talkRange) talkTo(n); else walkTo(n.x, n.z + 1.3, () => { if (Math.hypot(P.x - n.x, P.z - n.z) < TUNING.talkRange * 1.7) talkTo(n); }); } return; }
   const s = stalls.find((q) => q.id === id); if (!s) return;
   if (Math.hypot(P.x - s.front[0], P.z - s.front[1]) < 0.7) openStall(s); else walkTo(s.front[0], s.front[1], () => openStall(s));
 }
@@ -247,6 +310,8 @@ function applyMood(time, indoors) {
 }
 
 const nearBoard = () => rectDistance(hall.board.rect, P.x, P.z) < 2.3;
+// within a few steps of the water's edge
+const nearPond = () => rectDistance(pond.rect, P.x, P.z) < 0.9 || ((P.x - POND.x) / (POND.rx + 2.6)) ** 2 + ((P.z - POND.z) / (POND.rz + 2.6)) ** 2 < 1;
 
 /* ── input ── */
 const keys = {}, joy = { x: 0, y: 0 };
@@ -257,7 +322,12 @@ const rollDir = [0, 1];
 function pressJump() { if (time - lastJumpPress < 0.3) { rollQueued = true; lastJumpPress = -9; } else { jumpQueued = true; lastJumpPress = time; } }
 window.addEventListener('keydown', (e) => {
   const k = e.code;
-  if (k === 'Escape') { if (pondUI.isOpen()) { pondUI.hide(); return; } if (!ui.escape()) hx.hide(); return; }
+  if (k === 'Escape') { if (minimap.isBig()) { minimap.close(); return; } if (disc.isOpen()) { disc.close(); return; } if (pondUI.isOpen()) { pondUI.hide(); return; } if (!ui.escape()) hx.hide(); return; }
+  // M opens the big map, C the checklist (when nothing else is open)
+  if ((k === 'KeyM' || k === 'KeyC') && !e.repeat && !e.metaKey && !e.ctrlKey && !(e.target && /INPUT|TEXTAREA/.test(e.target.tagName))) {
+    if (k === 'KeyM' && (minimap.isBig() || (!paused() && !disc.isOpen()))) { minimap.toggle(); return; }
+    if (k === 'KeyC' && (disc.isOpen() || (!paused() && !minimap.isBig()))) { if (disc.isOpen()) disc.close(); else disc.show(); return; }
+  }
   if (k === 'KeyE' && !e.repeat) { if (ui.openId() || ui.chatId() || ui.boardOpen()) ui.escape(); else if (hx.isOpen()) hx.hide(); else if (pondUI.isOpen()) pondUI.hide(); else if (near && !paused()) near.act(); return; }
   if (k === 'Space' || k.startsWith('Arrow')) { if (paused()) return; e.preventDefault(); } // leave these keys to buttons and sliders while a panel is open
   if (k === 'Space' && !e.repeat) pressJump();
@@ -331,7 +401,7 @@ function resize() {
 window.addEventListener('resize', resize); resize();
 
 /* ── loop ── */
-let last = performance.now(), time = 0, chirpT = 4, idle = 0, overlayOn = false;
+let last = performance.now(), time = 0, chirpT = 4, idle = 0, overlayOn = false, hudOpen = false;
 const v3 = new THREE.Vector3();
 function update(dt) {
   time += dt;
@@ -354,7 +424,7 @@ function update(dt) {
   rollCool -= dt;
   if (rollQueued && !busy && rollT < 0 && rollCool <= 0 && !ui.wardrobeOpen()) {
     const m = Math.hypot(dx, dz); if (m > 0.1) { rollDir[0] = dx / m; rollDir[1] = dz / m; } else { rollDir[0] = Math.sin(P.yaw); rollDir[1] = Math.cos(P.yaw); }
-    rollT = 0; P.vy = Math.min(P.vy, 1.5); auto = null; sound.play('roll');
+    rollT = 0; P.vy = Math.min(P.vy, 1.5); auto = null; sound.play('roll'); discover('roll');
   }
   rollQueued = false;
   let accel = Math.min(1, dt * (dx || dz ? 9 : 12)); // ease into and out of motion instead of snapping to full speed
@@ -386,6 +456,7 @@ function update(dt) {
   if (night !== nightTarget) night += Math.sign(nightTarget - night) * Math.min(Math.abs(nightTarget - night), dt / 1.6);
   torch.position.set(P.x, P.visY + 2.2, P.z + 0.6);
   applyMood(time, indoors);
+  if (night > 0.9 && !underground && !disc.has('night')) discover('night');
   player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors) * (underground ? 0 : 1));
   cave.update(time); hideout.update(time, ease(night), music.isOn());
   if (!underground) pond.update(time, dt, ease(night));
@@ -431,8 +502,9 @@ function update(dt) {
     const d = rectDistance(s.rect, P.x, P.z); if (d < bd) { bd = d; nearKey = s.id; near = s.kind === 'outfits' ? { key: 'changeOutfit', act: () => goTo('outfits') } : { key: 'open', vars: { name: tr(s, 'label') }, act: () => openStall(s) }; }
   }
   { const n = underground ? null : agents.nearest(P, indoors); if (n) { nearKey = n.id; near = { key: 'talkTo', vars: { name: n.name }, act: () => talkTo(n) }; } }
+  // anywhere round the pond (or on its bridge and benches) E walks you out to the end of the dock and casts
+  if (!underground && !near && nearPond()) { nearKey = 'pond'; near = { key: 'goFishing', act: () => goTo('pond') }; }
   if (!underground && Math.hypot(P.x - cave.top[0], P.z - cave.top[1]) < 2.3) { nearKey = 'cave'; near = { key: 'enterCave', act: () => travel(true) }; }
-  if (!underground && rectDistance(pond.rect, P.x, P.z) < 0.9) { nearKey = 'pond'; near = { key: 'goFishing', act: goFish }; }
   if (underground) { near = null; nearKey = null; bd = TUNING.interactRange; for (const p of hideout.props) { const d = rectDistance(p.rect, P.x, P.z); if (d < Math.min(bd, p.range || bd)) { bd = d; nearKey = 'hx:' + p.id; near = { key: p.key, act: () => useProp(p.id) }; } } }
   // the board wins when you are right up against it
   if (!underground && indoors > 0.5 && nearBoard() && (!near || near.key !== 'talkTo' || rectDistance(hall.board.rect, P.x, P.z) < 1.1)) { nearKey = 'board'; near = { key: 'openBoard', act: openBoard }; }
@@ -470,6 +542,8 @@ function frame(now) {
   // while a panel covers the screen, hide the touch controls behind it (and on short screens the top buttons)
   { const over = hx.isOpen() || pondUI.isOpen() || !!ui.openId() || !!ui.chatId() || ui.boardOpen() || ui.wardrobeOpen(); if (over !== overlayOn) { overlayOn = over; document.body.classList.toggle('overlay', over); } }
   // (never while the wardrobe is up or the camera is moving: those need every frame)
+  minimap.draw(time, Math.min(0.05, raw));
+  { const on = disc.isOpen() || minimap.isBig(); if (on !== hudOpen) { hudOpen = on; document.body.classList.toggle('hudopen', on); } }
   idle = paused() && !travelling && !ui.wardrobeOpen() && closeUp === 0 && listen === 0 ? idle + 1 : 0;
   if (idle % 3 === 0 || bakeFrames > 0) renderer.render(scene, camera);
   requestAnimationFrame(frame);
@@ -480,7 +554,7 @@ function start(saved) {
   canvas.tabIndex = 0;
   // a returning preview session skips the opening; a fresh visit glides in over about two seconds
   if (saved && typeof saved.x === 'number') ui.endIntro(); else { zoom = TUNING.zoomStart * 1.55; opening = 2.8; titleFor = 1.3; for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); }, { once: true }); }
-  window.__village = { P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
+  window.__village = { disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 // Only matters inside the Claude preview: keeps your place when the page is republished.

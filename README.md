@@ -43,6 +43,17 @@ wolf that starts following you once you have opened every stall.
 
 <br>
 
+## Finding your way
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="docs/img/readme/minimap.jpg" alt="The big map of the village with every place labelled"><br><b>The map.</b> A small map in the top-left corner follows you around. Tap it (or press <kbd>M</kbd>) and it opens into a map of the whole village, or of the Hideout when you are underground. Tap a place to walk there.</td>
+<td width="50%" valign="top"><img src="docs/img/readme/discoveries.jpg" alt="The discoveries checklist"><br><b>Discoveries.</b> Fifteen things to find, from the About Me signpost to the cat in the Hideout. Each one ticks off as you find it, "Show me" walks you to the next, and finding them all earns a badge. Press <kbd>C</kbd> to open the list.</td>
+</tr>
+</table>
+
+<br>
+
 ## The Hideout
 
 <img src="docs/img/readme/hideout.jpg" alt="The Hideout, an underground room with a fireplace, a lounge, a CD player, a gallery and a library" width="100%">
@@ -82,7 +93,7 @@ Songs go in `public/assets/sounds/`, CD art in `public/assets/images/cds/`.
 </table>
 
 Just right of the Hideout's cave there is a pond with a wooden bridge, a dock, benches and
-lanterns that light up at night. Stand on the dock and press <kbd>E</kbd> to cast. Every catch is a
+lanterns that light up at night. Walk up to the pond and press <kbd>E</kbd> (or tap the water): you head out to the end of the dock and cast. Every catch is a
 fact about me: my travel photos in a slow-moving carousel (tap one to see it full size), my coffee
 habit, or the research I write about, with a link to the article. The facts and photo captions are
 in `src/pond-content.js`, and the photos in `public/assets/images/photos/`.
@@ -105,7 +116,7 @@ in `src/pond-content.js`, and the photos in `public/assets/images/photos/`.
 <img src="docs/img/readme/board.jpg" alt="The agent board menu" width="100%">
 
 Four villagers work in the hall, one for each project. The **agent board** at the end of the room
-shows who is at their desk, who is on a break and what they did last. Talk to any of them to try
+has a card for each of them, with what they do, who is at their desk or on a break, and what they did last. Talk to any of them to try
 what they do.
 
 <table>
@@ -142,6 +153,7 @@ what they do.
 | Open, talk, read | <kbd>E</kbd> when near, or click it | The yellow button, or tap it |
 | Close | <kbd>Esc</kbd> | × |
 | Zoom a little | Scroll, <kbd>+</kbd> and <kbd>-</kbd> | Pinch |
+| Map and discoveries | <kbd>M</kbd> and <kbd>C</kbd> | Tap the map or the counter under it |
 
 The menu in the top-right corner lists every place in the village and walks you there.
 
@@ -280,6 +292,8 @@ src/hideout-content.js  the CDs, journal entries, paintings and books (edit thes
 src/pond.js         the fishing pond: water, bridge, dock, benches, lanterns and the fishing line
 src/pond-ui.js      the fact card and the full-size photo viewer
 src/pond-content.js the facts about me and the photo captions (edit these)
+src/minimap.js      the mini-map and the big map
+src/discover.js     the discoveries checklist (the list is at the top)
 src/pixelart.js     the pixel discs, icons and paintings
 src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)
 src/style.css       interface styling

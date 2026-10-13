@@ -26,7 +26,7 @@
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@500;700&family=Noto+Sans+Myanmar:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito:wght@500;700&family=Noto+Sans+Myanmar:wght@500;700&display=swap">
 <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
@@ -66,6 +66,7 @@
     <div class="desk-only"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span data-t="kMove"></span> <kbd class="gap">Shift</kbd><span data-t="kRun"></span> <kbd class="gap">Space</kbd><span data-t="kJump"></span></div>
     <div class="desk-only"><kbd>Space</kbd><kbd>Space</kbd><span data-t="kRoll"></span></div>
     <div class="desk-only"><kbd>E</kbd><span data-t="kOpen"></span> <kbd class="gap">Esc</kbd><span data-t="kClose"></span></div>
+    <div class="desk-only"><kbd>M</kbd><span data-t="kMap"></span> <kbd class="gap">C</kbd><span data-t="kList"></span></div>
     <div data-t="kZoom"></div>
   </div>
   <a class="side-plain" href="./plain.html">Simple version: every project on one page</a>
@@ -92,12 +93,14 @@
 
 <div id="board" role="dialog" aria-labelledby="boardTitle">
   <div class="board-panel">
-    <div class="board-head"><strong id="boardTitle" data-t="boardTitle"></strong><button class="xbtn" id="boardClose" aria-label="Close">×</button></div>
+    <div class="board-head">
+      <div><small class="board-kicker" data-t="boardKicker"></small><strong id="boardTitle" data-t="boardTitle"></strong><p class="board-hint" data-t="boardHint"></p></div>
+      <button class="xbtn" id="boardClose" aria-label="Close">×</button>
+    </div>
+    <div id="boardGrid"></div>
     <div class="board-body">
       <div id="boardHero"></div>
       <div class="board-side">
-        <p class="board-hint" data-t="boardHint"></p>
-        <div id="boardGrid"></div>
         <h3 data-t="activity"></h3>
         <ol id="boardLog"></ol>
         <small class="board-note" data-t="sampleLog"></small>
@@ -105,6 +108,7 @@
     </div>
   </div>
 </div>
+
 
 <div id="wardrobe" role="dialog" aria-labelledby="wardTitle">
   <div class="ward-panel">
