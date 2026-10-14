@@ -115,15 +115,22 @@ export function createBookViewer(host) {
   const tgt = { yaw: VIEWS.front, pitch: REST_PITCH, x: 0, y: 0, s: 1 };
   let book = null, leaving = [], dragging = false, velYaw = 0, lastInput = -9, timers = [], clock = 0;
 
+  // fade a whole book: its materials turn see-through only while fading, so a resting book draws normally
+  function fade(g, a) {
+    const see = a < 0.995;
+    g.traverse((m) => { if (!m.material) return; for (const mt of [].concat(m.material)) { if (mt.transparent !== see) { mt.transparent = see; mt.depthWrite = !see || a > 0.6; mt.needsUpdate = true; } mt.opacity = a; } });
+  }
+  const inA = sp(1);
   function show(bk, i, dir = 1) {
     timers.forEach(clearTimeout); timers = [];
     if (book) { // the old book slides away and turns as it goes
-      const g = book, o = { yaw: sp(S.yaw.v), x: sp(S.x.v), s: sp(S.s.v), vy: S.yaw.vel, life: 0.9, g };
-      o.yaw.vel = S.yaw.vel; o.tYaw = S.yaw.v - dir * 1.1; o.tX = -dir * 3.4; leaving.push(o);
+      const g = book, o = { yaw: sp(S.yaw.v), x: sp(S.x.v), s: sp(S.s.v), a: sp(inA.v), life: 1.1, g, pitch: S.pitch.v, y: S.y.v };
+      o.yaw.vel = S.yaw.vel; o.x.vel = S.x.vel; o.tYaw = S.yaw.v - dir * 0.9; o.tX = -dir * 2.6; leaving.push(o);
     }
     book = build(bk, i); leaving = leaving.filter((o) => o.g !== book); if (book.parent) book.parent.remove(book); scene.add(book);
     // the new one comes in spine first, rises a little, then turns to show its cover
-    S.x.v = dir * 3.2; S.x.vel = 0; S.yaw.v = VIEWS.spine + dir * 0.35; S.yaw.vel = 0; S.s.v = 0.9; S.y.v = -0.25; S.pitch.v = REST_PITCH;
+    inA.v = 0; inA.vel = 0; fade(book, 0);
+    S.x.v = dir * 2.4; S.x.vel = 0; S.yaw.v = VIEWS.spine + dir * 0.35; S.yaw.vel = 0; S.s.v = 0.9; S.y.v = -0.25; S.pitch.v = REST_PITCH;
     tgt.x = 0; tgt.s = 1; tgt.y = 0; tgt.yaw = VIEWS.spine; tgt.pitch = REST_PITCH;
     timers.push(setTimeout(() => { tgt.yaw = VIEWS.front; }, 520));
   }
@@ -143,13 +150,15 @@ export function createBookViewer(host) {
     spring(S.x, tgt.x, 7, dt); spring(S.y, tgt.y, 6, dt); spring(S.s, tgt.s, 7, dt);
     if (book) {
       const float = Math.sin(time * 1.1) * 0.035, sway = dragging ? 0 : Math.sin(time * 0.6) * 0.015;
+      spring(inA, 1, 5.5, dt); fade(book, Math.min(1, inA.v));
       book.position.set(S.x.v, S.y.v + float, 0); book.rotation.set(S.pitch.v, S.yaw.v + sway, 0, 'XYZ'); book.scale.setScalar(S.s.v);
-      blob.position.x = S.x.v; blob.material.opacity = Math.max(0, 1 - Math.abs(S.x.v) / 3) * (1 - float * 2);
+      blob.position.x = S.x.v; blob.material.opacity = Math.max(0, 1 - Math.abs(S.x.v) / 3) * (1 - float * 2) * Math.min(1, inA.v);
     }
     leaving = leaving.filter((o) => {
-      o.life -= dt; spring(o.yaw, o.tYaw, 5, dt); spring(o.x, o.tX, 6, dt); spring(o.s, 0.85, 6, dt);
-      o.g.position.x = o.x.v; o.g.rotation.y = o.yaw.v; o.g.scale.setScalar(o.s.v);
-      if (o.life <= 0 || Math.abs(o.x.v) > 3.3) { if (o.g !== book) scene.remove(o.g); return false; }
+      // the old book glides off to the side, fading out as it goes
+      o.life -= dt; spring(o.yaw, o.tYaw, 4.5, dt); spring(o.x, o.tX, 4.5, dt); spring(o.s, 0.82, 5, dt); spring(o.a, 0, 4.2, dt);
+      o.g.position.set(o.x.v, o.y, 0); o.g.rotation.set(o.pitch, o.yaw.v, 0, 'XYZ'); o.g.scale.setScalar(o.s.v); fade(o.g, Math.max(0, o.a.v));
+      if (o.life <= 0 || o.a.v < 0.01) { if (o.g !== book) { scene.remove(o.g); fade(o.g, 1); } return false; }
       return true;
     });
   }

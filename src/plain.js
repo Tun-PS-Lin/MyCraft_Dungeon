@@ -57,7 +57,8 @@ if (GALLERY.length) {
   const gg = el('div', 'cards'); gs.appendChild(gg);
   for (const p of GALLERY) {
     const c = el('article', 'card'); c.style.setProperty('--accent', '#c98a2b');
-    const pic = pictureCanvas(32, 24, (g) => drawPainting(g, p.art)); pic.className = 'pix'; c.appendChild(pic);
+    let pic; if (p.image) { pic = el('img', 'shot'); pic.src = './assets/images/gallery/' + p.image + '.jpg'; pic.alt = p.title; pic.loading = 'lazy'; } else { pic = pictureCanvas(32, 24, (g) => drawPainting(g, p.art)); pic.className = 'pix'; }
+    c.appendChild(pic);
     const b = el('div', 'body'); b.appendChild(el('h3', '', p.title)); b.appendChild(el('p', '', p.desc));
     if (p.url) b.appendChild(link(p.url, 'Visit ↗', 'go')); else b.appendChild(el('span', 'soon', 'Link coming soon'));
     c.appendChild(b); gg.appendChild(c);

@@ -67,7 +67,7 @@ At the bottom of the square, a cave glows in the rock. Walk down the steps and y
 <td width="50%" valign="top"><img src="docs/img/readme/journal.jpg" alt="The journal of mental models"><br><b>The journal.</b> My notes on ten mental models: second-level thinking, ergodicity, circles of competence, fat pitches, market cycles and more.</td>
 </tr>
 <tr>
-<td width="50%" valign="top"><img src="docs/img/readme/gallery-menu.jpg" alt="The gallery: a 3D cube with a side project in each window"><br><b>The gallery.</b> A lacquered cube with a side project behind each window. Turn it with the arrows, the thumbnails or a drag; click the window in front to read about the project.</td>
+<td width="50%" valign="top"><img src="docs/img/readme/gallery-menu.jpg" alt="The gallery: a 3D cube with a side project in each window"><br><b>The gallery.</b> A slim gold-framed cube with a side project in each window. Drag to turn it any way you like, or glide between projects with the arrows and thumbnails; click a window to read about the project.</td>
 <td width="50%" valign="top"><img src="docs/img/readme/library.jpg" alt="The library: a 3D book above the shelf"><br><b>The library.</b> Bookshelves round an enchanting table. Pull a book off the shelf and it comes out in 3D: drag to turn it and see the cover, the spine and my takeaway on the back.</td>
 </tr>
 </table>
@@ -78,7 +78,7 @@ At the bottom of the square, a cave glows in the rock. Walk down the steps and y
   lights at night, maps on the walls, and a window that shows sun by day and stars by night.
 
 Everything in it lives in `src/hideout-content.js`: the CDs (`RECORDS`), the journal (`JOURNAL`),
-the paintings (`GALLERY`) and the books (`BOOKS`). Book covers go in `public/assets/images/books/`.
+the paintings (`GALLERY`) and the books (`BOOKS`). Book covers go in `public/assets/images/books/`, gallery pictures (square) in `public/assets/images/gallery/`.
 Songs go in `public/assets/sounds/`, CD art in `public/assets/images/cds/`.
 
 <br>
@@ -298,7 +298,7 @@ src/hideout-ui.js   the CD player, journal, gallery and library menus
 src/stage3d.js      the small 3D stage the library and gallery menus share
 src/book3d.js       the library's 3D books
 src/cube3d.js       the gallery's project cube
-src/hideout-content.js  the CDs, journal entries, paintings and books (edit these)
+src/hideout-content.js  the CDs, journal entries, gallery projects and books (edit these)
 src/pond.js         the fishing pond: water, bridge, dock, benches, lanterns and the fishing line
 src/pond-ui.js      the fact card and the full-size photo viewer
 src/pond-content.js the facts about me and the photo captions (edit these)

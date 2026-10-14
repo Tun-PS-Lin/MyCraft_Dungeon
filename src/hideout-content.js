@@ -42,12 +42,14 @@ export const JOURNAL = [
 ];
 
 /* ── the gallery ──
-   Side projects shown as paintings. art picks the painting: 'world', 'voice', 'stars'.
-   url '' shows "Link coming soon". */
+   Side projects, one per window of the gallery cube. image: a square picture in
+   public/assets/images/gallery/ (1024 × 1024 is plenty; a name-thumb.jpg sits beside it for the
+   buttons). art is a small pixel painting used only if the picture can't be shown. url '' shows
+   "Link coming soon". */
 export const GALLERY = [
-  { id: 'world', title: 'Virtual World', art: 'world', desc: 'Mingalar World: a 3D town in the browser with a virtual mall, a garage, an office and a target range.', url: 'https://mingalar-world.vercel.app/' },
-  { id: 'voice', title: 'Burmese Text-to-Speech', art: 'voice', desc: 'A Burmese text-to-speech project with several voice options.', url: '' },
-  { id: 'mahabote', title: 'Mahabhote Burmese Astrology', art: 'stars', desc: 'A Burmese Mahabhote astrology bot on Telegram that remembers the conversation and asks follow-up questions.', url: '' },
+  { id: 'world', title: 'Virtual World', art: 'world', image: 'virtual-world', desc: 'Mingalar World: a 3D town in the browser with a virtual mall, a garage, an office and a target range.', url: 'https://mingalar-world.vercel.app/' },
+  { id: 'voice', title: 'Burmese Text-to-Speech', art: 'voice', image: 'burmese-tts', desc: 'A Burmese text-to-speech project with several voice options.', url: '' },
+  { id: 'mahabote', title: 'Mahabhote Burmese Astrology', art: 'stars', image: 'mahabhote', desc: 'A Burmese Mahabhote astrology bot on Telegram that remembers the conversation and asks follow-up questions.', url: '' },
 ];
 
 /* ── the library ──

@@ -162,49 +162,56 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
     };
   }
 
-  /* ── gallery: a 3D cube with a project behind each window. Turn it with the arrows, the
-     thumbnails or a drag; click the window in front to read about that project ── */
+  /* ── gallery: a 3D cube with a project in each window, under a night sky. Turn it any way with
+     a drag, or glide to a project with the arrows and thumbnails; click a window to read about it ── */
   {
     const wrap = shell('gallery', 'Gallery', 'hx-gallery'), gal = el('div', 'gal'); wrap.appendChild(gal);
     const x = closeBtn(); x.classList.add('gal-x'); x.onclick = () => hide(); gal.appendChild(x);
-    const top = el('div', 'gal-top'); top.append(el('strong', '', 'Gallery'), el('span', 'gal-count')); gal.appendChild(top);
+    const top = el('header', 'gal-top'); top.append(el('h2', '', 'The Gallery'), el('p', 'gal-sub', 'Side projects  ·  ' + GALLERY.length + ' open windows')); gal.appendChild(top);
     const wall = el('div', 'gal-wall'); gal.appendChild(wall);
     const host = el('div', 'gal-cube'); host.setAttribute('aria-label', 'A cube of side projects. Drag to turn it.'); wall.appendChild(host);
-    const prev = el('button', 'gal-arrow prev'), next = el('button', 'gal-arrow next');
-    prev.innerHTML = ICON.prev.replace('M6 6l4-3v6z', ''); next.innerHTML = ICON.next.replace('M6 6l-4-3v6z', '');
-    prev.setAttribute('aria-label', 'Previous project'); next.setAttribute('aria-label', 'Next project');
-    wall.append(prev, next);
-    // the caption under the cube, and the details panel that slides in when you open a window
-    const cap = el('button', 'gal-cap'), capK = el('span', 'gal-kicker'), capT = el('strong'), capH = el('small', '', 'Click the window to read more');
+    const chev = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + (d < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7') + '"/></svg>';
+    const prev = el('button', 'gal-arrow prev'), next = el('button', 'gal-arrow next'); prev.innerHTML = chev(-1); next.innerHTML = chev(1);
+    prev.setAttribute('aria-label', 'Previous project'); next.setAttribute('aria-label', 'Next project'); wall.append(prev, next);
+    // the caption under the cube, and the details card that slides in when a window is opened
+    const cap = el('button', 'gal-cap'), capK = el('span', 'gal-kicker'), capT = el('strong'), capH = el('small', '', 'Click the window to step inside');
     cap.append(capK, capT, capH); wall.appendChild(cap);
-    const infoBox = el('div', 'gal-info'), ik = el('span', 'gal-kicker'), ih = el('h3'), ip = el('p'), go = el('a', 'gal-go'), back = el('button', 'gal-back', '‹ Back to the cube');
-    go.target = '_blank'; go.rel = 'noopener'; infoBox.append(ik, ih, ip, go, back); wall.appendChild(infoBox);
+    const infoBox = el('aside', 'gal-info'), shot = el('img', 'gal-shot'), ik = el('span', 'gal-kicker'), ih = el('h3'), ip = el('p'), go = el('a', 'gal-go'), back = el('button', 'gal-back', '← Back to the cube');
+    shot.alt = ''; shot.decoding = 'async'; go.target = '_blank'; go.rel = 'noopener'; infoBox.append(shot, ik, ih, el('i', 'gal-rule'), ip, go, back); wall.appendChild(infoBox);
+    wall.appendChild(el('p', 'gal-hint', 'Drag to turn the cube any way  ·  click a window to step inside'));
+    const IMG = (g, thumb) => BASE + 'assets/images/gallery/' + g.image + (thumb ? '-thumb' : '') + '.jpg';
     const rail = el('div', 'gal-rail'), thumbs = [];
-    GALLERY.forEach((g, i) => { const b = el('button', 'gal-thumb'); b.setAttribute('aria-label', g.title); b.title = g.title; b.appendChild(pictureCanvas(32, 24, (c) => drawPainting(c, g.art))); b.appendChild(el('span', '', g.title)); b.onclick = () => turnTo(i); rail.appendChild(b); thumbs.push(b); });
+    GALLERY.forEach((g, i) => {
+      const b = el('button', 'gal-thumb'); b.setAttribute('aria-label', g.title); b.title = g.title;
+      if (g.image) { const im = el('img'); im.src = IMG(g, true); im.alt = ''; im.loading = 'lazy'; b.appendChild(im); } else b.appendChild(pictureCanvas(32, 24, (c) => drawPainting(c, g.art)));
+      b.appendChild(el('span', '', g.title)); b.onclick = () => turnTo(i); rail.appendChild(b); thumbs.push(b);
+    });
     gal.appendChild(rail);
     let at = 0, infoOpen = false;
     function fill() {
-      const g = GALLERY[at]; if (!g) return; const k = 'Side project No. ' + String(at + 1).padStart(2, '0');
+      const g = GALLERY[at]; if (!g) return; const k = 'Side project  ·  No. ' + String(at + 1).padStart(2, '0');
       capK.textContent = k; capT.textContent = g.title; ik.textContent = k; ih.textContent = g.title; ip.textContent = g.desc;
-      if (g.url) { go.href = g.url; go.textContent = 'Visit ' + g.title + ' ↗'; go.classList.remove('off'); go.removeAttribute('aria-disabled'); }
+      if (g.image) { shot.src = IMG(g); shot.hidden = false; } else shot.hidden = true;
+      if (g.url) { go.href = g.url; go.textContent = 'Visit ' + g.title + '  ↗'; go.classList.remove('off'); go.removeAttribute('aria-disabled'); }
       else { go.removeAttribute('href'); go.textContent = 'Link coming soon'; go.classList.add('off'); go.setAttribute('aria-disabled', 'true'); }
       thumbs.forEach((b, i) => { b.classList.toggle('on', i === at); b.setAttribute('aria-pressed', String(i === at)); });
-      top.lastChild.textContent = (at + 1) + ' / ' + GALLERY.length;
     }
-    // swap the words with a quick cross-fade as the cube turns
+    // the words cross-fade as the cube turns
     let fadeT = 0;
-    function face(i) { if (i === at) return; at = i; sound.play('near'); cap.classList.add('swap'); infoBox.classList.add('swap'); clearTimeout(fadeT); fadeT = setTimeout(() => { fill(); cap.classList.remove('swap'); infoBox.classList.remove('swap'); }, 180); }
-    function setInfo(on) { infoOpen = on; gal.classList.toggle('reading', on); if (cube) cube.setInfo(on); if (on) sound.play('open'); }
+    function face(i) { if (i === at) return; at = i; sound.play('near'); cap.classList.add('swap'); infoBox.classList.add('swap'); clearTimeout(fadeT); fadeT = setTimeout(() => { fill(); cap.classList.remove('swap'); infoBox.classList.remove('swap'); }, 200); }
+    function setInfo(on) { if (on === infoOpen) return; infoOpen = on; gal.classList.toggle('reading', on); if (cube) cube.setInfo(on); sound.play(on ? 'open' : 'close'); }
     const cube = createProjectCube(host, GALLERY, { onFace: face, onOpen: setInfo, onSealed: () => { cap.classList.remove('nudge'); void cap.offsetWidth; cap.classList.add('nudge'); } });
-    if (!cube) { gal.classList.add('flat'); host.appendChild(pictureCanvas(32, 24, () => {})); }
-    const paintFlat = () => { if (!cube) drawPainting(host.firstChild.getContext('2d'), GALLERY[at].art); };
-    function turnTo(i, dir) { if (cube) cube.go(i, dir); else { face(i); setTimeout(paintFlat, 190); } }
+    if (!cube) { gal.classList.add('flat'); const im = el('img', 'gal-flat'); im.alt = ''; host.appendChild(im); }
+    const paintFlat = () => { if (!cube) { const g = GALLERY[at]; host.firstChild.src = g.image ? IMG(g) : ''; } };
+    function turnTo(i) { if (cube) cube.go(i); else { face(i); setTimeout(paintFlat, 210); } }
     prev.onclick = () => (cube ? cube.next(-1) : turnTo((at + GALLERY.length - 1) % GALLERY.length));
     next.onclick = () => (cube ? cube.next(1) : turnTo((at + 1) % GALLERY.length));
     cap.onclick = () => setInfo(!infoOpen); back.onclick = () => setInfo(false);
     if (!cube) host.onclick = () => setInfo(!infoOpen);
+    // fetch the full pictures ahead, so the cube and the card show them at once
+    GALLERY.forEach((g) => { if (g.image) { const im = new Image(); im.src = IMG(g); } });
     panels.gallery.onShow = () => { if (cube) cube.start(); else paintFlat(); };
-    panels.gallery.onHide = () => { if (cube) cube.stop(); setInfo(false); };
+    panels.gallery.onHide = () => { if (cube) cube.stop(); if (infoOpen) { infoOpen = false; gal.classList.remove('reading'); if (cube) cube.setInfo(false); } };
     panels.gallery.key = (e) => {
       if (e.key === 'ArrowLeft') { prev.onclick(); return true; } if (e.key === 'ArrowRight') { next.onclick(); return true; }
       if (e.key === 'Enter' && document.activeElement === document.body) { setInfo(!infoOpen); return true; }

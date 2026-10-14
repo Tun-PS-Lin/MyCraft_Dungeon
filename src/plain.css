@@ -42,6 +42,7 @@ section h2{font-size:clamp(26px,4vw,34px);text-transform:uppercase;letter-spacin
 .mail{display:inline-block;margin-top:16px;font-family:var(--display);font-size:clamp(20px,3.4vw,28px);text-underline-offset:5px}
 footer{margin-top:56px;padding-top:18px;border-top:3px solid var(--line);color:var(--ink-dim);font-size:14px}
 @media (prefers-reduced-motion:reduce){.btn{transition:none}}
+.card img.shot{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-bottom:3px solid var(--line)}
 .card canvas.pix{display:block;width:100%;height:auto;aspect-ratio:4/3;image-rendering:pixelated;border-bottom:3px solid var(--line)}
 .entry{background:#fbfaf4;border:3px solid var(--line);margin-top:14px;padding:0 18px}
 .entry summary{display:flex;align-items:center;gap:14px;padding:14px 0;cursor:pointer;list-style:none}

@@ -552,7 +552,10 @@ function frame(now) {
   // (and never while fishing, or just after the fact card opens or closes)
   if (pondUI.isOpen() !== pondWas) { pondWas = pondUI.isOpen(); pondCalm = 0.9; } pondCalm -= Math.min(raw, 0.1);
   idle = paused() && !travelling && !ui.wardrobeOpen() && closeUp === 0 && listen === 0 && !(pond.active() && !pondUI.isOpen()) && pondCalm <= 0 ? idle + 1 : 0;
-  if (idle % 3 === 0 || bakeFrames > 0) renderer.render(scene, camera);
+  // behind the library's books and the gallery's cube (which have their own 3D stage) the village
+  // is dimmed and still, so after a few frames it isn't redrawn at all: the menu gets the GPU
+  const stage3d = hx.isOpen() && (hx.which() === 'gallery' || hx.which() === 'library');
+  if (bakeFrames > 0 || (stage3d ? idle < 4 : idle % 3 === 0)) renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 
