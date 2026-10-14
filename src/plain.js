@@ -60,7 +60,7 @@ if (GALLERY.length) {
     let pic; if (p.image) { pic = el('img', 'shot'); pic.src = './assets/images/gallery/' + p.image + '.jpg'; pic.alt = p.title; pic.loading = 'lazy'; } else { pic = pictureCanvas(32, 24, (g) => drawPainting(g, p.art)); pic.className = 'pix'; }
     c.appendChild(pic);
     const b = el('div', 'body'); b.appendChild(el('h3', '', p.title)); b.appendChild(el('p', '', p.desc));
-    if (p.url) b.appendChild(link(p.url, 'Visit ↗', 'go')); else b.appendChild(el('span', 'soon', 'Link coming soon'));
+    if (p.url) b.appendChild(link(p.url, 'Visit ↗', 'go')); else if (p.link !== false) b.appendChild(el('span', 'soon', 'Link coming soon'));
     c.appendChild(b); gg.appendChild(c);
   }
 }

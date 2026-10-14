@@ -67,7 +67,7 @@ At the bottom of the square, a cave glows in the rock. Walk down the steps and y
 <td width="50%" valign="top"><img src="docs/img/readme/journal.jpg" alt="The journal of mental models"><br><b>The journal.</b> My notes on ten mental models: second-level thinking, ergodicity, circles of competence, fat pitches, market cycles and more.</td>
 </tr>
 <tr>
-<td width="50%" valign="top"><img src="docs/img/readme/gallery-menu.jpg" alt="The gallery: a 3D cube with a side project in each window"><br><b>The gallery.</b> A slim gold-framed cube with a side project in each window. Drag to turn it any way you like, or glide between projects with the arrows and thumbnails; click a window to read about the project.</td>
+<td width="50%" valign="top"><img src="docs/img/readme/gallery-menu.jpg" alt="The gallery: a 3D cube with a side project in each window"><br><b>The gallery.</b> A slim gold-framed cube with a side project on each of its six faces. Drag to turn it any way you like, zoom with the wheel or a pinch, or glide between projects with the arrows; click a face to read about the project.</td>
 <td width="50%" valign="top"><img src="docs/img/readme/library.jpg" alt="The library: a 3D book above the shelf"><br><b>The library.</b> Bookshelves round an enchanting table. Pull a book off the shelf and it comes out in 3D: drag to turn it and see the cover, the spine and my takeaway on the back.</td>
 </tr>
 </table>

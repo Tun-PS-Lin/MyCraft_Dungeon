@@ -66,7 +66,7 @@ export function canvasTex(c, pixel, aniso = 4) {
 export function dragger(elm, { onStart, onMove, onEnd }) {
   let id = null, x0 = 0, y0 = 0, lx = 0, ly = 0, moved = 0;
   // buttons and links inside the area keep their own clicks (capturing the pointer would swallow them)
-  elm.addEventListener('pointerdown', (e) => { if (e.button > 0 || (e.target.closest && e.target.closest('button,a'))) return; id = e.pointerId; elm.setPointerCapture(id); x0 = lx = e.clientX; y0 = ly = e.clientY; moved = 0; if (onStart) onStart(e); });
+  elm.addEventListener('pointerdown', (e) => { if (e.button > 0 || id !== null || (e.target.closest && e.target.closest('button,a'))) return; id = e.pointerId; elm.setPointerCapture(id); x0 = lx = e.clientX; y0 = ly = e.clientY; moved = 0; if (onStart) onStart(e); });
   elm.addEventListener('pointermove', (e) => { if (e.pointerId !== id) return; const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; moved = Math.max(moved, Math.hypot(e.clientX - x0, e.clientY - y0)); onMove(dx, dy, e); });
   const end = (e) => { if (e.pointerId !== id) return; id = null; onEnd(moved, e); };
   elm.addEventListener('pointerup', end); elm.addEventListener('pointercancel', end);

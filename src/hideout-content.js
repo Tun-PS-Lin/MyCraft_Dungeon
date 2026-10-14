@@ -44,12 +44,16 @@ export const JOURNAL = [
 /* ── the gallery ──
    Side projects, one per window of the gallery cube. image: a square picture in
    public/assets/images/gallery/ (1024 × 1024 is plenty; a name-thumb.jpg sits beside it for the
-   buttons). art is a small pixel painting used only if the picture can't be shown. url '' shows
-   "Link coming soon". */
+   buttons). art is a small pixel painting used only if the picture can't be shown.
+   url: the project's link. url '' shows "Link coming soon"; link: false shows no link button at all.
+   The cube has six faces: the first four projects go round the sides, the fifth on top, the sixth underneath. */
 export const GALLERY = [
-  { id: 'world', title: 'Virtual World', art: 'world', image: 'virtual-world', desc: 'Mingalar World: a 3D town in the browser with a virtual mall, a garage, an office and a target range.', url: 'https://mingalar-world.vercel.app/' },
-  { id: 'voice', title: 'Burmese Text-to-Speech', art: 'voice', image: 'burmese-tts', desc: 'A Burmese text-to-speech project with several voice options.', url: '' },
-  { id: 'mahabote', title: 'Mahabhote Burmese Astrology', art: 'stars', image: 'mahabhote', desc: 'A Burmese Mahabhote astrology bot on Telegram that remembers the conversation and asks follow-up questions.', url: '' },
+  { id: 'world', title: 'Mingalar World', art: 'world', image: 'virtual-world', desc: 'A 3D town in the browser with a virtual mall, a garage, an office and a target range.', url: 'https://mingalar-world.vercel.app/' },
+  { id: 'voice', title: 'Burmese Text-to-Speech', art: 'voice', image: 'burmese-tts', desc: 'A Burmese text-to-speech project with several voice options.', link: false },
+  { id: 'mahabote', title: 'Mahabhote Burmese Astrology', art: 'stars', image: 'mahabhote', desc: 'A Burmese Mahabhote astrology bot on Telegram that remembers the conversation and asks follow-up questions.', link: false },
+  { id: 'news', title: 'News Scraper', art: 'chart', image: 'news-scraper', desc: 'An n8n workflow for Mingalar News: every morning it reads news feeds and pages, parses the articles and shortlists what matters to Myanmar migrants in Thailand.', link: false },
+  { id: 'facenet', title: 'FaceNet', art: 'bot', image: 'facenet', desc: 'A social network app.', url: '' },
+  { id: 'trace', title: 'Trace', art: 'chart', image: 'trace', desc: 'A blockchain app.', url: '' },
 ];
 
 /* ── the library ──

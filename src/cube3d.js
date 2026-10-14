@@ -11,9 +11,13 @@ const HALF = 1, BAR = 0.045, CORNER = 0.075, FACE = 2 * HALF - 2 * BAR + 0.006;
 const OFFSET = 0.38, REST_PITCH = 0.26; // a project "in front": square on, turned a little so it reads as a cube
 const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
 const canvas = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); return c; };
-// the four side faces in turn (face i is in front when the cube is turned -i·90°), then top and bottom
+// the four side faces in turn, then the top and the bottom. TURN[i] turns face i to face you square on.
 const NORMALS = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0], [0, 1, 0], [0, -1, 0]].map((n) => new THREE.Vector3(...n));
-const restFor = (i) => new THREE.Quaternion().setFromEuler(new THREE.Euler(REST_PITCH, -i * (Math.PI / 2) + OFFSET, 0, 'XYZ'));
+const TURN = [0, 1, 2, 3].map((i) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -i * (Math.PI / 2)))
+  .concat([Math.PI / 2, -Math.PI / 2].map((a) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), a)));
+// at rest a face is turned a little, so the cube reads as a cube
+const TILT = new THREE.Quaternion().setFromEuler(new THREE.Euler(REST_PITCH, OFFSET, 0, 'XYZ'));
+const restFor = (i) => TILT.clone().multiply(TURN[i]);
 
 function emblem(g, kind, cx, cy, r, color) {
   g.strokeStyle = color; g.lineWidth = Math.max(2, r * 0.07); g.lineCap = 'round'; g.beginPath();
@@ -48,14 +52,14 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
   for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) { const c = new THREE.Mesh(barGeo, gold); c.scale.setScalar(CORNER); c.position.set(x * (HALF - CORNER / 2 + 0.012), y * (HALF - CORNER / 2 + 0.012), z * (HALF - CORNER / 2 + 0.012)); cube.add(c); }
 
   // shared overlays: a faint inner shadow at the window's edge, and the glow for the window in front
-  const edgeTex = canvasTex(canvas(256, 256, (g) => { for (let i = 0; i < 18; i++) { g.strokeStyle = `rgba(6,8,18,${0.3 * (1 - i / 18)})`; g.lineWidth = 2; g.strokeRect(i * 2 + 1, i * 2 + 1, 254 - i * 4, 254 - i * 4); } }), false);
+  const edgeTex = canvasTex(canvas(256, 256, (g) => { for (let i = 0; i < 10; i++) { g.strokeStyle = `rgba(6,8,18,${0.13 * (1 - i / 10)})`; g.lineWidth = 2; g.strokeRect(i * 2 + 1, i * 2 + 1, 254 - i * 4, 254 - i * 4); } }), false);
   const glowTex = canvasTex(canvas(256, 256, (g) => { for (let i = 0; i < 22; i++) { g.strokeStyle = `rgba(255,230,170,${0.07 * (1 - i / 22)})`; g.lineWidth = 2; g.strokeRect(i * 2 + 1, i * 2 + 1, 254 - i * 4, 254 - i * 4); } }), false);
   const glassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.06, roughness: 0.05, metalness: 0, envMapIntensity: 2.4, depthWrite: false });
   const loader = new THREE.TextureLoader();
   const faces = [], hits = [];
   NORMALS.forEach((n, i) => {
-    const face = new THREE.Group(); face.position.copy(n).multiplyScalar(HALF); face.lookAt(n.clone().multiplyScalar(2)); cube.add(face);
-    const p = i < 4 ? projects[i] : null;
+    const face = new THREE.Group(); face.position.copy(n).multiplyScalar(HALF); face.quaternion.copy(TURN[i]).invert(); cube.add(face);
+    const p = projects[i] || null;
     let mat;
     if (p) {
       // the project's picture, in its own colours (unlit, so it looks like the original)
@@ -63,7 +67,7 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
       mat = new THREE.MeshBasicMaterial({ map: fallback, color: 0xffffff });
       if (p.image) loader.load(BASE + 'assets/images/gallery/' + p.image + '.jpg', (t) => { t.encoding = THREE.sRGBEncoding; t.anisotropy = aniso; mat.map = t; mat.needsUpdate = true; });
     } else {
-      const label = i === 3 ? 'MORE SOON' : '';
+      const label = 'MORE SOON';
       mat = new THREE.MeshStandardMaterial({ roughness: 0.42, metalness: 0.15, envMapIntensity: 0.55, map: canvasTex(canvas(512, 512, (g) => {
         const gr = g.createLinearGradient(0, 0, 512, 512); gr.addColorStop(0, '#1e2340'); gr.addColorStop(1, '#0c0e1c'); g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
         let s = 9 + i; const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
@@ -80,7 +84,7 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
     pic.userData.face = i; hits.push(pic);
     faces.push({ n, mat, open: !!p, glow, g: sp(0), lit: p ? mat : null });
   });
-  const isOpen = (i) => i >= 0 && i < 4 && !!projects[i];
+  const isOpen = (i) => i >= 0 && i < 6 && !!projects[i];
 
   /* motion. The cube's orientation is a quaternion with an angular velocity: dragging spins it
      about any axis, letting go keeps the spin and lets it slow down, and the arrows set a target
@@ -88,6 +92,16 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
   const q = restFor(0), w = new THREE.Vector3(), dq = new THREE.Quaternion(), tmpQ = new THREE.Quaternion(), tmpV = new THREE.Vector3(), axis = new THREE.Vector3();
   let target = restFor(0), dragging = false, current = 0, hover = -1, info = false, lastMove = 0;
   const pos = { x: sp(0), y: sp(0), s: sp(1) }, tgt = { x: 0, y: 0, s: 1 }, dragW = new THREE.Vector3();
+  // zoom: the scroll wheel, a two-finger pinch or the + and − buttons, within a small range
+  const ZMIN = 0.8, ZMAX = 1.35, zoom = sp(1); let zoomT = 1;
+  const setZoom = (z) => { zoomT = Math.max(ZMIN, Math.min(ZMAX, z)); };
+  host.addEventListener('wheel', (e) => { e.preventDefault(); setZoom(zoomT * Math.exp(-Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 100) * 0.0018)); }, { passive: false });
+  const touches = new Map(); let pinch = 0;
+  const spread = () => { const p = [...touches.values()]; return Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]); };
+  host.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; touches.set(e.pointerId, [e.clientX, e.clientY]); if (touches.size === 2) { pinch = spread(); w.set(0, 0, 0); } });
+  host.addEventListener('pointermove', (e) => { if (!touches.has(e.pointerId)) return; touches.set(e.pointerId, [e.clientX, e.clientY]); if (touches.size === 2 && pinch) { const d = spread(); if (d > 0) setZoom(zoomT * (d / pinch)); pinch = d; } });
+  const lift = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch = 0; };
+  host.addEventListener('pointerup', lift); host.addEventListener('pointercancel', lift);
 
   function goTo(i) { if (!isOpen(i)) return; target = restFor(i); if (i !== current) { current = i; if (onFace) onFace(i); } }
   function setInfo(on) { info = on; const wide = camera.aspect > 1.05; tgt.x = on && wide ? -1.25 : 0; tgt.y = on && !wide ? 0.95 : 0; tgt.s = on ? (wide ? 0.9 : 0.62) : 1; if (on) goTo(current); }
@@ -100,9 +114,10 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
   function update(dt, time) {
     // fit the cube, at any angle, between the title above and the caption below (and the arrows at the sides)
     const H = host.clientHeight || 1, Wd = host.clientWidth || 1, small = Wd < 700 || H < 500;
-    const fh = Math.max(0.45, (H - (H < 500 ? 110 : small ? 170 : 210)) / H), fw = Math.max(0.45, (Wd - (small ? 96 : 150)) / Wd);
-    const tan = Math.tan((camera.fov * Math.PI) / 360), R = 1.62, dist = Math.max(R / (tan * fh), R / (tan * camera.aspect * fw));
-    const shift = (H < 500 ? 0 : small ? 10 : 6) / H * 2 * tan * dist; // a little up, off the caption
+    const fh = Math.max(0.5, (H - (H < 500 ? 104 : small ? 176 : 214)) / H), fw = Math.max(0.5, (Wd - (small ? 88 : 140)) / Wd);
+    spring(zoom, zoomT, 7, dt);
+    const tan = Math.tan((camera.fov * Math.PI) / 360), dist = Math.max(1.66 / (tan * fh), 1.5 / (tan * camera.aspect * fw)) / zoom.v;
+    const shift = (H < 500 ? 4 : small ? 14 : 16) / H * 2 * tan * dist; // a little up, off the caption
     camera.position.set(0, -shift, dist); camera.lookAt(0, -shift, 0);
     if (!dragging) {
       if (target) {
@@ -134,6 +149,7 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
   dragger(host, {
     onStart() { dragging = true; target = null; w.set(0, 0, 0); dragW.set(0, 0, 0); lastMove = performance.now(); host.classList.add('grab'); },
     onMove(dx, dy) {
+      if (touches.size > 1) return; // two fingers: that's a pinch, not a turn
       const now = performance.now(), dts = Math.max(0.008, (now - lastMove) / 1000); lastMove = now;
       const k = 0.0095, ay = dx * k, ax = dy * k;
       q.premultiply(tmpQ.setFromAxisAngle(tmpV.set(0, 1, 0), ay)).premultiply(tmpQ.setFromAxisAngle(tmpV.set(1, 0, 0), ax)).normalize();
@@ -141,7 +157,8 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
     },
     onEnd(moved, e) {
       dragging = false; host.classList.remove('grab');
-      if (moved < 5) { click(e); return; }
+      if (moved < 5 && touches.size < 2) { click(e); return; }
+      if (pinch || touches.size) { w.set(0, 0, 0); return; }
       // keep the spin you gave it (if you let go while still moving)
       w.copy(performance.now() - lastMove < 90 ? dragW : tmpV.set(0, 0, 0)); if (w.length() > 9) w.setLength(9);
     },
@@ -162,8 +179,9 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
   host.addEventListener('pointerleave', () => { hover = -1; host.classList.remove('point'); });
 
   return {
-    start() { const ok = stage.start(); if (ok) intro(); return ok; }, stop: () => stage.stop(),
+    start() { const ok = stage.start(); if (ok) { zoomT = 1; zoom.v = 1; intro(); } return ok; }, stop: () => stage.stop(),
     go: (i) => goTo(i), setInfo, current: () => current,
-    next: (d) => { let i = current; for (let s = 0; s < 4; s++) { i = (i + d + 4) % 4; if (isOpen(i)) break; } goTo(i); },
+    next: (d) => { let i = current; for (let s = 0; s < 6; s++) { i = (i + d + 6) % 6; if (isOpen(i)) break; } goTo(i); },
+    zoom: (k) => setZoom(zoomT * k),
   };
 }

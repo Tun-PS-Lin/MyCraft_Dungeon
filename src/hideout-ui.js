@@ -167,7 +167,7 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
   {
     const wrap = shell('gallery', 'Gallery', 'hx-gallery'), gal = el('div', 'gal'); wrap.appendChild(gal);
     const x = closeBtn(); x.classList.add('gal-x'); x.onclick = () => hide(); gal.appendChild(x);
-    const top = el('header', 'gal-top'); top.append(el('h2', '', 'The Gallery'), el('p', 'gal-sub', 'Side projects  ·  ' + GALLERY.length + ' open windows')); gal.appendChild(top);
+    const top = el('header', 'gal-top'); top.append(el('h2', '', 'The Gallery'), el('p', 'gal-sub', 'Side projects  ·  ' + GALLERY.length + ' faces')); gal.appendChild(top);
     const wall = el('div', 'gal-wall'); gal.appendChild(wall);
     const host = el('div', 'gal-cube'); host.setAttribute('aria-label', 'A cube of side projects. Drag to turn it.'); wall.appendChild(host);
     const chev = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + (d < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7') + '"/></svg>';
@@ -180,27 +180,28 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
     shot.alt = ''; shot.decoding = 'async'; go.target = '_blank'; go.rel = 'noopener'; infoBox.append(shot, ik, ih, el('i', 'gal-rule'), ip, go, back); wall.appendChild(infoBox);
     wall.appendChild(el('p', 'gal-hint', 'Drag to turn the cube any way  ·  click a window to step inside'));
     const IMG = (g, thumb) => BASE + 'assets/images/gallery/' + g.image + (thumb ? '-thumb' : '') + '.jpg';
-    const rail = el('div', 'gal-rail'), thumbs = [];
-    GALLERY.forEach((g, i) => {
-      const b = el('button', 'gal-thumb'); b.setAttribute('aria-label', g.title); b.title = g.title;
-      if (g.image) { const im = el('img'); im.src = IMG(g, true); im.alt = ''; im.loading = 'lazy'; b.appendChild(im); } else b.appendChild(pictureCanvas(32, 24, (c) => drawPainting(c, g.art)));
-      b.appendChild(el('span', '', g.title)); b.onclick = () => turnTo(i); rail.appendChild(b); thumbs.push(b);
-    });
-    gal.appendChild(rail);
+    // zoom in and out a little (the wheel and a pinch work too)
+    const zoomBox = el('div', 'gal-zoom'), zIn = el('button', '', '+'), zOut = el('button', '', '−');
+    zIn.setAttribute('aria-label', 'Zoom in'); zOut.setAttribute('aria-label', 'Zoom out'); zoomBox.append(zIn, zOut); wall.appendChild(zoomBox);
+    // which face you're on, as a row of dots
+    const dots = el('div', 'gal-dots'), dot = GALLERY.map((g, i) => { const d = el('button'); d.setAttribute('aria-label', g.title); d.onclick = () => turnTo(i); dots.appendChild(d); return d; }); wall.appendChild(dots);
     let at = 0, infoOpen = false;
     function fill() {
       const g = GALLERY[at]; if (!g) return; const k = 'Side project  ·  No. ' + String(at + 1).padStart(2, '0');
       capK.textContent = k; capT.textContent = g.title; ik.textContent = k; ih.textContent = g.title; ip.textContent = g.desc;
       if (g.image) { shot.src = IMG(g); shot.hidden = false; } else shot.hidden = true;
+      // a link button only for projects that have one (or will soon); none at all when link is false
+      go.hidden = g.link === false && !g.url;
       if (g.url) { go.href = g.url; go.textContent = 'Visit ' + g.title + '  ↗'; go.classList.remove('off'); go.removeAttribute('aria-disabled'); }
       else { go.removeAttribute('href'); go.textContent = 'Link coming soon'; go.classList.add('off'); go.setAttribute('aria-disabled', 'true'); }
-      thumbs.forEach((b, i) => { b.classList.toggle('on', i === at); b.setAttribute('aria-pressed', String(i === at)); });
+      dot.forEach((d, i) => { d.classList.toggle('on', i === at); d.setAttribute('aria-pressed', String(i === at)); });
     }
     // the words cross-fade as the cube turns
     let fadeT = 0;
     function face(i) { if (i === at) return; at = i; sound.play('near'); cap.classList.add('swap'); infoBox.classList.add('swap'); clearTimeout(fadeT); fadeT = setTimeout(() => { fill(); cap.classList.remove('swap'); infoBox.classList.remove('swap'); }, 200); }
     function setInfo(on) { if (on === infoOpen) return; infoOpen = on; gal.classList.toggle('reading', on); if (cube) cube.setInfo(on); sound.play(on ? 'open' : 'close'); }
     const cube = createProjectCube(host, GALLERY, { onFace: face, onOpen: setInfo, onSealed: () => { cap.classList.remove('nudge'); void cap.offsetWidth; cap.classList.add('nudge'); } });
+    zIn.onclick = () => cube && cube.zoom(1.12); zOut.onclick = () => cube && cube.zoom(1 / 1.12); if (!cube) zoomBox.hidden = true;
     if (!cube) { gal.classList.add('flat'); const im = el('img', 'gal-flat'); im.alt = ''; host.appendChild(im); }
     const paintFlat = () => { if (!cube) { const g = GALLERY[at]; host.firstChild.src = g.image ? IMG(g) : ''; } };
     function turnTo(i) { if (cube) cube.go(i); else { face(i); setTimeout(paintFlat, 210); } }
@@ -215,6 +216,7 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
     panels.gallery.key = (e) => {
       if (e.key === 'ArrowLeft') { prev.onclick(); return true; } if (e.key === 'ArrowRight') { next.onclick(); return true; }
       if (e.key === 'Enter' && document.activeElement === document.body) { setInfo(!infoOpen); return true; }
+      if ((e.key === '+' || e.key === '=') && cube) { cube.zoom(1.12); return true; } if ((e.key === '-' || e.key === '_') && cube) { cube.zoom(1 / 1.12); return true; }
       if (e.key === 'Escape' && infoOpen) { setInfo(false); return 'stop'; }
       return false;
     };
