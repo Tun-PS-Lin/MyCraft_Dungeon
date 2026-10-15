@@ -385,6 +385,8 @@ kbd.gap{margin-left:8px}
 #intro.ready #introLoad b{animation:none;transform:none}
 @keyframes introLoad{0%{transform:translateX(-100%) scaleX(.4)}60%{transform:translateX(40%) scaleX(.7)}100%{transform:translateX(110%) scaleX(.4)}}
 #intro em{font-style:normal;font-family:var(--body);font-size:14px;color:#6d675c;min-height:1.4em}
+#introWhy{font-family:var(--body);font-size:12px;color:#8a8273;max-width:34ch;overflow-wrap:anywhere;margin-top:-4px}
+#introWhy[hidden]{display:none}
 #introPlain{position:absolute;left:0;right:0;bottom:calc(22px + env(safe-area-inset-bottom));text-align:center;font-family:var(--body);font-size:13px;color:#6d675c;text-decoration:underline;text-underline-offset:3px}
 #introPlain:hover{color:var(--night)}
 .broken #introLoad b{animation:none;transform:none;background:#a8322a}
@@ -1227,3 +1229,45 @@ body.flying #hud,body.flying .mm:not(.big),body.flying #touch{opacity:0;pointer-
 .whistle-btn[hidden]{display:none}
 @media (max-width:700px){ .whistle-btn{height:38px;padding:0 8px 0 6px} .whistle-btn span{display:none} }
 @media (max-height:500px){ .whistle-btn{height:36px} .whistle-btn span{display:none} }
+
+/* ── accessibility settings (menu → Accessibility; see src/access.js) ── */
+#access{display:flex;flex-direction:column;gap:8px}
+.acc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;box-sizing:border-box;background:var(--night-2);border:3px solid var(--frame);
+  padding:8px 12px;font-family:var(--display);font-size:16px;letter-spacing:.04em;color:var(--ink);text-align:left}
+.acc-sw{cursor:pointer;transition:border-color .15s,color .15s}
+.acc-sw:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.acc-sw:disabled{opacity:.5;cursor:default}
+.acc-sw i{flex:none;position:relative;width:38px;height:20px;box-sizing:border-box;border:2px solid #000;background:var(--night);box-shadow:inset 0 0 0 2px var(--frame);transition:background .2s}
+.acc-sw i::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;background:var(--ink-dim);transition:transform .22s var(--ease),background .2s}
+.acc-sw[aria-checked="true"] i{background:var(--emerald)}
+.acc-sw[aria-checked="true"] i::after{transform:translateX(18px);background:#fff}
+.acc-seg{display:flex;gap:4px}
+.acc-seg button{width:34px;height:30px;border:2px solid var(--frame);background:var(--night);color:var(--ink);font-family:var(--display);font-weight:700;line-height:1;cursor:pointer;transition:border-color .15s}
+.acc-seg button:hover{border-color:var(--gold)}
+.acc-seg button:nth-child(1){font-size:13px}.acc-seg button:nth-child(2){font-size:17px}.acc-seg button:nth-child(3){font-size:21px}
+.acc-seg button[aria-pressed="true"]{background:var(--gold);color:var(--night);border-color:#000}
+
+/* larger text: the reading text everywhere, the name tags and the prompts */
+html.big-text #cardDesc,html.big-text #chatText{font-size:calc(17px * var(--ts))}
+html.big-text .jbody{font-size:calc(16px * var(--ts))}
+html.big-text .jquote p{font-size:calc(19px * var(--ts))}
+html.big-text .lbl{font-size:calc(clamp(12px,1.15vw,16px) * var(--ts))}
+html.big-text #prompt{font-size:calc(17px * var(--ts))}
+html.big-text .keys,html.big-text .board-hint,html.big-text #toast span{font-size:calc(14px * var(--ts))}
+html.big-text #progHint,html.big-text #boardLog li{font-size:calc(13px * var(--ts))}
+html.big-text .navbtn{font-size:calc(18px * var(--ts))}
+html.big-text .acc-row{font-size:calc(16px * var(--ts))}
+html.big-text .parrot-say{font-size:calc(13px * var(--ts))}
+html.big-text .pond-card p{font-size:calc(1em * var(--ts))}
+
+/* high contrast: no haze or vignette over the scene, solid name tags, full-strength text, clear focus rings */
+html.contrast{--ink-dim:#e6e9f0}
+html.contrast #atmo{display:none}
+html.contrast .lbl{background:rgba(0,0,0,.85);text-shadow:none;padding:4px 10px;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+html.contrast #prompt{box-shadow:0 0 0 3px #000,0 0 0 5px var(--gold)}
+html.contrast .parrot-say{border:2px solid #000}
+html.contrast .page{color:#1a120c}
+html.contrast :focus-visible{outline:3px solid #ffd84a!important;outline-offset:2px}
+
+/* reduce motion: menus and cards appear without sliding, nothing loops (the same as the system setting) */
+html.calm *,html.calm *::before,html.calm *::after{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important;transition-delay:0s!important;scroll-behavior:auto!important}

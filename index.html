@@ -60,6 +60,14 @@
   <div id="navVillage" class="navlist"></div>
   <h2 data-t="hello"></h2>
   <div id="navContact" class="navlist"></div>
+  <h2 data-t="access"></h2>
+  <div id="access">
+    <div class="acc-row"><span data-t="textSize"></span>
+      <div class="acc-seg" role="group" aria-label="Text size"><button type="button" data-ts="0" aria-label="Normal text">A</button><button type="button" data-ts="1" aria-label="Large text">A</button><button type="button" data-ts="2" aria-label="Largest text">A</button></div></div>
+    <button type="button" class="acc-row acc-sw" role="switch" data-acc="contrast"><span data-t="contrast"></span><i aria-hidden="true"></i></button>
+    <button type="button" class="acc-row acc-sw" role="switch" data-acc="calm"><span data-t="calm"></span><i aria-hidden="true"></i></button>
+    <button type="button" class="acc-row acc-sw" role="switch" data-acc="flight"><span data-t="flight"></span><i aria-hidden="true"></i></button>
+  </div>
   <div class="keys">
     <div data-t="menuHint"></div>
     <div class="desk-only"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span data-t="kMove"></span> <kbd class="gap">Shift</kbd><span data-t="kRun"></span> <kbd class="gap">Space</kbd><span data-t="kJump"></span></div>
@@ -136,12 +144,25 @@
 </div>
 <div id="travel" aria-hidden="true"><strong></strong></div>
 <div id="intro"><div><strong id="introName">MyCraft Dungeon</strong><span id="introBy">A portfolio by Tun. L</span>
-  <i id="introLoad" role="progressbar" aria-label="Loading the village"><b></b></i><em id="introState">Building the village…</em></div>
+  <i id="introLoad" role="progressbar" aria-label="Loading the village"><b></b></i><em id="introState">Building the village…</em><small id="introWhy" hidden></small></div>
   <a id="introPlain" href="./plain.html">Simple version</a></div>
 <noscript><p class="noscript">This village needs JavaScript. <a href="./plain.html">Open the simple version</a>.</p></noscript>
 <script>
   // if the village fails to start, offer the simple version on the title card instead of a blank page
-  addEventListener('error', function () { document.documentElement.classList.add('broken'); var s = document.getElementById('introState'); if (s) s.textContent = 'The village could not start on this device.'; });
+  // (with the reason in small print, so it can be reported). Errors from browser extensions, and
+  // anything after the village is up, are left alone.
+  window.__villageFail = function (why) {
+    var s = document.getElementById('introState'), w = document.getElementById('introWhy');
+    if (!s || window.__villageUp) return;
+    document.documentElement.classList.add('broken'); s.textContent = 'The village could not start on this device.';
+    if (w && why) { w.textContent = why; w.hidden = false; }
+  };
+  addEventListener('error', function (e) {
+    var f = e.filename || '';
+    if (f && f.indexOf(location.origin) !== 0) return;
+    if (!e.error && /^Script error/.test(e.message || '')) return;
+    window.__villageFail((e.message || 'Unknown error') + (f ? ' (' + f.split('/').pop() + ':' + e.lineno + ')' : ''));
+  });
 </script>
 <script type="module" src="./src/main.js"></script>
 </body>

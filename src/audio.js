@@ -57,6 +57,7 @@ const SYNTH = {
   stepWood: () => { thud(0.06, 480 + Math.random() * 120, 0.12); tone(150 + Math.random() * 30, 105, 0.06, 'triangle', 0.03); }, // planks: a hollow knock
   stepGrass: () => thud(0.11, 2600 + Math.random() * 900, 0.035),                                   // grass: a soft brush
   whoosh: () => whoosh(),
+  flutter: () => { for (let i = 0; i < 7; i++) setTimeout(() => thud(0.035, 1500 + Math.random() * 900, 0.05 + Math.random() * 0.03), i * (45 + Math.random() * 35)); },
   squawk: () => { tone(1300, 780, 0.12, 'sawtooth', 0.05, 0, 1600); tone(1150, 720, 0.15, 'sawtooth', 0.045, 0.15, 1500); },
   whistle: () => { tone(1400, 2300, 0.16, 'sine', 0.045); tone(2300, 1650, 0.24, 'sine', 0.045, 0.2); },
   jump: () => tone(260, 470, 0.11, 'square', 0.04),

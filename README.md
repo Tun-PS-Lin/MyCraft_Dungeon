@@ -37,7 +37,10 @@ nothing to install.
 </tr>
 </table>
 
-A first visit opens with a slow flight round the whole village before the camera settles behind you.
+A first visit opens with a slow flight round the whole village, down through the clouds, before the camera settles behind you.
+The village gets on with its own day: cloud shadows drift across the square, laundry sways on the
+washing lines, pigeons burst up and circle when you run at them, and at night the moon and stars
+show in the pond.
 A few small things to find: an **About Me** signpost above the movement guide, a day and night
 switch that sweeps through a sunset or sunrise, sounds that change with where you stand, a dash roll (tap <kbd>Space</kbd> twice), a meeting table you can call the agents to, and a
 wolf that starts following you once you have opened every stall.
@@ -170,6 +173,9 @@ they did last. Talk to any of them to try what they do.
 | Whistle for the parrot | <kbd>F</kbd> | The Whistle button |
 
 The menu in the top-right corner lists every place in the village and walks you there.
+Under **Accessibility** in the same menu you can make the text larger, switch on high contrast,
+reduce motion, or turn off the opening flight. The choices are remembered in your browser, and
+reduce motion follows your system setting until you change it.
 
 <br>
 
@@ -254,6 +260,7 @@ export const SOUND_FILES = {
 | `near` | walking into range of a stall | a soft blip |
 | `menu` | menu opening and closing | one |
 | `cluck` | startled chicken | 2 to 3 variants |
+| `flutter` | the pigeons taking off | one or two |
 | `bird`, `cricket` | occasional bird call by day, cricket by night | 2 to 3 variants |
 | `villager` | an agent greeting you | 2 to 3 short grunts |
 | `bark` | the wolf | one |
@@ -295,6 +302,9 @@ src/demos.js        the demo each agent shows when you talk to them (sample data
 src/figures.js      the blocky people: outfits, painting, posing
 src/player.js       the player's state and shadow
 src/critters.js     chickens and the wolf
+src/life.js         the washing lines and the pigeons
+src/sky.js          cloud shadows, the clouds seen from the opening flight, the moon and stars in the pond
+src/access.js       the accessibility settings (text size, contrast, motion, opening flight)
 src/nav.js          path finding for walk-to
 src/ambience.js     fireflies and drifting leaves
 src/collision.js    the walkable area, steps and jumping onto things
@@ -314,7 +324,7 @@ src/minimap.js      the mini-map and the big map
 src/parrot.js       the parrot companion
 src/discover.js     the discoveries checklist (the list is at the top)
 src/pixelart.js     the pixel discs, icons and paintings
-src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)
+src/lights.js       lanterns (shared out to a few real lights) and the day/night colours (edit `MOOD` to retune either mode)
 src/style.css       interface styling
 src/plain.js        builds the simple version from the same config
 src/plain.css       styling for the simple version

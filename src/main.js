@@ -23,10 +23,13 @@ import { createParrot, PARROT_ICON } from './parrot.js';
 import { RECORDS } from './hideout-content.js';
 import { BASE } from './base.js';
 import { t, tr } from './i18n.js';
-import { lamps, addLamp, MOOD } from './lights.js';
+import { lamps, addLamp, MOOD, createLightPool, updateLightPool } from './lights.js';
 import { cv } from './textures.js';
 import { drawSprite, drawFace, SPRITE, createFigure } from './figures.js';
 import { inject as analytics } from '@vercel/analytics';
+import { access, bindAccess } from './access.js';
+import { createLife } from './life.js';
+import { createSky } from './sky.js';
 
 // Page views for Vercel Web Analytics (turn it on in the Vercel project, under Analytics).
 // No cookies are set; on any host other than Vercel this quietly does nothing.
@@ -43,6 +46,9 @@ const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { ret
 // Phones get a lighter setup: no multisampling, a lower pixel ratio and a smaller shadow map.
 const phone = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: !phone, powerPreference: 'high-performance' });
+// if the browser takes the GPU away for a moment (Safari can, when a phone is short of memory),
+// three.js waits for it to come back; then the shadows are drawn again
+canvas.addEventListener('webglcontextrestored', () => { bakeFrames = 4; });
 let pixelRatio = Math.min(window.devicePixelRatio || 1, phone ? 1.5 : 2);
 renderer.setPixelRatio(pixelRatio);
 renderer.outputEncoding = THREE.sRGBEncoding;
@@ -72,6 +78,9 @@ sc.updateProjectionMatrix();
 sun.shadow.bias = -0.0006;
 sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
+// the lanterns' light: a few real lights shared out to the nearest lamps (see lights.js)
+createLightPool(scene, phone ? 10 : 16);
+const lampFill = new THREE.AmbientLight('#ffb36a', 0); scene.add(lampFill); let fillLevel = 0; const FILL_K = 0.06;
 
 /* ── world ── */
 const fixed = scene.children.length; // the sky light and the sun above stay where they are
@@ -83,6 +92,7 @@ const chickens = createChickens(scene);
 const ambience = createAmbience(scene);
 const cave = buildCave(scene);
 const pond = buildPond(scene);
+const life = createLife(scene, blocked); // washing lines and the pigeons
 // Everything built so far is the village. It goes in one group, and the Hideout in another, so
 // only the place the player is in gets drawn (and lit): the other one is switched off entirely.
 const village = new THREE.Group(); for (const o of scene.children.slice(fixed)) village.add(o); scene.add(village);
@@ -155,6 +165,11 @@ const ui = createUI(canvas, {
 });
 ui.setProgress(visited, wolfUnlocked);
 if (wolfUnlocked) wolf.activate(P);
+
+/* ── accessibility settings, in the menu ── */
+bindAccess(document.getElementById('access'), () => sound.play('menu'));
+const exposure = () => { renderer.toneMappingExposure = access.contrast() ? 1.14 : 1.0; };
+exposure(); access.onChange(exposure);
 
 /* ── the discovery checklist and the mini-map, together in the top-left corner ── */
 const focusGame = () => canvas.focus({ preventScroll: true });
@@ -399,9 +414,7 @@ let opening = 0; // seconds left of the opening glide; the camera starts high an
    then glides down into the usual view behind the player. It is a single smooth path (radius, angle and
    height each eased from start to end), it ends exactly on the game camera, and any key or tap speeds
    it to a quick finish. */
-let fly = null, stallLook = null; const stallLean = { v: 0, vel: 0 };
-// critically damped spring (see stage3d.js)
-function spring(o, target, w, dt) { const x = o.v - target, e = Math.exp(-w * dt), q = (o.vel + w * x) * dt; o.v = target + (x + q) * e; o.vel = (o.vel - w * q) * e; return o.v; }
+let fly = null;
 // fly: { t, dur, rate } while the entrance flight runs
 const FLY_C = new THREE.Vector3(2, 0, -3), flyRel = new THREE.Vector3(), flyLook = new THREE.Vector3();
 const smoother = (k) => k * k * k * (k * (k * 6 - 15) + 10);
@@ -509,6 +522,7 @@ function update(dt) {
   if (night !== nightTarget) night += Math.sign(nightTarget - night) * Math.min(Math.abs(nightTarget - night), dt / 3.4); // a slow sweep through dusk
   torch.position.set(P.x, P.visY + 2.2, P.z + 0.6);
   applyMood(time, indoors);
+  { const rest = updateLightPool(focus); fillLevel += (rest - fillLevel) * Math.min(1, dt * 3); lampFill.intensity = Math.min(0.35, fillLevel * FILL_K); }
   if (night > 0.9 && !underground && !disc.has('night')) discover('night');
   player.setHold(pond.hold());
   player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors) * (underground ? 0 : 1));
@@ -552,12 +566,9 @@ function update(dt) {
   if (titleFor <= 0) { zoom += (zoomTarget - zoom) * Math.min(1, dt * (opening > 0 ? 1.7 : 7)); if (opening > 0) opening -= dt; }
   // while fishing the camera leans a little toward the line and closes in, then eases back
   const lean = underground ? 0 : pond.lean(), [lx, lz] = pond.lookAt();
-  // standing at a stall, the camera leans in a little toward it so you can see what's on the counter
-  { let best = null, bd = 1.6; if (!underground && !auto && !paused()) for (const st of stalls) { if (st.about) continue; const d = rectDistance(st.rect, P.x, P.z); if (d < bd) { bd = d; best = st; } }
-    if (best) stallLook = best; spring(stallLean, best && speed < 2.5 ? 1 : 0, 2.6, dt); }
-  const sl = stallLean.v, fx = P.x + (lx - P.x) * 0.38 * lean + (stallLook ? (stallLook.pos[0] - P.x) * 0.3 * sl : 0), fz = P.z + (lz - P.z) * 0.38 * lean + (stallLook ? (stallLook.pos[1] - P.z) * 0.3 * sl : 0);
+  const fx = P.x + (lx - P.x) * 0.38 * lean, fz = P.z + (lz - P.z) * 0.38 * lean;
   focus.x += (fx - focus.x) * Math.min(1, dt * 5); focus.z += (fz - 1.5 * zoom - focus.z) * Math.min(1, dt * 5); focus.y += (P.visY * 0.5 - focus.y) * Math.min(1, dt * 3);
-  camPos.copy(CAM).multiplyScalar(camScale * zoom * (1 - 0.13 * lean) * (1 - 0.14 * sl)).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
+  camPos.copy(CAM).multiplyScalar(camScale * zoom * (1 - 0.13 * lean)).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
   if (listen > 0.001) {
     const e = ease(listen), [dx2, dy2, dz2] = hideout.deckAt; deckLook.set(dx2, dy2 + 0.4, dz2 + 0.4);
     deckCam.copy(CAM).multiplyScalar(0.32 * camScale).add(deckLook); camPos.lerp(deckCam, e); camLook.lerp(deckLook, e);
@@ -607,6 +618,8 @@ function update(dt) {
 
   agents.update(dt, time, P, ui.chatId());
   chickens.update(dt, P, () => sound.play('cluck'));
+  if (!underground) life.update(dt, time, P, speed, rollT >= 0, ease(night) > 0.6, () => sound.play('flutter'));
+  sky.update(dt, time, ease(night), indoors, underground, sun, camera);
   wolf.update(dt, time, P);
   ambience.update(time, ease(night), underground ? 1 : indoors);
   chirpT -= dt; if (chirpT < 0) { chirpT = 4 + Math.random() * 7; if (sound.started() && indoors < 0.5 && !underground) sound.play(night > 0.5 ? 'cricket' : 'bird'); }
@@ -627,7 +640,17 @@ function update(dt) {
 }
 // If the first few seconds run slowly, render at a lower resolution from then on.
 let probe = { frames: 0, time: 0 };
+// One bad frame (or one feature failing on an unusual browser) must not stop the village, so the
+// next frame is always asked for first. If every frame keeps failing, the title card says why.
+let failing = 0;
 function frame(now) {
+  requestAnimationFrame(frame);
+  try { step(now); failing = 0; } catch (e) {
+    failing++; if (failing === 1) console.error(e);
+    if (failing === 20 && window.__villageFail) window.__villageFail(String((e && e.message) || e));
+  }
+}
+function step(now) {
   const raw = (now - last) / 1000, dt = Math.min(0.05, raw); last = now; update(dt);
   if (probe && document.visibilityState === 'visible') { probe.frames++; if (probe.frames > 30) probe.time += raw; if (probe.frames === 150) { if (probe.time / 120 > 1 / 42 && pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.5); renderer.setPixelRatio(pixelRatio); resize(); probe = { frames: 0, time: 0 }; } else probe = null; } }
   if (bakeFrames > 0) { bakeFrames--; renderer.shadowMap.needsUpdate = true; }
@@ -646,23 +669,26 @@ function frame(now) {
   // is dimmed and still, so after a few frames it isn't redrawn at all: the menu gets the GPU
   const stage3d = hx.isOpen() && (hx.which() === 'gallery' || hx.which() === 'library');
   if (bakeFrames > 0 || (stage3d ? idle < 4 : idle % 3 === 0)) renderer.render(scene, camera);
-  requestAnimationFrame(frame);
 }
+
+/* ── the sky: drifting cloud shadows by day, the moon and stars in the pond at night ── */
+const sky = createSky(scene);
+for (const o of scene.children) if (o !== hideoutRoot) sky.patchAll(o);
 
 function start(saved) {
   if (saved && typeof saved.x === 'number' && !blocked(saved.x, saved.z, floorAt(saved.x, saved.z))) { P.x = saved.x; P.z = saved.z; P.y = P.visY = floorAt(P.x, P.z); P.yaw = saved.yaw || 0; focus.set(P.x, 0, P.z - 1.5); }
   canvas.tabIndex = 0;
   // a saved position skips the opening; a fresh visit glides in over about two seconds
-  const still = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const still = !access.flight(); // turned off in the menu, or reduced motion
   if (saved && typeof saved.x === 'number') ui.endIntro();
   else {
     titleFor = 1.3;
-    if (still) { zoom = TUNING.zoomStart * 1.55; opening = 2.8; } // no flight: the old gentle settle
+    if (still) { zoom = TUNING.zoomStart * (access.calm() ? 1 : 1.55); opening = 2.8; } // no flight: the old gentle settle (or none at all)
     else { zoom = zoomTarget; fly = { t: 0, dur: 7.2, rate: 1 }; document.body.classList.add('flying'); }
     // the first key or tap lifts the title at once and hurries the flight to a smooth finish (about a second)
     for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); if (fly) fly.rate = Math.max(1, (fly.dur - fly.t) / 1.1); }, { once: true });
   }
-  window.__village = { flying: () => !!fly, night: () => night, parrot, disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
+  window.__village = { camera, sky, life, setNight: (v) => { night = nightTarget = v; }, flying: () => !!fly, night: () => night, parrot, disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, fill: () => fillLevel, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 start({});

@@ -1,6 +1,7 @@
 // The Hideout's three menus: the CD player (pick a CD), the journal (read an entry)
 // and the gallery (flip through side projects). Their content is in hideout-content.js.
 import { RECORDS, JOURNAL, GALLERY, BOOKS } from './hideout-content.js';
+import { access } from './access.js';
 import { drawIcon, drawPainting, pictureCanvas } from './pixelart.js';
 import { music, sound } from './audio.js';
 import { BASE } from './base.js';
@@ -10,7 +11,7 @@ import { createProjectCube } from './cube3d.js';
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 const closeBtn = () => { const b = el('button', 'xbtn', '×'); b.setAttribute('aria-label', 'Close'); return b; };
 const cover = (r) => BASE + 'assets/images/cds/' + r.cover;
-const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const reduced = () => access.calm();
 const anim = (node, frames, opts) => (reduced() || !node.animate ? { finished: Promise.resolve() } : node.animate(frames, opts));
 const clock = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
 const svg = (d) => '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="' + d + '"/></svg>';

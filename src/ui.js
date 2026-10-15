@@ -284,7 +284,7 @@ export function createUI(canvas, handlers) {
   const intro = $('intro'); $('introName').textContent = INTRO_NAME; $('introBy').textContent = INTRO_BY;
   const endIntro = () => {
     if (!intro.isConnected || intro.classList.contains('lift')) return;
-    intro.classList.add('ready'); $('introState').textContent = 'Ready';
+    window.__villageUp = true; intro.classList.add('ready'); $('introState').textContent = 'Ready';
     setTimeout(() => { intro.classList.add('lift'); setTimeout(() => intro.remove(), 1200); }, 260);
   };
 
