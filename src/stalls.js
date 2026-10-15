@@ -212,6 +212,66 @@ const BUILD = {
     s.lamp = lantern(g, 3.7, 2.3);
     col(-4.1, -3, 0.7, 1.4, 2.2); col(3, 4, -0.6, 1.5, 1.2); col(3.5, 3.9, 2.1, 2.5, 3.2);
   },
+  // A little open-air cinema: a marquee of running bulbs, red velvet curtains round a glowing
+  // screen, rows of red seats, a projector throwing its beam, and a popcorn cart.
+  cinema(g, s, col) {
+    const red = wool('#9a1f2a'), redDark = wool('#6e121c'), gold = flat('#d9a93a'), black = flat('#1a1416');
+    platform(g, 6.2, 4.4); B(g, 5.8, 0.05, 4.0, M.carpet, 0, 0.23, 0.1);
+    evenPosts(g, 3.2, 2.85, 1.7);
+    // a short stepped roof over the screen only, so you can see in from above; the marquee stands at the front
+    B(g, 6.3, 0.24, 1.5, red, 0, 3.42, -1.45); B(g, 6.1, 0.24, 1.0, redDark, 0, 3.66, -1.65); B(g, 6.4, 0.1, 1.6, gold, 0, 3.28, -1.4);
+    B(g, 6.4, 0.12, 0.12, gold, 0, 3.55, -0.68);
+    // the screen at the back, framed in black, with a still from the series on it
+    B(g, 5.2, 2.9, 0.2, black, 0, 1.75, -1.9);
+    const sc = document.createElement('canvas'); sc.width = 256; sc.height = 128; const x = sc.getContext('2d');
+    { const gr = x.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, '#1d2350'); gr.addColorStop(0.55, '#c2557a'); gr.addColorStop(1, '#ffb35a'); x.fillStyle = gr; x.fillRect(0, 0, 256, 128);
+      x.fillStyle = '#ffe2a0'; x.beginPath(); x.arc(128, 92, 26, 0, Math.PI * 2); x.fill(); // the sun rising
+      // a golden pagoda in silhouette
+      x.fillStyle = '#3a1630'; x.fillRect(100, 96, 56, 32); x.beginPath(); x.moveTo(104, 98); x.quadraticCurveTo(128, 88, 152, 98); x.fill(); x.beginPath(); x.moveTo(112, 92); x.quadraticCurveTo(128, 50, 144, 92); x.fill(); x.fillRect(126, 30, 4, 24);
+      x.fillStyle = '#e4b93a'; x.font = '700 26px "Pixelify Sans","Courier New",monospace'; x.textAlign = 'center'; x.fillText('38', 40, 40); x.font = '700 11px "Pixelify Sans","Courier New",monospace'; x.fillText('BLESSINGS', 40, 56);
+      for (let i = 0; i < 40; i++) { x.fillStyle = 'rgba(255,255,255,.6)'; x.fillRect((i * 53) % 256, (i * 29) % 60, 1, 1); } }
+    const tex = new THREE.CanvasTexture(sc); tex.encoding = THREE.sRGBEncoding; tex.magFilter = THREE.NearestFilter;
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 2.2), new THREE.MeshBasicMaterial({ map: tex })); screen.position.set(0, 1.85, -1.78); screen.userData.keep = true; g.add(screen);
+    // velvet curtains, gathered at each side of the screen, and a swag along the top
+    for (const sx of [-1, 1]) for (let k = 0; k < 4; k++) B(g, 0.2, 2.9, 0.22, k % 2 ? redDark : red, sx * (2.5 - k * 0.18), 1.7, -1.62 + k * 0.03);
+    for (let i = 0; i < 12; i++) B(g, 0.44, 0.34 + (i % 2) * 0.12, 0.22, i % 2 ? redDark : red, -2.42 + i * 0.44, 3.0 - (i % 2) * 0.06, -1.58);
+    for (const sx of [-1, 1]) B(g, 0.12, 0.12, 0.3, gold, sx * 2.3, 1.2, -1.45);
+    // two rows of red seats facing the screen
+    for (let r = 0; r < 2; r++) for (let i = 0; i < 4; i++) { const sx = -1.65 + i * 1.1, sz = -0.35 + r * 1.0; B(g, 0.8, 0.22, 0.6, red, sx, 0.55, sz); B(g, 0.8, 0.7, 0.16, red, sx, 0.85, sz + 0.28); B(g, 0.1, 0.5, 0.6, black, sx - 0.43, 0.5, sz); B(g, 0.1, 0.5, 0.6, black, sx + 0.43, 0.5, sz); }
+    // the projector on a stand at the front, and its beam
+    B(g, 0.2, 1.1, 0.2, black, 0, 0.75, 1.55); B(g, 0.7, 0.46, 0.8, flat('#2b2b33'), 0, 1.5, 1.55); B(g, 0.3, 0.3, 0.3, flat('#3a3a44'), 0, 1.52, 1.05);
+    for (const dz of [-0.2, 0.25]) { B(g, 0.08, 0.56, 0.56, black, 0, 2.0, 1.55 + dz); B(g, 0.1, 0.18, 0.18, gold, 0, 2.0, 1.55 + dz); }
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 0.12, 3.0, 4, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff1c4, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    beam.rotation.x = Math.PI / 2; beam.rotation.y = Math.PI / 4; beam.position.set(0, 1.7, -0.4); beam.userData.keep = true; g.add(beam);
+    // the marquee over the front, with its name in lights and a frame of running bulbs
+    B(g, 4.6, 1.0, 0.3, red, 0, 3.75, 1.95); B(g, 4.8, 0.1, 0.36, gold, 0, 4.28, 1.95); B(g, 4.8, 0.1, 0.36, gold, 0, 3.22, 1.95);
+    const mc = document.createElement('canvas'); mc.width = 512; mc.height = 96; const mx = mc.getContext('2d');
+    const paint = () => { mx.fillStyle = '#7a141e'; mx.fillRect(0, 0, 512, 96); mx.font = '700 60px "Pixelify Sans","Courier New",monospace'; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillStyle = '#3a0a10'; mx.fillText('AI CINEMA', 260, 54); mx.fillStyle = '#ffe6a0'; mx.fillText('AI CINEMA', 256, 50); mt.needsUpdate = true; };
+    const mt = new THREE.CanvasTexture(mc); mt.encoding = THREE.sRGBEncoding; paint();
+    if (document.fonts && document.fonts.load) document.fonts.load('700 40px "Pixelify Sans"').then(paint).catch(() => {});
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 0.73), new THREE.MeshBasicMaterial({ map: mt })); sign.position.set(0, 3.75, 2.11); sign.userData.keep = true; g.add(sign);
+    // two sets of bulbs that take turns, so the lights seem to run round the sign
+    const bulbA = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffd27a').convertSRGBToLinear() }), bulbB = bulbA.clone();
+    let k = 0; const bulb = (bx, by) => { const m = B(g, 0.11, 0.11, 0.06, k++ % 2 ? bulbB : bulbA, bx, by, 2.12, true); m.userData.keep = true; };
+    for (let i = 0; i <= 14; i++) { bulb(-2.2 + i * (4.4 / 14), 4.15); bulb(-2.2 + i * (4.4 / 14), 3.35); }
+    for (const bx of [-2.2, 2.2]) bulb(bx, 3.75);
+    // film reels either side of the marquee
+    for (const sx of [-1, 1]) { const reel = new THREE.Group(); reel.position.set(sx * 2.75, 3.85, 1.95); g.add(reel);
+      for (let a = 0; a < 3; a++) { const r = B(reel, 0.62, 0.62, 0.1, black, 0, 0, 0); r.rotation.z = a * Math.PI / 6; }
+      for (let h = 0; h < 4; h++) { const a = h * Math.PI / 2; B(reel, 0.13, 0.13, 0.12, flat('#5a5a66'), Math.cos(a) * 0.17, Math.sin(a) * 0.17, 0.01); }
+      B(reel, 0.1, 0.1, 0.14, gold, 0, 0, 0.01); }
+    // a popcorn cart
+    B(g, 0.9, 0.8, 0.7, wool('#f4f1e6'), 3.55, 0.6, 1.2); for (let i = 0; i < 3; i++) B(g, 0.18, 0.8, 0.72, red, 3.25 + i * 0.3, 0.6, 1.2);
+    B(g, 0.8, 0.6, 0.6, glass, 3.55, 1.32, 1.2, true); B(g, 0.66, 0.3, 0.46, flat('#ffe08a'), 3.55, 1.17, 1.2); B(g, 1, 0.12, 0.8, red, 3.55, 1.68, 1.2);
+    for (const [px, pz] of [[3.2, 0.9], [3.9, 1.5]]) B(g, 0.14, 0.14, 0.14, black, px, 0.25, pz);
+    chest(g, -3.5, 1.2, '#6e121c', '#9a1f2a'); crate(g, -3.45, -0.2, 0.8);
+    banner(g, -2.6, 2.3, 2.05, 0.7, 1.0, '#9a1f2a', 'crest');
+    s.lamp = lantern(g, 3.6, 2.6);
+    col(3.05, 4.05, 0.8, 1.6, 1.8); col(-4, -3, -0.6, 1.6, 1.3); col(3.4, 3.8, 2.4, 2.8, 3.2);
+    // the running lights
+    const BULB = bulbA.color.clone(); let was = -1;
+    s.update = (time) => { const on = Math.floor(time * 3.5) % 2; if (on === was) return; was = on; bulbA.color.copy(BULB).multiplyScalar(on ? 1 : 0.3); bulbB.color.copy(BULB).multiplyScalar(on ? 0.3 : 1); };
+  },
 };
 
 // The About Me signpost: two posts, a carved board, a little roof and a lantern.

@@ -1,6 +1,6 @@
 // Small floating particles: drifting leaves by day, fireflies by night.
 import * as THREE from 'three';
-import { BOUNDS } from './config.js';
+import { BOUNDS, POND } from './config.js';
 import { cv, lin } from './textures.js';
 
 const dot = new THREE.CanvasTexture(cv(16, 16, (g) => { const r = g.createRadialGradient(8, 8, 1, 8, 8, 8); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 16, 16); }));
@@ -17,12 +17,18 @@ function cloud(scene, count, opts) {
 
 export function createAmbience(scene) {
   const flies = cloud(scene, 70, { map: dot, color: lin('#eaff7a'), size: 0.42, blending: THREE.AdditiveBlending });
+  // a brighter little swarm hovering over the pond at night
+  const pondFlies = cloud(scene, 22, { map: dot, color: lin('#fff3a0'), size: 0.5, blending: THREE.AdditiveBlending });
+  for (let i = 0; i < pondFlies.count; i++) { const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()); pondFlies.seed[i * 4] = POND.x + Math.cos(a) * r * (POND.rx + 0.8); pondFlies.seed[i * 4 + 2] = POND.z + Math.sin(a) * r * (POND.rz + 0.8); }
   const leaves = cloud(scene, 46, { map: square, color: lin('#c9a23a'), size: 0.16 });
   // night is 0 by day and 1 at night; quiet is 1 when the particles should hide (indoors)
   function update(time, night, quiet) {
     const show = 1 - quiet;
     flies.mat.opacity = night * show * 0.95; flies.pts.visible = flies.mat.opacity > 0.01;
     if (flies.pts.visible) { for (let i = 0; i < flies.count; i++) { const s = flies.seed, k = i * 4, t = time * 0.35 * s[k + 3] + s[k + 1]; flies.pos[i * 3] = s[k] + Math.sin(t) * 1.6; flies.pos[i * 3 + 1] = 0.7 + (Math.sin(t * 1.7) * 0.5 + 0.5) * 1.8; flies.pos[i * 3 + 2] = s[k + 2] + Math.cos(t * 0.8) * 1.6; } flies.geo.attributes.position.needsUpdate = true; flies.mat.size = 0.36 + Math.sin(time * 3) * 0.06; }
+    pondFlies.mat.opacity = night * show; pondFlies.pts.visible = pondFlies.mat.opacity > 0.01;
+    if (pondFlies.pts.visible) { const s = pondFlies.seed, q = pondFlies.pos; for (let i = 0; i < pondFlies.count; i++) { const k = i * 4, t = time * 0.5 * s[k + 3] + s[k + 1]; q[i * 3] = s[k] + Math.sin(t) * 0.7; q[i * 3 + 1] = 0.25 + (Math.sin(t * 2.1) * 0.5 + 0.5) * 1.1; q[i * 3 + 2] = s[k + 2] + Math.cos(t * 1.3) * 0.5; } pondFlies.geo.attributes.position.needsUpdate = true;
+      pondFlies.mat.size = 0.42 + Math.sin(time * 3) * 0.08; }
     leaves.mat.opacity = (1 - night) * show * 0.9; leaves.pts.visible = leaves.mat.opacity > 0.01;
     if (leaves.pts.visible) { for (let i = 0; i < leaves.count; i++) { const s = leaves.seed, k = i * 4, t = (time * 0.07 * s[k + 3] + s[k + 1]) % 1; leaves.pos[i * 3] = s[k] + t * 5 + Math.sin(t * 18 + s[k + 1]) * 0.6; leaves.pos[i * 3 + 1] = 9 * (1 - t); leaves.pos[i * 3 + 2] = s[k + 2] + t * 2.5; } leaves.geo.attributes.position.needsUpdate = true; }
   }

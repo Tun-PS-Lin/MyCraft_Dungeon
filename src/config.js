@@ -83,6 +83,16 @@ export const STALLS = [
     my: { label: 'မြို့ပြ ပုံတူစမ်းသပ်မှု', title: 'မြို့ပြ ပုံတူစမ်းသပ်မှု', desc: 'မြို့ပြသုတေသန၏ တွေ့ရှိချက်များအပေါ် အခြေခံထားသည့် ရင်းနှီးမြှုပ်နှံမှုဆိုင်ရာ ပုံတူ အပူပြမြေပုံ။', cta: 'ပရောဂျက်သို့ သွားရန်', sub: 'ဝက်ဘ်ဆိုက် ဖွင့်ရန်' },
   },
   {
+    id: 'cinema', kind: 'project', face: 'south',
+    label: 'AI Cinema', title: 'AI Cinema',
+    pos: [-7.5, 11.2],
+    color: '#b3242f', glow: '#ffd27a',
+    image: '',
+    desc: 'An AI animated series about “38 Mingalar Blessings”.',
+    url: '', // add the link here when it is ready
+    cta: 'Go to project', sub: 'Open project website',
+  },
+  {
     id: 'outfits', kind: 'outfits', face: 'west',
     label: 'Outfits', title: 'Outfits',
     pos: [21, 1],

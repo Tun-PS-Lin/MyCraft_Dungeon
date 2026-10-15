@@ -192,7 +192,7 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
       if (g.image) { shot.src = IMG(g); shot.hidden = false; } else shot.hidden = true;
       // a link button only for projects that have one (or will soon); none at all when link is false
       go.hidden = g.link === false && !g.url;
-      if (g.url) { go.href = g.url; go.textContent = 'Visit ' + g.title + '  ↗'; go.classList.remove('off'); go.removeAttribute('aria-disabled'); }
+      if (g.url) { go.href = g.url; go.textContent = (/github\.com/.test(g.url) ? 'View on GitHub' : 'Visit ' + g.title) + '  ↗'; go.classList.remove('off'); go.removeAttribute('aria-disabled'); }
       else { go.removeAttribute('href'); go.textContent = 'Link coming soon'; go.classList.add('off'); go.setAttribute('aria-disabled', 'true'); }
       dot.forEach((d, i) => { d.classList.toggle('on', i === at); d.setAttribute('aria-pressed', String(i === at)); });
     }

@@ -37,8 +37,9 @@ nothing to install.
 </tr>
 </table>
 
+A first visit opens with a slow flight round the whole village before the camera settles behind you.
 A few small things to find: an **About Me** signpost above the movement guide, a day and night
-switch, a dash roll (tap <kbd>Space</kbd> twice), a meeting table you can call the agents to, and a
+switch that sweeps through a sunset or sunrise, sounds that change with where you stand, a dash roll (tap <kbd>Space</kbd> twice), a meeting table you can call the agents to, and a
 wolf that starts following you once you have opened every stall.
 
 <br>
@@ -96,7 +97,8 @@ Just right of the Hideout's cave there is a pond with a wooden bridge, a dock, b
 lanterns that light up at night. Walk up to the pond and press <kbd>E</kbd> (or tap the water): you head out to the end of the dock, take up the rod and cast. Every catch is a
 fact about me: my travel photos in a slow-moving carousel (tap one to see it full size), my coffee
 habit, or the research I write about, with a link to the article. The facts and photo captions are
-in `src/pond-content.js`, and the photos in `public/assets/images/photos/`.
+in `src/pond-content.js`, and the photos in `public/assets/images/photos/`. Catch all three facts
+and a parrot comes to ride on your shoulder; dash-roll and it takes off, circles, and lands again.
 
 <br>
 
@@ -114,6 +116,9 @@ Each stall opens a card with a screenshot, a short story and a link.
 <td width="50%" valign="top"><img src="docs/img/readme/stall-urbansim.jpg" alt="The Urban Simulation stall card"><br><b>Urban Simulation.</b> A simulated heat map for investments based on the findings of Urban Research.<br>Coming soon</td>
 </tr>
 </table>
+
+The newest stall, **AI Cinema**, sits just left of the cave: a marquee of running lights, red velvet
+curtains and a projector. It is home to an AI animated series about *38 Mingalar Blessings* (link coming soon).
 
 <br>
 
@@ -303,6 +308,7 @@ src/pond.js         the fishing pond: water, bridge, dock, benches, lanterns and
 src/pond-ui.js      the fact card and the full-size photo viewer
 src/pond-content.js the facts about me and the photo captions (edit these)
 src/minimap.js      the mini-map and the big map
+src/parrot.js       the parrot companion
 src/discover.js     the discoveries checklist (the list is at the top)
 src/pixelart.js     the pixel discs, icons and paintings
 src/lights.js       lanterns and the day/night colours (edit `MOOD` to retune either mode)

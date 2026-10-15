@@ -72,7 +72,9 @@ export function createPlayer(scene) {
   return { state, group, stride, animate, setOutfit, outfit: () => fig.design.id, setLantern(on) { lantern.visible = on; },
     setHold(h) { hold = h; },
     // where the right hand is in the world (for things the player holds)
-    hand(v) { group.updateMatrixWorld(true); return fig.parts.armR.localToWorld(v.copy(handAt)); } };
+    hand(v) { group.updateMatrixWorld(true); return fig.parts.armR.localToWorld(v.copy(handAt)); },
+    // a point in the figure's own space (its body, before it leans or rolls) in the world
+    shoulder(v) { group.updateMatrixWorld(true); return rig.localToWorld(v); } };
 }
 
 // Round soft shadow, the same trick the original blocky games use for moving things.

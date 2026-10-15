@@ -1097,3 +1097,96 @@ body.overlay #hud,body.overlay .mm:not(.big){opacity:0;pointer-events:none}
   .gal-cap{bottom:26px}.gal-dots{bottom:10px}
 }
 @media (max-width:1000px){.gal-hint{display:none}}
+
+/* ══ phone layouts: every menu fits on one screen, no scrolling ══ */
+.bhero-about{display:none}
+@media (max-width:700px){
+  /* CD player: the close button sits above the player, inside the screen */
+  .cdp-x{top:-52px;right:0}
+  /* menus with a 3D stage use the whole screen */
+  .hx-library,.hx-gallery{padding:calc(8px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px))}
+
+  /* library: the book on top, a short card under it, and the shelf as a row you swipe along */
+  .lib.three{height:calc(100vh - 16px);height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:none;overflow:hidden}
+  .lib.three .lib-card{flex:1 1 auto;min-height:0;display:flex!important;flex-direction:column;padding:6px 14px 10px!important;gap:2px!important}
+  .lib.three .lib-stage{flex:1 1 auto;height:auto;min-height:140px}
+  .lib.three .lib-turn{top:2px}
+  .lib.three .lib-views{bottom:2px}
+  .lib.three .lib-views button{font-size:12px;padding:4px 10px}
+  .lib.three .lib-info{flex:none}
+  .lib.three .lib-kicker,.lib.three .lib-note,.lib.three .lib-rule,.lib.three .lib-info h3{display:none}
+  .lib.three .lib-info h2{font-size:20px!important;margin:2px 0 0}
+  .lib.three .lib-author{font-size:15px}
+  .lib.three .lib-take{font-size:14px;line-height:1.45;margin-top:4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .lib.three .lib-shelf{flex:none;padding:8px 8px 0}
+  .lib.three .lib-row{height:112px!important;min-height:0!important;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;gap:3px;padding:12px 6px 14px;scrollbar-width:none;scroll-snap-type:x proximity}
+  .lib.three .lib-row::-webkit-scrollbar{display:none}
+  .lib.three .spine{width:calc(var(--w) * .66);scroll-snap-align:center}
+  .lib.three .spine.on{transform:translateY(-10px)}
+  .lib.three .sp-title{font-size:9.5px}.lib.three .sp-author{font-size:7.5px}
+  .lib.three .lib-hint{display:none}
+
+  /* gallery: title, cube, caption, then one row of controls at the bottom */
+  .gal-wall{height:calc(100vh - 16px)!important;height:calc(100dvh - 18px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;min-height:0!important}
+  .gal-wall .gal-arrow{top:auto;bottom:14px;margin-top:0;width:42px;height:42px}
+  .gal-arrow.prev{left:14px}.gal-arrow.next{right:14px}
+  .gal-dots{bottom:30px}
+  .gal-cap{bottom:66px}
+  .gal-zoom{top:14px;left:12px;right:auto;bottom:auto}
+  .gal-zoom button{width:32px;height:30px}
+  .gal-info{bottom:12px}
+
+  /* agent board: four compact agent tabs, then the chosen agent's desk; the log stays off */
+  #board{padding:8px}
+  .board-panel{max-height:calc(100dvh - 16px);padding:14px 14px 14px;gap:10px;overflow:hidden}
+  .board-hint{display:none}
+  #boardTitle{font-size:22px}
+  #boardGrid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0;padding:0;overflow:visible}
+  #boardGrid .bcard{flex:none;padding:8px 2px 8px;gap:3px;align-items:center;text-align:center;animation-delay:calc(.05s + var(--i,0) * .04s)}
+  #boardGrid .bcard::before{margin:-8px -2px 4px;align-self:stretch;height:4px}
+  #boardGrid .bpic,#boardGrid .babout,#boardGrid .bsw,#boardGrid .bcard em,#boardGrid .brole{display:none}
+  #boardGrid .bwho{flex-direction:column-reverse;align-items:center;gap:4px;margin:0}
+  #boardGrid .bface{width:38px;height:38px}
+  #boardGrid .bwho strong{font-size:15px}
+  #boardGrid .bst{align-self:center;font-size:9px;padding:1px 6px;letter-spacing:.03em}
+  #boardGrid .bcard.on{transform:translateY(-2px)}
+  .board-body{display:block}
+  #boardHero{padding:12px 14px;gap:9px}
+  .bhero-about{display:block;margin:0;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+  .bfacts{gap:6px}.bfacts > div{padding:6px 8px}.bfacts dd{font-size:13px}
+  .bcall{align-self:stretch;text-align:center}
+  .board-side{display:none}
+}
+@media (max-width:700px) and (min-height:780px){
+  .board-side{display:flex;padding:10px 12px;margin-top:10px}
+  #boardLog li:nth-child(n+4){display:none}
+  #boardLog li{font-size:12px;padding:3px 0 3px 8px}
+}
+
+/* during the entrance flight the corner map, discoveries and touch controls wait, then fade in */
+#hud,.mm,#touch{transition:opacity .9s ease}
+body.flying #hud,body.flying .mm:not(.big),body.flying #touch{opacity:0;pointer-events:none}
+/* agent board on a phone held sideways: the four agents as a 2×2 grid on the left, their desk on the right */
+@media (max-height:500px){
+  #board{padding:8px}
+  .board-panel{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:8px 12px;max-height:calc(100dvh - 16px);padding:10px 14px 12px;overflow:hidden}
+  .board-head{grid-column:1/-1}
+  .board-kicker,.board-hint{display:none}
+  #boardTitle{font-size:20px}
+  .board-panel .xbtn{width:34px;height:34px}
+  #boardGrid{grid-column:1;grid-row:2;display:grid!important;grid-template-columns:1fr 1fr;gap:6px;align-content:start;margin:0;padding:0;overflow:visible}
+  #boardGrid .bcard{flex:none;padding:8px 2px;gap:3px;align-items:center;text-align:center}
+  #boardGrid .bcard::before{margin:-8px -2px 4px;align-self:stretch;height:4px}
+  #boardGrid .bpic,#boardGrid .babout,#boardGrid .bsw,#boardGrid .bcard em,#boardGrid .brole{display:none}
+  #boardGrid .bwho{flex-direction:column-reverse;align-items:center;gap:3px;margin:0}
+  #boardGrid .bface{width:32px;height:32px}
+  #boardGrid .bwho strong{font-size:14px}
+  #boardGrid .bst{align-self:center;font-size:9px;padding:1px 6px}
+  .board-body{grid-column:2;grid-row:2;display:block;min-height:0}
+  #boardHero{padding:10px 12px;gap:7px;height:100%;box-sizing:border-box}
+  .bdesk-head .bface{width:28px;height:28px}.bdesk-head strong{font-size:17px}
+  .bhero-about{display:block;margin:0;font-size:12.5px;line-height:1.4;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .bfacts{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.bfacts > div{padding:5px 7px}.bfacts dt{font-size:9.5px}.bfacts dd{font-size:12px}.bfacts dd small{font-size:10.5px}
+  .bcall{padding:8px 14px;font-size:13px}
+  .bnote,.board-side{display:none}
+}

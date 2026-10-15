@@ -49,6 +49,13 @@ const ART = {
     for (let j = 0; j < 6; j++) for (let i = 0; i < 6; i++) { const d = Math.hypot(i - 3.3, j - 2.2), k = Math.max(0, Math.min(5, Math.round(5 - d * 1.35 + (((i * 7 + j * 3) % 3) - 1) * 0.5))); fill(g, heat[k], 4 + i * 4, 4 + j * 4, 3, 3); }
     fill(g, '#ffffff', 17, 12, 1, 1);
   },
+  cinema(g) { // a clapperboard
+    const f = (c, x, y, w, h) => fill(g, c, x, y, w, h);
+    f('#1a1416', 4, 13, 24, 15); f('#2b2226', 5, 14, 22, 13);
+    f('#f4f1e6', 6, 17, 20, 1); f('#f4f1e6', 6, 21, 20, 1); f('#ffd27a', 7, 23, 8, 2); f('#d8403a', 18, 23, 6, 2);
+    for (let i = 0; i < 4; i++) { f('#f4f1e6', 4 + i * 6, 9 - Math.round(i * 1.4), 3, 4); f('#1a1416', 7 + i * 6, 9 - Math.round(i * 1.4) - 1, 3, 4); }
+    f('#1a1416', 3, 9, 26, 1); f('#d8403a', 2, 12, 28, 1); f('#ffd27a', 27, 4, 1, 1); f('#ffd27a', 2, 5, 1, 1);
+  },
   contact(g) {
     const f = (c, x, y, w, h) => fill(g, c, x, y, w, h);
     f('#8d8d8a', 5, 10, 24, 16); f('#fbfaf4', 4, 9, 24, 16); f('#d9d6ca', 4, 9, 24, 1);
@@ -204,6 +211,7 @@ export function createUI(canvas, handlers) {
       const head = el('div', 'bdesk-head'), face = document.createElement('canvas'); face.width = face.height = 16; face.className = 'bface'; drawFace(face.getContext('2d'), handlers.agentDesign(a.id));
       const hn = el('div'); hn.append(el('small', '', t('deskOf')), el('strong', '', a.name)); const state = el('span', 'bst'); state.id = 'boardState';
       head.append(face, hn, state); d.appendChild(head);
+      d.appendChild(el('p', 'bhero-about', a.about || tr(a, 'line'))); // shown on phones, where the cards are compact
       const facts = el('dl', 'bfacts');
       [['schedule', a.schedule], ['delivers', a.delivers], ['lastRun', null, 'boardLast'], ['where', null, 'boardWhere']].forEach(([k, v, id]) => { if (!id && !v) return; const box = el('div'); box.appendChild(el('dt', '', t(k))); const dd = el('dd', '', v || ''); if (id) dd.id = id; box.appendChild(dd); facts.appendChild(box); });
       d.appendChild(facts);

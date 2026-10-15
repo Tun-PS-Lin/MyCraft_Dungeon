@@ -66,7 +66,38 @@ const SYNTH = {
 };
 const VOLUME = { step: 0.5, bird: 0.4, cricket: 0.4 };
 
+/* ambient beds: long, quiet loops that fade in and out with where you are.
+   water: soft lapping by the pond; hall: a low murmur in the town hall; fire: the Hideout's hearth */
+const beds = {};
+const BED_MAX = { water: 0.07, hall: 0.03, fire: 0.06 };
+function makeBed(a, name) {
+  const len = a.sampleRate * 2, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+  let last = 0; for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = name === 'hall' ? w : (last + 0.04 * w) / 1.04; d[i] = name === 'hall' ? w : last * 3.5; } // brown-ish noise for water and fire
+  const src = a.createBufferSource(); src.buffer = buf; src.loop = true;
+  const f = a.createBiquadFilter(), mod = a.createGain(), out = a.createGain(); out.gain.value = 0;
+  if (name === 'water') { f.type = 'lowpass'; f.frequency.value = 700; }
+  else if (name === 'hall') { f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = 0.8; }
+  else { f.type = 'lowpass'; f.frequency.value = 260; }
+  mod.gain.value = name === 'fire' ? 0.85 : 0.6;
+  // slow swells for the water, a talking rhythm for the murmur, a flicker for the fire
+  for (const [hz, amt] of name === 'water' ? [[0.19, 0.3], [0.07, 0.15]] : name === 'hall' ? [[2.7, 0.25], [4.3, 0.2], [0.5, 0.15]] : [[0.9, 0.1], [6.5, 0.05]]) {
+    const o = a.createOscillator(), og = a.createGain(); o.frequency.value = hz; og.gain.value = amt; o.connect(og); og.connect(mod.gain); o.start();
+  }
+  src.connect(f); f.connect(mod); mod.connect(out); out.connect(a.destination); src.start(0, Math.random() * 2);
+  return { out, level: 0 };
+}
+
 export const sound = {
+  // levels: { water, hall, fire }, each 0..1
+  ambient(levels) {
+    if (!ctx) return;
+    for (const name in BED_MAX) {
+      const want = on ? Math.max(0, Math.min(1, levels[name] || 0)) : 0;
+      let b = beds[name]; if (!b) { if (want < 0.01) continue; b = beds[name] = makeBed(ctx, name); }
+      if (Math.abs(want - b.level) < 0.02) continue; b.level = want;
+      b.out.gain.setTargetAtTime(want * BED_MAX[name], ctx.currentTime, 0.6);
+    }
+  },
   play(name) { if (!sample(name, VOLUME[name] || 0.8) && SYNTH[name]) SYNTH[name](); },
   unlock() { audio(); music.start(); },   // call from the first key press or tap
   started: () => !!ctx,

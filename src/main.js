@@ -19,6 +19,7 @@ import { buildPond } from './pond.js';
 import { createPondUI } from './pond-ui.js';
 import { createDiscoveries } from './discover.js';
 import { createMinimap } from './minimap.js';
+import { createParrot, PARROT_ICON } from './parrot.js';
 import { RECORDS } from './hideout-content.js';
 import { BASE } from './base.js';
 import { t, tr } from './i18n.js';
@@ -89,6 +90,10 @@ const hideoutRoot = new THREE.Group(); hideoutRoot.visible = false; scene.add(hi
 const hideout = buildHideout(hideoutRoot);
 const player = createPlayer(scene), P = player.state;
 pond.setHand((v) => player.hand(v));
+/* the parrot: catch all three facts at the pond and it comes to sit on your shoulder */
+const parrot = createParrot(scene, player);
+let parrotDue = false;
+if (store.get('pv-parrot') === 'yes') parrot.enable('perch');
 const wolf = createWolf(scene, blocked);
 const torch = addLamp(scene, 0, 2, 0, 0, 0.85, 5.5, '#ffd9a0'); // a soft light that follows the player at night
 const pickable = [...stalls.map((s) => s.group), ...agents.groups, hall.board.mesh];
@@ -101,6 +106,8 @@ function visit(id) {
   if (id === 'about') discover('about');
   if (visited.has(id)) return; visited.add(id); store.set('pv-visited', [...visited].join(','));
   disc.setStalls([...visited].filter((v) => v !== 'about'));
+// visitors who caught every fact before the parrot existed get it too
+if (disc.has('facts') && !parrot.on()) { store.set('pv-parrot', 'yes'); parrot.enable('perch'); }
   if (!wolfUnlocked && STALLS.every((s) => s.about || visited.has(s.id))) pendingReward = true;
   ui.setProgress(visited, wolfUnlocked);
 }
@@ -176,7 +183,7 @@ const pondUI = createPondUI({ focusGame: () => canvas.focus({ preventScroll: tru
 function goFish() {
   if (pond.fishing() && !pond.holding()) return; auto = null; ui.closeMenu(true);
   P.vx = P.vz = 0; setTimeout(() => sound.play('cast'), pond.holding() ? 300 : 860); // the whoosh lands with the throw
-  pond.fish(P, () => { sound.play('splash'); const id = pondUI.next(); pondUI.show(id); disc.add('facts', id); });
+  pond.fish(P, () => { sound.play('splash'); const id = pondUI.next(); pondUI.show(id); disc.add('facts', id); if (disc.has('facts') && !parrot.on()) parrotDue = true; });
 }
 const paused = () => ui.paused() || hx.isOpen() || travelling || pondUI.isOpen() || pond.fishing() || disc.isOpen() || minimap.isBig();
 ui.addPlace('cave', 'The Hideout', '#ffd060', () => goTo('hideout'));
@@ -291,6 +298,8 @@ let night = nightTarget;
 ui.setTheme(nightTarget === 1);
 const mix = (a, b, t) => a + (b - a) * t;
 const ease = (t) => t * t * (3 - 2 * t);
+// the colours the sky passes through on the way between day and night: a sunset or a sunrise
+const DUSK = { sky: new THREE.Color('#ffb08a'), sun: new THREE.Color('#ff7a3a'), back: new THREE.Color('#e88a72').convertSRGBToLinear(), ground: new THREE.Color('#6a3a4a') };
 const UNDER = { sky: new THREE.Color('#ffd9a8'), ground: new THREE.Color('#3a2a1a'), sunDay: new THREE.Color('#ffe2b0'), sunNight: new THREE.Color('#7f95e0'), back: new THREE.Color('#0a0705').convertSRGBToLinear() };
 function applyMood(time, indoors) {
   // walking into the hall dims the daylight so the candles carry the room
@@ -304,6 +313,9 @@ function applyMood(time, indoors) {
     hemi.color.copy(d.sky).lerp(n.sky, t); hemi.groundColor.copy(d.ground).lerp(n.ground, t); hemi.intensity = mix(d.hemi, n.hemi, t);
     sun.color.copy(d.sun).lerp(n.sun, t); sun.intensity = mix(d.sunI, n.sunI, t);
     backdrop.copy(d.back).lerp(n.back, t); scene.fog.color.copy(backdrop);
+    // halfway through a change the whole sky glows warm, like the sun setting (or rising)
+    const dusk = 4 * t * (1 - t) * (1 - indoors * 0.7);
+    if (dusk > 0.001) { hemi.color.lerp(DUSK.sky, dusk * 0.6); hemi.groundColor.lerp(DUSK.ground, dusk * 0.4); sun.color.lerp(DUSK.sun, dusk * 0.75); sun.intensity *= 1 + dusk * 0.25; backdrop.lerp(DUSK.back, dusk * 0.7); scene.fog.color.copy(backdrop); }
   }
   const dim = 1 - listen * 0.6;
   for (const l of lamps) l.light.intensity = mix(l.day, l.night, t) * dim * (1 + Math.sin(time * 9 + l.seed) * 0.05 + Math.sin(time * 23 + l.seed * 2) * 0.035);
@@ -353,6 +365,13 @@ let down = null, hoverT = 0;
 // zoom: mouse wheel, two-finger pinch, or the + and - keys. The camera angle never changes.
 let zoom = TUNING.zoomStart, zoomTarget = TUNING.zoomStart;
 let opening = 0; // seconds left of the opening glide; the camera starts high and settles while the title lifts
+/* the entrance: on a fresh visit the camera sweeps once round and over the whole village, high up,
+   then glides down into the usual view behind the player. It is a single smooth path (radius, angle and
+   height each eased from start to end), it ends exactly on the game camera, and any key or tap speeds
+   it to a quick finish. */
+let fly = null; // { t, dur, rate }
+const FLY_C = new THREE.Vector3(2, 0, -3), flyRel = new THREE.Vector3(), flyLook = new THREE.Vector3();
+const smoother = (k) => k * k * k * (k * (k * 6 - 15) + 10);
 let titleFor = 0; // seconds of drawn frames before the title card lifts, so it never lifts onto a half-built scene
 const setZoom = (z) => { zoomTarget = Math.max(TUNING.zoomMin, Math.min(TUNING.zoomMax, z)); };
 canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (!paused()) setZoom(zoomTarget * Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0016)); }, { passive: false });
@@ -454,14 +473,18 @@ function update(dt) {
   // town hall: the roof lifts away while the player is inside
   hall.update(dt, !underground && insideHall(P.x, P.z) || (Math.abs(P.x - HALL.doorX) < HALL.doorW / 2 && P.z < HALL.z1 + 0.2), time);
   const indoors = hall.openness();
-  if (night !== nightTarget) night += Math.sign(nightTarget - night) * Math.min(Math.abs(nightTarget - night), dt / 1.6);
+  if (night !== nightTarget) night += Math.sign(nightTarget - night) * Math.min(Math.abs(nightTarget - night), dt / 3.4); // a slow sweep through dusk
   torch.position.set(P.x, P.visY + 2.2, P.z + 0.6);
   applyMood(time, indoors);
   if (night > 0.9 && !underground && !disc.has('night')) discover('night');
   player.setHold(pond.hold());
   player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors) * (underground ? 0 : 1));
+  parrot.update(dt, time);
+  // the parrot arrives once the card for the last fact has been closed (and the rod put away)
+  if (parrotDue && !pondUI.isOpen() && !pond.active()) { parrotDue = false; store.set('pv-parrot', 'yes'); parrot.enable('arrive'); ui.toast({ title: 'Parrot Friend', text: 'You caught every fact. A parrot now rides on your shoulder (try a dash roll).', icon: PARROT_ICON }); sound.play('achieve'); }
   cave.update(time); hideout.update(time, ease(night), music.isOn());
   if (!underground) pond.update(time, dt, ease(night));
+  if (!underground) for (const st of stalls) if (st.update) st.update(time);
   if (pond.holding() && !pondUI.isOpen()) pond.release(); // the card closed: put the rod away
   // listening mode
   const byDeck = underground && music.isOn() && rectDistance(hideout.musicRect, P.x, P.z) < 2.8;
@@ -469,6 +492,15 @@ function update(dt) {
   { const want = listenT > 3 ? 1 : 0; listen += (want - listen) * Math.min(1, dt * (want ? 0.9 : 4)); if (listen < 0.002) listen = 0; }
   if (listen > 0.01) { const r = RECORDS.find((q) => q.id === music.current()); if (r && nowPlaying.dataset.id !== r.id) { nowPlaying.dataset.id = r.id; nowPlaying.querySelector('img').src = BASE + 'assets/images/cds/' + r.cover; nowPlaying.querySelector('strong').textContent = r.title; nowPlaying.querySelector('span').textContent = r.by + ' \u00b7 ' + r.album; } }
   nowPlaying.style.opacity = listen.toFixed(3); nowPlaying.classList.toggle('on', listen > 0.5);
+  // ambient sound by place, fading with distance
+  if (sound.started()) {
+    const near = (d, a, b) => Math.max(0, Math.min(1, 1 - (d - a) / (b - a)));
+    sound.ambient({
+      water: underground ? 0 : near(Math.hypot((P.x - POND.x) / 1.4, P.z - POND.z), 2.5, 11),
+      hall: underground ? 0 : indoors * 0.9 + (1 - indoors) * 0.25 * near(Math.hypot(P.x - (HALL.x0 + HALL.x1) / 2, P.z - HALL.z1), 2, 9),
+      fire: underground ? near(Math.hypot(P.x - hideout.fireAt[0], P.z - hideout.fireAt[1]), 1.5, 9) : 0,
+    });
+  }
   // a crackle from the fireplace now and then when you are near it
   if (underground && sound.started() && Math.hypot(P.x - hideout.fireAt[0], P.z - hideout.fireAt[1]) < 5 && Math.random() < dt * 1.4) sound.play('crackle');
   // walking down the cave stairs, or into the glowing doorway in the Hideout, travels
@@ -497,6 +529,17 @@ function update(dt) {
     // clip the fence that would stand in front, but only once the camera is nearly there
     const nearT = Math.max(0, (e - 0.55) / 0.45); camera.near = mix(1, dist - 1.2, nearT * nearT); camera.updateProjectionMatrix();
   } else if (camera.near !== 1) { camera.near = 1; camera.updateProjectionMatrix(); }
+  if (fly) {
+    if (titleFor <= 0) fly.t += dt * fly.rate;
+    const u = Math.min(1, Math.max(0, fly.t / fly.dur)), e = smoother(u);
+    flyRel.copy(camPos).sub(FLY_C);
+    const rEnd = flyRel.length(), thEnd = Math.atan2(flyRel.x, flyRel.z), phEnd = Math.asin(flyRel.y / rEnd);
+    const r = mix(rEnd * 1.25 + 12, rEnd, e), th = mix(thEnd + 2.5, thEnd, e), ph = mix(1.02, phEnd, smoother(Math.min(1, u * 1.1)));
+    camPos.set(FLY_C.x + Math.sin(th) * Math.cos(ph) * r, FLY_C.y + Math.sin(ph) * r, FLY_C.z + Math.cos(th) * Math.cos(ph) * r);
+    // first it looks over the square, then its gaze settles on the player
+    camLook.copy(flyLook.copy(FLY_C).lerp(camLook, smoother(Math.min(1, Math.max(0, (u - 0.3) / 0.7)))));
+    if (u >= 1) { fly = null; document.body.classList.remove('flying'); }
+  }
   camera.position.copy(camPos); camera.lookAt(camLook);
   // haze begins a little beyond the player and thickens toward the far trees, at any zoom
   const reach = camPos.distanceTo(camLook); scene.fog.near = reach + (underground ? 6 : 13); scene.fog.far = reach + (underground ? 26 : 54);
@@ -514,7 +557,7 @@ function update(dt) {
   // the board wins when you are right up against it
   if (!underground && indoors > 0.5 && nearBoard() && (!near || near.key !== 'talkTo' || rectDistance(hall.board.rect, P.x, P.z) < 1.1)) { nearKey = 'board'; near = { key: 'openBoard', act: openBoard }; }
   refreshBoard();
-  if (auto || !near || hx.isOpen() || travelling || listen > 0.3 || pondUI.isOpen() || pond.fishing()) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
+  if (fly || auto || !near || hx.isOpen() || travelling || listen > 0.3 || pondUI.isOpen() || pond.fishing()) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
   if (markerLife > 0) { markerLife = auto ? Math.max(0.35, markerLife - dt * 0.8) : markerLife - dt * 3; marker.material.opacity = Math.max(0, markerLife) * 0.9; marker.scale.setScalar(0.8 + Math.sin(time * 6) * 0.08); marker.rotation.z = time * 1.2; }
   if (pendingReward && !paused()) { pendingReward = false; wolfUnlocked = true; store.set('pv-wolf', 'yes'); wolf.activate(P); ui.setProgress(visited, true); ui.toast(); sound.play('achieve'); setTimeout(() => sound.play('bark'), 700); }
 
@@ -525,7 +568,7 @@ function update(dt) {
   chirpT -= dt; if (chirpT < 0) { chirpT = 4 + Math.random() * 7; if (sound.started() && indoors < 0.5 && !underground) sound.play(night > 0.5 ? 'cricket' : 'bird'); }
 
   // labels
-  const w = window.innerWidth, h = window.innerHeight, hide = Math.max(0, 1 - closeUp * 3);
+  const w = window.innerWidth, h = window.innerHeight, hide = Math.max(0, 1 - closeUp * 3) * (fly ? Math.max(0, (fly.t / fly.dur - 0.82) / 0.18) : 1);
   const place = (key, x, y, z, isNear, alpha) => { v3.set(x, y, z).project(camera); ui.placeLabel(key, (v3.x * 0.5 + 0.5) * w, (-v3.y * 0.5 + 0.5) * h, isNear, v3.z > 1 ? 0 : alpha * hide); };
   const up = underground ? 0 : 1, quiet = 1 - listen;
   for (const s of stalls) place(s.id, s.pos[0], s.labelY || 5.3, s.pos[1], s.id === nearKey, up);
@@ -563,8 +606,16 @@ function start(saved) {
   if (saved && typeof saved.x === 'number' && !blocked(saved.x, saved.z, floorAt(saved.x, saved.z))) { P.x = saved.x; P.z = saved.z; P.y = P.visY = floorAt(P.x, P.z); P.yaw = saved.yaw || 0; focus.set(P.x, 0, P.z - 1.5); }
   canvas.tabIndex = 0;
   // a saved position skips the opening; a fresh visit glides in over about two seconds
-  if (saved && typeof saved.x === 'number') ui.endIntro(); else { zoom = TUNING.zoomStart * 1.55; opening = 2.8; titleFor = 1.3; for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); }, { once: true }); }
-  window.__village = { disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
+  const still = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  if (saved && typeof saved.x === 'number') ui.endIntro();
+  else {
+    titleFor = 1.3;
+    if (still) { zoom = TUNING.zoomStart * 1.55; opening = 2.8; } // no flight: the old gentle settle
+    else { zoom = zoomTarget; fly = { t: 0, dur: 7.2, rate: 1 }; document.body.classList.add('flying'); }
+    // the first key or tap lifts the title at once and hurries the flight to a smooth finish (about a second)
+    for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); if (fly) fly.rate = Math.max(1, (fly.dur - fly.t) / 1.1); }, { once: true });
+  }
+  window.__village = { flying: () => !!fly, night: () => night, parrot, disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 start({});

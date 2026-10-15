@@ -40,6 +40,10 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
     map: canvasTex(canvas(256, 256, (g) => { const gr = g.createRadialGradient(128, 128, 10, 128, 128, 128); gr.addColorStop(0, 'rgba(255,226,160,.42)'); gr.addColorStop(0.35, 'rgba(160,150,255,.14)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); }), false) }));
   halo.scale.set(6.4, 6.4, 1); halo.position.z = -1.6; scene.add(halo);
 
+  // a soft shadow on the "floor" under the cube, and a faint warm pool of light round it
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, opacity: 0.9,
+    map: canvasTex(canvas(128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(0.55, 'rgba(0,0,0,.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }), false) }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.95; scene.add(shadow);
   const cube = new THREE.Group(); scene.add(cube);
   // the frame: twelve slim gold bars and small corner blocks
   const gold = new THREE.MeshStandardMaterial({ color: lin('#d9c18c'), roughness: 0.24, metalness: 0.92, envMapIntensity: 1.35, emissive: lin('#3a2c10'), emissiveIntensity: 0.35 });
@@ -114,7 +118,7 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
   function update(dt, time) {
     // fit the cube, at any angle, between the title above and the caption below (and the arrows at the sides)
     const H = host.clientHeight || 1, Wd = host.clientWidth || 1, small = Wd < 700 || H < 500;
-    const fh = Math.max(0.5, (H - (H < 500 ? 104 : small ? 176 : 214)) / H), fw = Math.max(0.5, (Wd - (small ? 88 : 140)) / Wd);
+    const fh = Math.max(0.5, (H - (H < 500 ? 104 : small ? 200 : 214)) / H), fw = Math.max(0.5, (Wd - (small ? 88 : 140)) / Wd);
     spring(zoom, zoomT, 7, dt);
     const tan = Math.tan((camera.fov * Math.PI) / 360), dist = Math.max(1.66 / (tan * fh), 1.5 / (tan * camera.aspect * fw)) / zoom.v;
     const shift = (H < 500 ? 4 : small ? 14 : 16) / H * 2 * tan * dist; // a little up, off the caption
@@ -133,7 +137,7 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
     cube.quaternion.copy(q);
     spring(pos.x, tgt.x, 6.5, dt); spring(pos.y, tgt.y, 6.5, dt); spring(pos.s, tgt.s, 6, dt);
     const float = Math.sin(time * 0.9) * 0.04;
-    cube.position.set(pos.x.v, pos.y.v + float, 0); cube.scale.setScalar(pos.s.v); halo.position.x = pos.x.v; halo.position.y = pos.y.v;
+    cube.position.set(pos.x.v, pos.y.v + float, 0); cube.scale.setScalar(pos.s.v); shadow.position.set(pos.x.v, pos.y.v - 1.95 * pos.s.v, 0); shadow.scale.setScalar(pos.s.v * (1 - float * 1.5)); shadow.material.opacity = 0.85 - float * 3; halo.position.x = pos.x.v; halo.position.y = pos.y.v;
     // which window faces you most; faces turned away are a little darker
     let best = -1, bd = 0.5;
     faces.forEach((f, i) => {

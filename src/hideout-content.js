@@ -49,11 +49,11 @@ export const JOURNAL = [
    The cube has six faces: the first four projects go round the sides, the fifth on top, the sixth underneath. */
 export const GALLERY = [
   { id: 'world', title: 'Mingalar World', art: 'world', image: 'virtual-world', desc: 'A 3D town in the browser with a virtual mall, a garage, an office and a target range.', url: 'https://mingalar-world.vercel.app/' },
-  { id: 'voice', title: 'Burmese Text-to-Speech', art: 'voice', image: 'burmese-tts', desc: 'A Burmese text-to-speech project with several voice options.', link: false },
+  { id: 'voice', title: 'Burmese TTS', art: 'voice', image: 'burmese-tts', desc: 'A Burmese text-to-speech project based on the open-source VoxCPM2, with several voice options.', link: false },
   { id: 'mahabote', title: 'Mahabhote Burmese Astrology', art: 'stars', image: 'mahabhote', desc: 'A Burmese Mahabhote astrology bot on Telegram that remembers the conversation and asks follow-up questions.', link: false },
   { id: 'news', title: 'News Scraper', art: 'chart', image: 'news-scraper', desc: 'An n8n workflow for Mingalar News: every morning it reads news feeds and pages, parses the articles and shortlists what matters to Myanmar migrants in Thailand.', link: false },
-  { id: 'facenet', title: 'FaceNet', art: 'bot', image: 'facenet', desc: 'A social network app.', url: '' },
-  { id: 'trace', title: 'Trace', art: 'chart', image: 'trace', desc: 'A blockchain app.', url: '' },
+  { id: 'facenet', title: 'FaceNet', art: 'bot', image: 'facenet', desc: 'A social networking app based on graph data structures.', url: 'https://github.com/Tun-PS-Lin/FaceNet' },
+  { id: 'trace', title: 'Trace', art: 'chart', image: 'trace', desc: 'A proof-of-work blockchain app based on SHA-256, ECDSA and Merkle trees.', url: 'https://github.com/Tun-PS-Lin/Trace' },
 ];
 
 /* ── the library ──
