@@ -118,7 +118,7 @@ export function createUI(canvas, handlers) {
   };
 
   /* menu */
-  function openMenu() { side.classList.add('open'); menuBtn.classList.add('open'); menuScrim.classList.add('show'); menuBtn.setAttribute('aria-expanded', 'true'); menuBtn.setAttribute('aria-label', 'Close menu'); sound.play('menu'); }
+  function openMenu() { side.classList.add('open'); menuBtn.classList.add('open'); menuScrim.classList.add('show'); menuBtn.setAttribute('aria-expanded', 'true'); menuBtn.setAttribute('aria-label', 'Close menu'); sound.play('menu'); sound.play('whoosh'); }
   function closeMenu(silent) { if (!menuOpen()) return; side.classList.remove('open'); menuBtn.classList.remove('open'); menuScrim.classList.remove('show'); menuBtn.setAttribute('aria-expanded', 'false'); menuBtn.setAttribute('aria-label', 'Open menu'); if (!silent) sound.play('menu'); }
   menuBtn.onclick = () => (menuOpen() ? closeMenu() : openMenu());
   menuScrim.addEventListener('pointerdown', () => closeMenu());

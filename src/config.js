@@ -22,6 +22,7 @@ export const REPO_URL = 'https://github.com/Tun-PS-Lin/MyCraft_Dungeon';
 //          the top of the screen and negative x is the left.
 //   face   which way the stall front points: 'south' (toward the camera), 'east' (right) or 'west' (left)
 //   kind   'project' opens the project popup; 'outfits' opens the wardrobe
+//   scale  optional, draws the stall smaller or larger (1 is the usual size)
 //   image  optional picture shown in the popup, a file in public/assets/images/
 //   url    '' shows "Link coming soon"
 export const STALLS = [
@@ -85,7 +86,7 @@ export const STALLS = [
   {
     id: 'cinema', kind: 'project', face: 'south',
     label: 'AI Cinema', title: 'AI Cinema',
-    pos: [-7.5, 11.2],
+    pos: [-6.2, 12.9], scale: 0.8, labelY: 4.5, // a smaller stall, tucked down by the ridge
     color: '#b3242f', glow: '#ffd27a',
     image: '',
     desc: 'An AI animated series about “38 Mingalar Blessings”.',

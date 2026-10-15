@@ -99,6 +99,8 @@ fact about me: my travel photos in a slow-moving carousel (tap one to see it ful
 habit, or the research I write about, with a link to the article. The facts and photo captions are
 in `src/pond-content.js`, and the photos in `public/assets/images/photos/`. Catch all three facts
 and a parrot comes to ride on your shoulder; dash-roll and it takes off, circles, and lands again.
+It sits on a stall's sign while you read its card and squawks the name afterwards, and if you whistle
+(<kbd>F</kbd>) it flies to the pond and brings back a fact.
 
 <br>
 
@@ -117,7 +119,7 @@ Each stall opens a card with a screenshot, a short story and a link.
 </tr>
 </table>
 
-The newest stall, **AI Cinema**, sits just left of the cave: a marquee of running lights, red velvet
+The newest stall, **AI Cinema**, sits down by the ridge, just left of the cave: a marquee of running lights, red velvet
 curtains and a projector. It is home to an AI animated series about *38 Mingalar Blessings* (link coming soon).
 
 <br>
@@ -165,6 +167,7 @@ they did last. Talk to any of them to try what they do.
 | Close | <kbd>Esc</kbd> | × |
 | Zoom a little | Scroll, <kbd>+</kbd> and <kbd>-</kbd> | Pinch |
 | Map and discoveries | <kbd>M</kbd> and <kbd>C</kbd> | Tap the map or the counter under it |
+| Whistle for the parrot | <kbd>F</kbd> | The Whistle button |
 
 The menu in the top-right corner lists every place in the village and walks you there.
 

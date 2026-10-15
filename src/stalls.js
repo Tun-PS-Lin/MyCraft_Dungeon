@@ -316,10 +316,10 @@ export function buildStalls(scene) {
   return STALLS.map((p) => {
     const s = Object.assign({}, p), g = new THREE.Group(), th = TURN[p.face || 'south'], sn = Math.sin(th), cs = Math.cos(th);
     // stall-local (x, z) to map coordinates, for whichever way the stall faces
-    const world = (lx, lz) => [p.pos[0] + lx * cs + lz * sn, p.pos[1] - lx * sn + lz * cs];
+    const sc = p.scale || 1, world = (lx, lz) => [p.pos[0] + (lx * cs + lz * sn) * sc, p.pos[1] + (-lx * sn + lz * cs) * sc];
     const box = (x0, x1, z0, z1) => { const a = world(x0, z0), b = world(x1, z1); return { x0: Math.min(a[0], b[0]), x1: Math.max(a[0], b[0]), z0: Math.min(a[1], b[1]), z1: Math.max(a[1], b[1]) }; };
-    const col = (x0, x1, z0, z1, h) => { const r = box(x0, x1, z0, z1); collide(r.x0, r.x1, r.z0, r.z1, h + 0.1); };
-    g.position.set(p.pos[0], 0.1, p.pos[1]); g.rotation.y = th; g.userData.id = p.id;
+    const col = (x0, x1, z0, z1, h) => { const r = box(x0, x1, z0, z1); collide(r.x0, r.x1, r.z0, r.z1, h * sc + 0.1); };
+    g.position.set(p.pos[0], 0.1, p.pos[1]); g.rotation.y = th; g.scale.setScalar(sc); g.userData.id = p.id;
     BUILD[p.id](g, s, col);
     if (p.about) { g.scale.setScalar(1.2); s.rect = box(-1.8, 1.8, -0.5, 0.6); collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 3.2); s.front = world(0, 2.3); bake(g); scene.add(g); s.group = g; return s; }
     // night lighting: a lantern hung on each front post, a pool of light in front, and a glow over and behind the stall

@@ -40,6 +40,8 @@ export function createHideoutUI({ onDisc, focusGame, onAllRead }) {
   {
     const wrap = shell('music', 'CD player', 'hx-cd'), box = el('div', 'cdp-wrap'); wrap.appendChild(box);
     const x = closeBtn(); x.classList.add('cdp-x'); x.onclick = () => hide(); box.appendChild(x);
+    // a title in the same style as the gallery and the library
+    const head = el('header', 'menu-head cdp-head'); head.append(el('small', '', 'The Hideout'), el('h2', '', 'The CD Player'), el('i', 'menu-rule')); box.appendChild(head);
     const body = el('div', 'cdp'); box.appendChild(body);
     body.append(el('i', 'cdp-hinge l'), el('i', 'cdp-hinge r'));
     const main = el('div', 'cdp-main'), side = el('div', 'cdp-side'); body.append(main, side);

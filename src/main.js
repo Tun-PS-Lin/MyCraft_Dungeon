@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { STALLS, TUNING, HALL, FLOOR, CAVE, POND } from './config.js';
 import { AGENTS } from './config.js';
-import { buildWorld, refreshSlab } from './world.js';
+import { buildWorld, refreshSlab, groundType } from './world.js';
 import { buildStalls } from './stalls.js';
 import { buildHall } from './hall.js';
 import { createAgents } from './agents.js';
@@ -90,10 +90,35 @@ const hideoutRoot = new THREE.Group(); hideoutRoot.visible = false; scene.add(hi
 const hideout = buildHideout(hideoutRoot);
 const player = createPlayer(scene), P = player.state;
 pond.setHand((v) => player.hand(v));
+/* footsteps sound like what you're walking on: planks, paving or grass */
+function stepSound() {
+  if (underground || insideHall(P.x, P.z)) return 'stepWood';
+  const onSlab = Math.abs(P.x) < 3.3 && Math.abs(P.z) < 2.2;
+  if (!onSlab && P.y > FLOOR + 0.06) return 'stepWood'; // the bridge, the dock, a stall's platform
+  const g = groundType(P.x, P.z); return g === 'stone' ? 'step' : 'stepGrass';
+}
 /* the parrot: catch all three facts at the pond and it comes to sit on your shoulder */
 const parrot = createParrot(scene, player);
 let parrotDue = false;
 if (store.get('pv-parrot') === 'yes') parrot.enable('perch');
+// its speech bubble
+const parrotSay = document.createElement('div'); parrotSay.className = 'parrot-say'; parrotSay.setAttribute('aria-live', 'polite'); document.body.appendChild(parrotSay);
+let sayUntil = 0, sayNext = null, cardWas = null;
+function say(text) { parrotSay.textContent = text; sayUntil = performance.now() + 2600; sound.play('squawk'); }
+// whistle: it flies to the pond and comes back with a fact
+function whistle() {
+  if (!parrot.on() || pondUI.isOpen()) return;
+  sound.play('whistle');
+  if (underground) { setTimeout(() => say('Squawk! No pond down here!'), 450); return; }
+  const ok = parrot.fetch(new THREE.Vector3(POND.x - 0.6, -0.15, POND.z), () => { say('Squawk! A fact!'); setTimeout(() => { if (!paused()) pondUI.show(pondUI.next()); }, 500); });
+  if (!ok) setTimeout(() => say('Squawk! Busy!'), 400);
+}
+// where a stall's sign is: the top of its front edge
+const signAt = {};
+function signPoint(s) {
+  if (!signAt[s.id]) { const b = new THREE.Box3().setFromObject(s.group); signAt[s.id] = new THREE.Vector3(s.pos[0] + (s.front[0] - s.pos[0]) * 0.5, b.max.y + 0.02, s.pos[1] + (s.front[1] - s.pos[1]) * 0.5); }
+  return signAt[s.id];
+}
 const wolf = createWolf(scene, blocked);
 const torch = addLamp(scene, 0, 2, 0, 0, 0.85, 5.5, '#ffd9a0'); // a soft light that follows the player at night
 const pickable = [...stalls.map((s) => s.group), ...agents.groups, hall.board.mesh];
@@ -157,7 +182,11 @@ const minimap = createMinimap({
   walk: (x, z) => { if (walkTo(x, z) && auto) { const end = auto.path[auto.path.length - 1]; marker.position.set(end[0], floorAt(end[0], end[1]) + 0.06, end[1]); markerLife = 1; sound.play('near'); } },
   focusGame,
 });
-hud.append(disc.button, disc.chip); document.body.append(minimap.el, hud, minimap.scrim);
+// on phones the parrot's whistle is a button beside the discoveries (on a keyboard it's F)
+const whistleBtn = document.createElement('button'); whistleBtn.className = 'whistle-btn'; whistleBtn.hidden = true; whistleBtn.setAttribute('aria-label', 'Whistle for the parrot');
+{ const c = document.createElement('canvas'); c.width = c.height = 16; PARROT_ICON(c.getContext('2d')); whistleBtn.append(c, Object.assign(document.createElement('span'), { textContent: 'Whistle' })); }
+whistleBtn.onclick = () => { whistle(); focusGame(); };
+hud.append(disc.button, whistleBtn, disc.chip); document.body.append(minimap.el, hud, minimap.scrim);
 
 /* ── the Hideout: the cave at the bottom of the square leads to a private room underground ── */
 // the Scholar's Lantern: earned by reading every journal entry; the player carries it and it lights the way
@@ -341,6 +370,7 @@ window.addEventListener('keydown', (e) => {
     if (k === 'KeyM' && (minimap.isBig() || (!paused() && !disc.isOpen()))) { minimap.toggle(); return; }
     if (k === 'KeyC' && (disc.isOpen() || (!paused() && !minimap.isBig()))) { if (disc.isOpen()) disc.close(); else disc.show(); return; }
   }
+  if (k === 'KeyF' && !e.repeat && !e.metaKey && !e.ctrlKey && !paused()) { whistle(); return; }
   if (k === 'KeyE' && !e.repeat) { if (ui.openId() || ui.chatId() || ui.boardOpen()) ui.escape(); else if (hx.isOpen()) hx.hide(); else if (pondUI.isOpen()) pondUI.hide(); else if (near && !paused()) near.act(); return; }
   if (k === 'Space' || k.startsWith('Arrow')) { if (paused()) return; e.preventDefault(); } // leave these keys to buttons and sliders while a panel is open
   if (k === 'Space' && !e.repeat) pressJump();
@@ -369,7 +399,10 @@ let opening = 0; // seconds left of the opening glide; the camera starts high an
    then glides down into the usual view behind the player. It is a single smooth path (radius, angle and
    height each eased from start to end), it ends exactly on the game camera, and any key or tap speeds
    it to a quick finish. */
-let fly = null; // { t, dur, rate }
+let fly = null, stallLook = null; const stallLean = { v: 0, vel: 0 };
+// critically damped spring (see stage3d.js)
+function spring(o, target, w, dt) { const x = o.v - target, e = Math.exp(-w * dt), q = (o.vel + w * x) * dt; o.v = target + (x + q) * e; o.vel = (o.vel - w * q) * e; return o.v; }
+// fly: { t, dur, rate } while the entrance flight runs
 const FLY_C = new THREE.Vector3(2, 0, -3), flyRel = new THREE.Vector3(), flyLook = new THREE.Vector3();
 const smoother = (k) => k * k * k * (k * (k * 6 - 15) + 10);
 let titleFor = 0; // seconds of drawn frames before the title card lifts, so it never lifts onto a half-built scene
@@ -468,7 +501,7 @@ function update(dt) {
   P.vy -= TUNING.gravity * dt; P.y += P.vy * dt;
   const g = groundAt(P.x, P.z, P.y);
   if (P.y <= g) { if (!P.grounded && P.vy < -4) { P.squash = 1; sound.play('land'); } P.y = g; P.vy = 0; P.grounded = true; } else P.grounded = false;
-  if (player.stride(dt, rollT >= 0 ? 0 : speed, running) && rollT < 0) sound.play('step');
+  if (player.stride(dt, rollT >= 0 ? 0 : speed, running) && rollT < 0) sound.play(stepSound());
 
   // town hall: the roof lifts away while the player is inside
   hall.update(dt, !underground && insideHall(P.x, P.z) || (Math.abs(P.x - HALL.doorX) < HALL.doorW / 2 && P.z < HALL.z1 + 0.2), time);
@@ -480,6 +513,13 @@ function update(dt) {
   player.setHold(pond.hold());
   player.animate(dt, time, groundAt(P.x, P.z, 9), (1 - ease(night)) * (1 - indoors) * (underground ? 0 : 1));
   parrot.update(dt, time);
+  // while a stall's card is open the parrot sits on its sign; afterwards it comes home and says the name
+  { const id = ui.openId();
+    if (id !== cardWas) { const was = cardWas; cardWas = id;
+      if (id && parrot.on() && !underground) { const st = stalls.find((q) => q.id === id); if (st) parrot.visit(signPoint(st)); }
+      else if (!id && was) { parrot.home(); const st = stalls.find((q) => q.id === was); if (st && parrot.on()) sayNext = 'Squawk! ' + tr(st, 'label') + '!'; } }
+    if (sayNext && parrot.state() === 'perch') { say(sayNext); sayNext = null; } }
+  whistleBtn.hidden = !parrot.on();
   // the parrot arrives once the card for the last fact has been closed (and the rod put away)
   if (parrotDue && !pondUI.isOpen() && !pond.active()) { parrotDue = false; store.set('pv-parrot', 'yes'); parrot.enable('arrive'); ui.toast({ title: 'Parrot Friend', text: 'You caught every fact. A parrot now rides on your shoulder (try a dash roll).', icon: PARROT_ICON }); sound.play('achieve'); }
   cave.update(time); hideout.update(time, ease(night), music.isOn());
@@ -511,9 +551,13 @@ function update(dt) {
   closeUp += Math.sign((ui.wardrobeOpen() ? 1 : 0) - closeUp) * Math.min(Math.abs((ui.wardrobeOpen() ? 1 : 0) - closeUp), dt / 0.95);
   if (titleFor <= 0) { zoom += (zoomTarget - zoom) * Math.min(1, dt * (opening > 0 ? 1.7 : 7)); if (opening > 0) opening -= dt; }
   // while fishing the camera leans a little toward the line and closes in, then eases back
-  const lean = underground ? 0 : pond.lean(), [lx, lz] = pond.lookAt(), fx = P.x + (lx - P.x) * 0.38 * lean, fz = P.z + (lz - P.z) * 0.38 * lean;
+  const lean = underground ? 0 : pond.lean(), [lx, lz] = pond.lookAt();
+  // standing at a stall, the camera leans in a little toward it so you can see what's on the counter
+  { let best = null, bd = 1.6; if (!underground && !auto && !paused()) for (const st of stalls) { if (st.about) continue; const d = rectDistance(st.rect, P.x, P.z); if (d < bd) { bd = d; best = st; } }
+    if (best) stallLook = best; spring(stallLean, best && speed < 2.5 ? 1 : 0, 2.6, dt); }
+  const sl = stallLean.v, fx = P.x + (lx - P.x) * 0.38 * lean + (stallLook ? (stallLook.pos[0] - P.x) * 0.3 * sl : 0), fz = P.z + (lz - P.z) * 0.38 * lean + (stallLook ? (stallLook.pos[1] - P.z) * 0.3 * sl : 0);
   focus.x += (fx - focus.x) * Math.min(1, dt * 5); focus.z += (fz - 1.5 * zoom - focus.z) * Math.min(1, dt * 5); focus.y += (P.visY * 0.5 - focus.y) * Math.min(1, dt * 3);
-  camPos.copy(CAM).multiplyScalar(camScale * zoom * (1 - 0.13 * lean)).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
+  camPos.copy(CAM).multiplyScalar(camScale * zoom * (1 - 0.13 * lean) * (1 - 0.14 * sl)).add(focus); camLook.set(focus.x, focus.y + 1, focus.z);
   if (listen > 0.001) {
     const e = ease(listen), [dx2, dy2, dz2] = hideout.deckAt; deckLook.set(dx2, dy2 + 0.4, dz2 + 0.4);
     deckCam.copy(CAM).multiplyScalar(0.32 * camScale).add(deckLook); camPos.lerp(deckCam, e); camLook.lerp(deckLook, e);
@@ -570,6 +614,9 @@ function update(dt) {
   // labels
   const w = window.innerWidth, h = window.innerHeight, hide = Math.max(0, 1 - closeUp * 3) * (fly ? Math.max(0, (fly.t / fly.dur - 0.82) / 0.18) : 1);
   const place = (key, x, y, z, isNear, alpha) => { v3.set(x, y, z).project(camera); ui.placeLabel(key, (v3.x * 0.5 + 0.5) * w, (-v3.y * 0.5 + 0.5) * h, isNear, v3.z > 1 ? 0 : alpha * hide); };
+  { const n = performance.now(), a = Math.max(0, Math.min(1, (sayUntil - n) / 400));
+    if (a > 0 && parrot.on()) { parrot.headAt(v3).project(camera); parrotSay.style.opacity = (a * hide).toFixed(2); parrotSay.style.transform = 'translate(-50%,-100%) translate(' + ((v3.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-v3.y * 0.5 + 0.5) * h).toFixed(1) + 'px)'; }
+    else if (parrotSay.style.opacity !== '0') parrotSay.style.opacity = '0'; }
   const up = underground ? 0 : 1, quiet = 1 - listen;
   for (const s of stalls) place(s.id, s.pos[0], s.labelY || 5.3, s.pos[1], s.id === nearKey, up);
   place('cave', cave.labelAt[0], cave.labelAt[1], cave.labelAt[2], nearKey === 'cave', up);

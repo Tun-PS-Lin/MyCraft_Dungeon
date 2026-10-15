@@ -22,19 +22,22 @@ export function createParrot(scene, player) {
   // body, head, beak, tail, feet: a little blocky macaw
   box(body, 3.2, 4.2, 3.2, '#d8403a', 0, 2.6, 0);
   box(body, 3.0, 1.2, 3.0, '#c2312a', 0, 0.9, 0.1);
-  const head = new THREE.Group(); head.position.set(0, 5.2, 0.5 * 1); body.add(head);
+  const head = new THREE.Group(); head.position.set(0, 5.2 * U, 0.5 * U); body.add(head); // (offsets are in skin pixels, like every part)
   box(head, 3, 3, 3, '#d8403a', 0, 0.9, 0);
   box(head, 0.7, 1.3, 1.6, '#f6f1e3', 1.55, 0.9, 0.5); box(head, 0.7, 1.3, 1.6, '#f6f1e3', -1.55, 0.9, 0.5);
   box(head, 0.75, 0.6, 0.6, '#141418', 1.6, 1.0, 0.7); box(head, 0.75, 0.6, 0.6, '#141418', -1.6, 1.0, 0.7);
   box(head, 1.2, 1.4, 1.4, '#ffc93c', 0, 0.4, 2.0); box(head, 1.0, 0.8, 0.8, '#2a2019', 0, -0.4, 2.2);
   box(head, 1, 1.4, 1, '#d8403a', 0, 2.8, -0.6);
-  const tail = new THREE.Group(); tail.position.set(0, 1.0, -1.6); body.add(tail);
+  const tail = new THREE.Group(); tail.position.set(0, 1.0 * U, -1.6 * U); body.add(tail);
   box(tail, 2.2, 0.6, 4.4, '#2f66c4', 0, -0.6, -2); box(tail, 1.4, 0.5, 2, '#57d47c', 0, -0.9, -4.8);
-  const wings = [-1, 1].map((s) => { const w = new THREE.Group(); w.position.set(s * 1.6, 4.4, 0); body.add(w); box(w, 0.6, 4, 3, '#2f66c4', s * 0.3, -2, -0.2); box(w, 0.5, 1.4, 2.6, '#57d47c', s * 0.3, -4.4, -0.4); box(w, 0.62, 1, 3, '#ffc93c', s * 0.3, -0.2, -0.2); return w; });
+  const wings = [-1, 1].map((s) => { const w = new THREE.Group(); w.position.set(s * 1.6 * U, 4.4 * U, 0); body.add(w); box(w, 0.6, 4, 3, '#2f66c4', s * 0.3, -2, -0.2); box(w, 0.5, 1.4, 2.6, '#57d47c', s * 0.3, -4.4, -0.4); box(w, 0.62, 1, 3, '#ffc93c', s * 0.3, -0.2, -0.2); return w; });
+  // the little rolled-up fact it brings back from the pond
+  const scroll = new THREE.Group(); scroll.visible = false; scroll.position.set(0, 4.6 * U, 2.6 * U); body.add(scroll); box(scroll, 3.4, 1, 1, '#f3ead2', 0, 0, 0); box(scroll, 0.6, 1.2, 1.2, '#d8403a', 0, 0, 0);
   const legs = new THREE.Group(); body.add(legs); box(legs, 0.6, 0.8, 0.6, '#3a2a1f', 0.8, 0.1, 0.3); box(legs, 0.6, 0.8, 0.6, '#3a2a1f', -0.8, 0.1, 0.3);
 
   const SH = new THREE.Vector3(5.4 * U, 24.2 * U, -0.6 * U); // on the left shoulder, in the figure's own space
   const anchor = new THREE.Vector3(), pos = new THREE.Vector3(), vel = new THREE.Vector3(), aim = new THREE.Vector3(), tmp = new THREE.Vector3();
+  const seat = new THREE.Vector3(), pond = new THREE.Vector3(); let fetchDone = null, fetchPhase = 0, carry = false;
   let state = 'off', t = 0, yaw = 0, yawV = 0, flap = 0, flapAmt = 0, pitch = 0, look = 0, lookT = 0, lookAt = 2;
   const P = player.state;
   // spring the position toward aim: stiffness w (higher is quicker), never overshooting
@@ -45,6 +48,14 @@ export function createParrot(scene, player) {
   function shoulder() { player.shoulder(anchor.copy(SH)); return anchor; }
   return {
     on: () => state !== 'off', root, state: () => state,
+    busy: () => state === 'go' || state === 'sit' || state === 'fetch',
+    // fly to a point (say a stall's sign) and sit there until called home
+    visit(p) { if (state === 'off') return; seat.copy(p); state = 'go'; t = 0; if (vel.lengthSq() < 0.01) vel.set(0, 3, 0); },
+    home() { if (state === 'go' || state === 'sit') { state = 'land'; t = 0; } },
+    // fly to the pond, dip down, and come back with something; done() runs once it has landed
+    fetch(p, done) { if (state !== 'perch') return false; pond.copy(p); fetchDone = done; fetchPhase = 0; state = 'fetch'; t = 0; vel.set(0, 4, 0); return true; },
+    // where its head is, for the speech bubble
+    headAt(v) { return v.set(pos.x, pos.y + 0.55, pos.z); },
     // start: 'perch' to appear on the shoulder, 'arrive' to fly in from the sky and land
     enable(how) {
       root.visible = true; shoulder(); t = 0;
@@ -56,6 +67,10 @@ export function createParrot(scene, player) {
       t += dt; shoulder();
       const rolling = P.rollK >= 0;
       if (state === 'perch' && rolling) { state = 'fly'; t = 0; vel.set(Math.sin(P.yaw) * 1.5, 4.5, Math.cos(P.yaw) * 1.5); }
+      if (state === 'sit') { // sitting on a sign: still, looking about, facing out
+        pos.copy(seat); vel.set(0, 0, 0); turnTo(0, 8, dt); flapAmt += (0 - flapAmt) * Math.min(1, dt * 8); pitch += (0 - pitch) * Math.min(1, dt * 8);
+        lookT -= dt; if (lookT < 0) { lookT = 1 + Math.random() * 2.5; lookAt = (Math.random() - 0.5) * 1.8; } look += (lookAt - look) * Math.min(1, dt * 6);
+      } else
       if (state === 'perch') {
         pos.copy(anchor); vel.set(0, 0, 0); turnTo(P.yaw, 14, dt);
         flapAmt += (0 - flapAmt) * Math.min(1, dt * 8); pitch += (0 - pitch) * Math.min(1, dt * 8);
@@ -63,7 +78,13 @@ export function createParrot(scene, player) {
         lookT -= dt; if (lookT < 0) { lookT = 1.5 + Math.random() * 3; lookAt = (Math.random() - 0.5) * 1.6; }
         look += (lookAt - look) * Math.min(1, dt * 6);
       } else {
-        if (state === 'fly') {
+        if (state === 'go') { // up and over, then down onto the seat
+          const d = pos.distanceTo(seat); aim.copy(seat); aim.y += Math.min(1.2, d * 0.35); chase(Math.min(8, 3.5 + t * 5), dt);
+          if (t > 0.4 && d < 0.05 && vel.length() < 0.5) { state = 'sit'; }
+        } else if (state === 'fetch') {
+          if (fetchPhase === 0) { aim.copy(pond); aim.y += 1.1; chase(4.5, dt); if (pos.distanceTo(aim) < 0.3 || t > 4) { fetchPhase = 1; t = 0; } }
+          else if (fetchPhase === 1) { aim.copy(pond); aim.y += t < 0.45 ? 0.05 : 1.0; chase(7, dt); if (t > 0.9) { fetchPhase = 2; carry = true; state = 'land'; t = 0; } }
+        } else if (state === 'fly') {
           // circle above the player until the roll is over
           aim.set(P.x + Math.cos(t * 3.2) * 0.8, P.visY + 3.0 + Math.sin(t * 5) * 0.15, P.z + Math.sin(t * 3.2) * 0.8);
           chase(5.5, dt);
@@ -71,12 +92,12 @@ export function createParrot(scene, player) {
         } else { // land: home in on the shoulder, gently at the end
           aim.copy(anchor).add(tmp.set(0, Math.max(0, 0.6 - t) * 0.8, 0));
           chase(Math.min(9, 4 + t * 7), dt);
-          if (t > 0.45 && pos.distanceTo(anchor) < 0.04 && vel.length() < 0.6) { state = 'perch'; }
+          if (t > 0.45 && pos.distanceTo(anchor) < 0.04 && vel.length() < 0.6) { state = 'perch'; if (carry) { carry = false; const f = fetchDone; fetchDone = null; if (f) f(); } }
           if (rolling && t > 0.2) { state = 'fly'; t = 0; } // rolled again before landing: up it goes
         }
         const sp = Math.hypot(vel.x, vel.z);
         turnTo(sp > 0.3 ? Math.atan2(vel.x, vel.z) : P.yaw, 9, dt);
-        flapAmt += ((state === 'land' && pos.distanceTo(anchor) < 0.5 ? 0.45 : 1) - flapAmt) * Math.min(1, dt * 6);
+        flapAmt += (((state === 'land' && pos.distanceTo(anchor) < 0.5) || (state === 'go' && pos.distanceTo(seat) < 0.5) ? 0.45 : 1) - flapAmt) * Math.min(1, dt * 6);
         pitch += (Math.max(-0.5, Math.min(0.5, -vel.y * 0.08 + sp * 0.06)) - pitch) * Math.min(1, dt * 6);
         look += (0 - look) * Math.min(1, dt * 6);
       }
@@ -84,7 +105,7 @@ export function createParrot(scene, player) {
       const f = flapAmt * (0.5 + 0.5 * Math.sin(flap));
       wings[0].rotation.z = -0.15 - f * 1.4; wings[1].rotation.z = 0.15 + f * 1.4;
       wings[0].rotation.x = wings[1].rotation.x = -f * 0.25;
-      legs.visible = flapAmt < 0.6;
+      legs.visible = flapAmt < 0.6; scroll.visible = carry;
       tail.rotation.x = 0.35 + pitch * 0.5 + (state === 'perch' ? Math.sin(time * 1.3) * 0.04 : 0);
       head.rotation.y = look; head.rotation.x = state === 'perch' ? Math.sin(time * 0.9) * 0.05 : -pitch * 0.5;
       root.position.copy(pos); root.rotation.set(0, yaw, 0); body.rotation.x = pitch;

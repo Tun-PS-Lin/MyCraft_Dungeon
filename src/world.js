@@ -18,6 +18,8 @@ const segDist = (x, z, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, t 
 const types = new Uint8Array(SIZE * SIZE), heights = new Float32Array(SIZE * SIZE);
 const idx = (x, z) => (Math.floor(z) + HALF) * SIZE + (Math.floor(x) + HALF);
 export const COBBLE_H = 0.09, GRASS_H = 0.1;
+// what the ground is made of at a point, for footstep sounds: 'grass', 'dirt' or 'stone'
+export const groundType = (x, z) => { const t = types[idx(x, z)]; return t === GRASS_T ? 'grass' : t === DIRT_T ? 'dirt' : 'stone'; };
 
 // Decide what each ground cell is. Roads form a cross with a wide oval middle,
 // roughened by noise so the edges break up into dirt and grass.
@@ -136,13 +138,13 @@ export function buildWorld(scene, renderer) {
   for (let z = BOUNDS.z0 + 0.5; z < BOUNDS.z1; z++) { edge(BOUNDS.x0 - 0.5, z, false); edge(BOUNDS.x1 + 0.5, z, false); }
 
   /* loose stones and lantern posts inside the plaza */
-  [[-19.8, -4.6], [4.4, -12.8], [23.8, -6], [-9, 15], [8.4, 15], [-12.4, -13], [-11.5, 15]].forEach(([x, z]) => {
+  [[-19.8, -4.6], [4.4, -12.8], [23.8, -6], [8.4, 15], [-12.4, -13]].forEach(([x, z]) => {
     const n = 2 + ((r() * 2) | 0);
     for (let i = 0; i < n; i++) { const s = 0.45 + r() * 0.4, ox = (r() - 0.5) * 0.9, oz = (r() - 0.5) * 0.9; rocks.add(x + ox, s / 2 + 0.1, z + oz, s, s, s, col.setHSL(0.08, 0.06, 0.36 + r() * 0.12).clone(), r()); }
     collide(x - 0.6, x + 0.6, z - 0.6, z + 0.6, 0.9);
   });
   const lampGlow = glow('#ffc76a');
-  [[-3.9, -13.1, 1, 1], [3.9, -13.1, 1, 1], [-12.4, 6, 0, 1], [16.5, 5.8, 0, 1], [-5.2, 15.1, 0, 0], [5.2, 15.1, 0, 0]].forEach(([x, z, lit, lamp]) => {
+  [[-3.9, -13.1, 1, 1], [3.9, -13.1, 1, 1], [16.5, 5.8, 0, 1], [5.2, 15.1, 0, 0]].forEach(([x, z, lit, lamp]) => {
     B(scene, 0.25, 2.3, 0.25, M.log, x, 1.15, z); B(scene, 0.44, 0.44, 0.44, lampGlow, x, 2.5, z, true); B(scene, 0.58, 0.1, 0.58, M.dark, x, 2.77, z);
     collide(x - 0.15, x + 0.15, z - 0.15, z + 0.15, 3);
     if (lamp) addLamp(scene, x, 2.5, z + 0.4, lit ? 0.5 : 0, 1.5, 8);

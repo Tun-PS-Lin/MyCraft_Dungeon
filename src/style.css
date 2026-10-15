@@ -1190,3 +1190,40 @@ body.flying #hud,body.flying .mm:not(.big),body.flying #touch{opacity:0;pointer-
   .bcall{padding:8px 14px;font-size:13px}
   .bnote,.board-side{display:none}
 }
+
+/* ── one style for every menu: serif titles, small spaced capitals and thin gold rules,
+      as in the gallery and the library ── */
+.menu-head{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.menu-head small{font-family:var(--body);font-weight:700;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:#d9c18c}
+.menu-head h2{margin:0;font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:clamp(22px,3vw,30px);letter-spacing:.04em;color:#f4ecd8;text-shadow:0 2px 14px rgba(0,0,0,.6)}
+.menu-rule{display:block;width:46px;height:1px;margin-top:5px;background:#d9c18c}
+.cdp-head{margin-bottom:-2.6em}
+.cdp-x{top:0;right:0}
+.cdp-cd strong{font-family:"Fraunces",Georgia,serif;font-weight:600;letter-spacing:0}
+.cdp-shelf{box-shadow:inset 0 0 0 1px rgba(217,193,140,.4),0 .8em 0 #120c08;border-radius:3px}
+/* journal */
+.page h2{font-family:"Fraunces",Georgia,serif;font-weight:600;text-transform:none;letter-spacing:.03em;font-size:28px;color:#2e2118}
+.page h2::after{content:'';display:block;width:46px;height:1px;margin:7px auto 0;background:#b08a4a}
+.jsub{font-family:var(--body);font-weight:700;font-size:11px;letter-spacing:.26em;color:#9a7a50}
+.jrow strong{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:16px;letter-spacing:0}
+.jrow small{font-family:var(--body);font-weight:700;font-size:10px;letter-spacing:.2em}
+.jnum{font-family:var(--body);font-weight:700;font-size:11px;letter-spacing:.24em}
+.jtitle{font-family:"Fraunces",Georgia,serif!important;font-weight:700;letter-spacing:0!important}
+.jtitle::after{margin-left:0!important}
+.jquote{background:transparent;border-left:1px solid #b08a4a;padding:4px 0 4px 18px}
+.jquote p{font-family:"Fraunces",Georgia,serif;font-size:19px}
+.jquote cite{font-family:var(--body);font-weight:700;font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+.jbody h3{font-family:var(--body);font-weight:700;font-size:11px;letter-spacing:.24em;border-bottom:1px solid rgba(176,138,74,.45);padding-bottom:6px}
+@media (max-width:700px){ .cdp-head{margin-bottom:-1.4em} .cdp-x{top:-4px;right:-2px} .page h2{font-size:22px} .jquote p{font-size:16px} }
+@media (max-height:500px){ .cdp-head{display:none} .page h2{font-size:18px} .page h2::after{margin-top:4px} }
+
+/* the parrot: its speech bubble, and the whistle button for phones */
+.parrot-say{position:fixed;left:0;top:0;z-index:4;pointer-events:none;opacity:0;margin-top:-8px;padding:5px 10px;max-width:200px;background:#fbf8f2;color:#2a2620;border-radius:10px;
+  font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.02em;white-space:nowrap;box-shadow:0 4px 0 rgba(0,0,0,.25);transition:opacity .25s ease}
+.parrot-say::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fbf8f2}
+.whistle-btn{display:flex;align-items:center;gap:6px;height:44px;box-sizing:border-box;padding:0 12px 0 8px;background:var(--night);border:4px solid var(--frame);box-shadow:inset 0 0 0 3px var(--frame-dark);color:var(--ink);font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;transition:border-color .2s}
+.whistle-btn:hover{border-color:#5a6c8f}
+.whistle-btn canvas{width:22px;height:22px;image-rendering:pixelated}
+.whistle-btn[hidden]{display:none}
+@media (max-width:700px){ .whistle-btn{height:38px;padding:0 8px 0 6px} .whistle-btn span{display:none} }
+@media (max-height:500px){ .whistle-btn{height:36px} .whistle-btn span{display:none} }

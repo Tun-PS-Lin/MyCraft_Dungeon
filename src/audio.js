@@ -43,11 +43,25 @@ function thud(dur, cut, vol) {
   s.buffer = noiseBuf; f.type = 'lowpass'; f.frequency.value = cut; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   s.connect(f); f.connect(g); g.connect(a.destination); s.start(t, Math.random() * 0.1, dur);
 }
+// a soft rush of air, for menus sliding open
+function whoosh(vol = 0.05) {
+  const a = audio(); if (!a) return;
+  if (!noiseBuf) { noiseBuf = a.createBuffer(1, a.sampleRate * 0.3, a.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(), t = a.currentTime;
+  s.buffer = noiseBuf; f.type = 'bandpass'; f.Q.value = 0.8; f.frequency.setValueAtTime(320, t); f.frequency.exponentialRampToValueAtTime(1900, t + 0.24);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.09); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+  s.connect(f); f.connect(g); g.connect(a.destination); s.start(t, 0, 0.3);
+}
 const SYNTH = {
-  step: () => thud(0.07, 700 + Math.random() * 500, 0.09),
+  step: () => thud(0.07, 700 + Math.random() * 500, 0.09),                                        // paving
+  stepWood: () => { thud(0.06, 480 + Math.random() * 120, 0.12); tone(150 + Math.random() * 30, 105, 0.06, 'triangle', 0.03); }, // planks: a hollow knock
+  stepGrass: () => thud(0.11, 2600 + Math.random() * 900, 0.035),                                   // grass: a soft brush
+  whoosh: () => whoosh(),
+  squawk: () => { tone(1300, 780, 0.12, 'sawtooth', 0.05, 0, 1600); tone(1150, 720, 0.15, 'sawtooth', 0.045, 0.15, 1500); },
+  whistle: () => { tone(1400, 2300, 0.16, 'sine', 0.045); tone(2300, 1650, 0.24, 'sine', 0.045, 0.2); },
   jump: () => tone(260, 470, 0.11, 'square', 0.04),
   land: () => thud(0.12, 380, 0.16),
-  open: () => { tone(520, 520, 0.07, 'triangle', 0.08); tone(780, 780, 0.1, 'triangle', 0.08, 0.07); },
+  open: () => { whoosh(0.035); tone(520, 520, 0.07, 'triangle', 0.08); tone(780, 780, 0.1, 'triangle', 0.08, 0.07); },
   close: () => tone(620, 380, 0.1, 'triangle', 0.07),
   near: () => tone(880, 880, 0.05, 'square', 0.025),
   menu: () => tone(330, 440, 0.08, 'triangle', 0.07),
@@ -64,7 +78,7 @@ const SYNTH = {
   bark: () => { tone(430, 250, 0.09, 'square', 0.07, 0, 700); tone(470, 260, 0.1, 'square', 0.07, 0.16, 700); },
   achieve: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.22, 'triangle', 0.08, i * 0.1)); },
 };
-const VOLUME = { step: 0.5, bird: 0.4, cricket: 0.4 };
+const VOLUME = { step: 0.5, stepWood: 0.5, stepGrass: 0.45, bird: 0.4, cricket: 0.4 };
 
 /* ambient beds: long, quiet loops that fade in and out with where you are.
    water: soft lapping by the pond; hall: a low murmur in the town hall; fire: the Hideout's hearth */
