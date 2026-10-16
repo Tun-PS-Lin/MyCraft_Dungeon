@@ -2,6 +2,8 @@
 // the Hideout and the pond. Progress is kept in the browser, ticks off with a little note beside
 // the button, and finding everything earns a badge. The list is in LIST below.
 import { sound } from './audio.js';
+import { FESTIVAL } from './festival.js';
+const FALL = { christmas: 'the snow', valentine: 'a shower of rose petals', easter: 'a shower of blossom' }[FESTIVAL] || 'the rain';
 
 const touch = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
 /* id: what the game reports; go: where "Show me" walks you (a place id, or a function name the
@@ -14,7 +16,7 @@ export const LIST = [
     { id: 'roll', text: touch ? 'Do a dash roll (tap Jump twice)' : 'Do a dash roll (Space twice)' },
     { id: 'night', text: 'See the village at night', go: 'night' },
     { id: 'cinema', text: 'Watch the showing at the AI Cinema', go: 'cinema' },
-    { id: 'rain', text: 'Get caught in the rain', go: 'rain' },
+    { id: 'rain', text: 'Get caught in ' + FALL, go: 'rain' },
   ] },
   { group: 'The town hall', items: [
     { id: 'board', text: 'Read the agent board', go: 'board' },

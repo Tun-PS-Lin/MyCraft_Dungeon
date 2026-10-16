@@ -40,8 +40,21 @@ nothing to install.
 A first visit opens with a slow flight round the whole village, down through the clouds, before the camera settles behind you.
 The village gets on with its own day: cloud shadows drift across the square, laundry sways on the
 washing lines, pigeons burst up and circle when you run at them, and at night the moon and stars
-show in the pond. The weather turns on its own, from clear to cloudy to rain (with splashes and a soft
-patter) to morning mist, or you can pick one in the menu under **Weather**.
+show in the pond. The weather turns on its own, from clear to cloudy to rain (with splashes, and puddles
+that spread across the paving and splash when you step in them) to morning mist, or you can pick one in
+the menu under **Weather**.
+
+**Festivals.** Around Christmas (1 December to 6 January), Valentine's Day (7 to 15 February) and Easter
+(the week either side of Easter Sunday) the village dresses up on its own, and the menu's **Festival** row
+can switch to any of them (or turn them off) whenever you like; the village rebuilds behind the loading card.
+
+| | Christmas | Valentine's | Easter |
+|---|---|---|---|
+| About Me | a giant lit Christmas tree with the sign hung on it, presents underneath | a big pixel heart outlined in lights, rose bushes and heart balloons | a giant painted egg on a straw nest, a bunny and tulips |
+| The village | snow lying on the paths, roofs and stalls; string lights and wreaths on every stall; snowmen | hearts strung across every stall, rose petals on the paving, pink-tinted lanterns | pastel bunting, tulips, painted eggs hidden in the grass, hopping bunnies |
+| The pond | frozen over, with one hole left to fish through | heart candles floating on the water | a duck and her ducklings paddling round |
+| What falls | snow (instead of rain) | rose petals | blossom |
+| Inside | a tree, stockings and lights in the town hall and the Hideout | heart garlands, roses and candles | bunting, egg baskets and a bunny |
 A few small things to find: an **About Me** signpost above the movement guide, a day and night
 switch that sweeps through a sunset or sunrise, sounds that change with where you stand, a dash roll (tap <kbd>Space</kbd> twice), a meeting table you can call the agents to, and a
 wolf that starts following you once you have opened every stall.
@@ -78,7 +91,8 @@ At the bottom of the square, a cave glows in the rock. Walk down the steps and y
 </table>
 
 - **Small rewards.** Read every journal entry (each gets a wax seal) to earn the **Scholar's Lantern**.
-  Stand by the CD player while a CD plays and the room dims into **listening mode**.
+  Stand by the CD player while a CD plays and the room dims into **listening mode**. When a song ends the
+  next CD goes on, round all five.
 - **The room.** A fireplace with a sleeping cat you can pet (it meows), a raised lounge, string
   lights at night, maps on the walls, and a window that shows sun by day and stars by night.
 
@@ -125,8 +139,9 @@ Each stall opens a card with a screenshot, a short story and a link.
 
 The newest stall, **AI Cinema**, sits down by the ridge, just left of the cave: a marquee of running lights, red velvet
 curtains and a projector, with a short demo of the series playing on its screen. It is home to an AI animated
-series about *38 Mingalar Blessings* (link coming soon); its card has a **Watch the showing** button that plays
-the demo full size. The demo is drawn in code in `src/show.js`, ready to be swapped for real clips.
+series about *38 Mingalar Blessings* (link coming soon). Its card has **Watch**, which plays the demo full size,
+and **Take a seat**, which sits you in the front row with the camera behind you facing the screen (move to stand
+up). The demo is drawn in code in `src/show.js`, ready to be swapped for real clips.
 
 <br>
 
@@ -264,7 +279,7 @@ export const SOUND_FILES = {
 | `menu` | menu opening and closing | one |
 | `cluck` | startled chicken | 2 to 3 variants |
 | `flutter` | the pigeons taking off | one or two |
-| `patter` | a single raindrop (many play together in the rain) | 3 to 4 tiny taps |
+| `stepPuddle` | stepping in a puddle | 2 to 3 short splashes |
 | `bird`, `cricket` | occasional bird call by day, cricket by night | 2 to 3 variants |
 | `villager` | an agent greeting you | 2 to 3 short grunts |
 | `bark` | the wolf | one |
@@ -307,8 +322,10 @@ src/figures.js      the blocky people: outfits, painting, posing
 src/player.js       the player's state and shadow
 src/critters.js     chickens and the wolf
 src/life.js         the washing lines and the pigeons
-src/sky.js          cloud shadows, the clouds seen from the opening flight, the moon and stars in the pond
-src/weather.js      clear, cloudy, rain and mist: the rain, the splashes and the Auto cycle
+src/sky.js          cloud shadows, Christmas snow cover, the clouds seen from the opening flight, the moon and stars in the pond
+src/weather.js      clear, cloudy, rain and mist: rain (or snow, petals, blossom), splashes, puddles, the Auto cycle
+src/festival.js     which festival is on (by date, or chosen in the menu), and switching between them
+src/festive.js      the festival decorations: About Me centrepieces, stalls, hall, pond, square, Hideout
 src/show.js         the AI Cinema's demo showing and the viewer that plays it large
 src/access.js       the accessibility settings (text size, contrast, motion, opening flight)
 src/nav.js          path finding for walk-to

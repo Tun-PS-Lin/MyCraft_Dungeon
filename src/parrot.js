@@ -17,7 +17,7 @@ export function PARROT_ICON(g) {
 }
 
 export function createParrot(scene, player) {
-  const root = new THREE.Group(); root.visible = false; scene.add(root);
+  const root = new THREE.Group(); root.visible = false; root.userData.moving = true; scene.add(root);
   const body = new THREE.Group(); root.add(body); // tilts with flight
   // body, head, beak, tail, feet: a little blocky macaw
   box(body, 3.2, 4.2, 3.2, '#d8403a', 0, 2.6, 0);

@@ -8,7 +8,7 @@ export function createChickens(scene, count = 4) {
   const r = rng(9), hens = [];
   const pickTarget = (h) => { const a = Math.random() * 6.28, d = 2 + Math.random() * 5; h.tx = Math.cos(a) * d * 1.5; h.tz = Math.sin(a) * d; };
   for (let i = 0; i < count; i++) {
-    const g = new THREE.Group(), w = flat('#f4f1ea'), y = flat('#e9b62f'), eye = flat('#1d1d1d');
+    const g = new THREE.Group(), w = flat('#f4f1ea'), y = flat('#e9b62f'), eye = flat('#1d1d1d'); g.userData.moving = true;
     B(g, 0.45, 0.4, 0.65, w, 0, 0.5, 0, true); B(g, 0.3, 0.34, 0.3, w, 0, 0.86, 0.3, true); B(g, 0.14, 0.1, 0.16, y, 0, 0.84, 0.52, true); B(g, 0.1, 0.12, 0.08, flat('#cf3a30'), 0, 0.74, 0.48, true);
     B(g, 0.08, 0.3, 0.08, y, 0.12, 0.15, 0, true); B(g, 0.08, 0.3, 0.08, y, -0.12, 0.15, 0, true); B(g, 0.06, 0.06, 0.06, eye, 0.16, 0.92, 0.4, true); B(g, 0.06, 0.06, 0.06, eye, -0.16, 0.92, 0.4, true);
     g.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
@@ -38,7 +38,7 @@ export function createChickens(scene, count = 4) {
 // The wolf companion, unlocked by the achievement. It trots after the player and
 // sits when they stop. It is hidden until activate() is called.
 export function createWolf(scene, blocked) {
-  const g = new THREE.Group(), fur = flat('#e9e6df'), fur2 = flat('#cfcac0'), dark = flat('#2a2623');
+  const g = new THREE.Group(), fur = flat('#e9e6df'), fur2 = flat('#cfcac0'), dark = flat('#2a2623'); g.userData.moving = true;
   const body = new THREE.Group(); g.add(body);
   B(body, 0.5, 0.48, 1.05, fur, 0, 0.62, 0, true); B(body, 0.56, 0.52, 0.45, fur2, 0, 0.66, 0.38, true); B(body, 0.5, 0.1, 0.2, flat('#c23b32'), 0, 0.7, 0.62, true);
   const head = new THREE.Group(); head.position.set(0, 0.86, 0.72); body.add(head);

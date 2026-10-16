@@ -1273,12 +1273,13 @@ html.contrast :focus-visible{outline:3px solid #ffd84a!important;outline-offset:
 html.calm *,html.calm *::before,html.calm *::after{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important;transition-delay:0s!important;scroll-behavior:auto!important}
 
 /* ── the AI Cinema's showing (src/show.js) ── */
-#cardWatch{width:100%;box-sizing:border-box;display:block;margin-bottom:12px;color:#ffe6a0;background:#2a1418;border:3px solid #b3242f;padding:10px 10px 11px;cursor:pointer;
+#cardActs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+#cardActs[hidden]{display:none}
+#cardWatch,#cardSeat{width:100%;box-sizing:border-box;display:block;color:#ffe6a0;background:#2a1418;border:3px solid #b3242f;padding:10px 10px 11px;cursor:pointer;
   box-shadow:inset 0 4px 0 rgba(255,255,255,.06),0 0 0 3px #000;transition:border-color .15s,transform .15s,filter .15s}
-#cardWatch[hidden]{display:none}
-#cardWatch:hover{border-color:#ffd27a;transform:translateY(-2px)}
-#cardWatch span{display:block;font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:.1em;text-transform:uppercase}
-#cardWatch small{display:block;font-size:13px;color:#e6d5c0;opacity:.9}
+#cardWatch:hover,#cardSeat:hover{border-color:#ffd27a;transform:translateY(-2px)}
+#cardWatch span,#cardSeat span{display:block;font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.08em;text-transform:uppercase}
+#cardWatch small,#cardSeat small{display:block;font-size:13px;color:#e6d5c0;opacity:.9}
 #show{position:fixed;inset:0;z-index:12;display:grid;place-items:center;padding:calc(var(--edge) + env(safe-area-inset-top,0px)) var(--edge) calc(var(--edge) + env(safe-area-inset-bottom,0px));
   background:rgba(6,4,8,.82);opacity:0;visibility:hidden;transition:opacity .35s ease,visibility 0s .35s}
 #show.open{opacity:1;visibility:visible;transition:opacity .35s ease}
@@ -1300,3 +1301,9 @@ html.calm *,html.calm *::before,html.calm *::after{animation-duration:.01s!impor
 .wx-seg button:hover{border-color:var(--gold);color:var(--gold)}
 .wx-seg button[aria-pressed="true"]{background:var(--gold);color:var(--night);border-color:#000}
 html.big-text .wx-seg button{font-size:calc(15px * var(--ts))}
+/* sitting in the cinema: the name tags and map step aside for the screen */
+#labels{transition:opacity .4s ease}
+body.seated #labels,body.seated #hud,body.seated .mm{opacity:0;pointer-events:none;transition:opacity .4s ease}
+/* festival picker (menu → Festival) */
+.fest-seg{grid-template-columns:repeat(3,1fr)}
+.fest-note{display:block;margin-top:-2px;font-size:13px;line-height:1.45;color:var(--ink-dim)}

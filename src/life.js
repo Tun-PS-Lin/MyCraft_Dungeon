@@ -25,7 +25,7 @@ function washingLine(parent, [x0, x1, z], seed) {
   while (x < x1 - 0.6) {
     const kind = k % 3, w = kind === 0 ? 0.8 : kind === 1 ? 0.62 : 0.24, h = kind === 0 ? 0.78 : kind === 1 ? 0.95 : 0.38;
     const u = (x + w / 2 - x0) / (x1 - x0), top = sag(u), col = CLOTHES[(k * 5 + 3) % CLOTHES.length];
-    const g = new THREE.Group(); g.position.set(x + w / 2, top, z); parent.add(g);
+    const g = new THREE.Group(); g.position.set(x + w / 2, top, z); g.userData.moving = true; parent.add(g);
     const mat = wool(col);
     if (kind === 0) { // a shirt: body and two short sleeves
       B(g, w * 0.62, h, 0.05, mat, 0, -h / 2, 0, true); B(g, w, h * 0.3, 0.05, mat, 0, -h * 0.15, 0, true);
@@ -43,7 +43,7 @@ function washingLine(parent, [x0, x1, z], seed) {
 /* ── pigeons ── */
 const GREY = flat('#8e95a3'), DARK = flat('#5e6574'), NECK = flat('#5f9c86'), PINK = flat('#d07a86'), BEAK = flat('#3a3530'), WHITE = flat('#d9dde4');
 function pigeonModel() {
-  const root = new THREE.Group(), body = new THREE.Group(); root.add(body); body.scale.setScalar(1.25);
+  const root = new THREE.Group(), body = new THREE.Group(); root.add(body); root.userData.moving = true; body.scale.setScalar(1.25);
   B(body, 0.2, 0.18, 0.34, GREY, 0, 0.17, 0, true);
   B(body, 0.16, 0.06, 0.2, WHITE, 0, 0.1, 0.02, true);
   const head = new THREE.Group(); head.position.set(0, 0.28, 0.14); body.add(head);

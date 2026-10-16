@@ -2,6 +2,9 @@
 import * as THREE from 'three';
 import { BOUNDS, POND } from './config.js';
 import { cv, lin } from './textures.js';
+import { FESTIVAL } from './festival.js';
+// what drifts by day: leaves, or a few flakes of snow, rose petals or blossom in festival time
+const DRIFT = { christmas: '#f4f8ff', valentine: '#ff7f9c', easter: '#ffd0e2' }[FESTIVAL] || '#c9a23a';
 
 const dot = new THREE.CanvasTexture(cv(16, 16, (g) => { const r = g.createRadialGradient(8, 8, 1, 8, 8, 8); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 16, 16); }));
 const square = new THREE.CanvasTexture(cv(4, 4, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 4, 4); }));
@@ -20,7 +23,7 @@ export function createAmbience(scene) {
   // a brighter little swarm hovering over the pond at night
   const pondFlies = cloud(scene, 22, { map: dot, color: lin('#fff3a0'), size: 0.5, blending: THREE.AdditiveBlending });
   for (let i = 0; i < pondFlies.count; i++) { const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()); pondFlies.seed[i * 4] = POND.x + Math.cos(a) * r * (POND.rx + 0.8); pondFlies.seed[i * 4 + 2] = POND.z + Math.sin(a) * r * (POND.rz + 0.8); }
-  const leaves = cloud(scene, 46, { map: square, color: lin('#c9a23a'), size: 0.16 });
+  const leaves = cloud(scene, 46, { map: square, color: lin(DRIFT), size: 0.16 });
   // night is 0 by day and 1 at night; quiet is 1 when the particles should hide (indoors)
   function update(time, night, quiet) {
     const show = 1 - quiet;

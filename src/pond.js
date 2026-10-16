@@ -6,6 +6,8 @@ import { POND, FLOOR } from './config.js';
 import { B, M, cv, speck, fill, toTex, rng, glow, flat, wool, lin, bake } from './textures.js';
 import { collide, inPondWater } from './collision.js';
 import { addLamp } from './lights.js';
+import { FESTIVAL } from './festival.js';
+const ICE = FESTIVAL === 'christmas'; // at Christmas the pond freezes over, all but a fishing hole
 
 const lam = (o) => new THREE.MeshLambertMaterial(o);
 const WATER_Y = -0.2;
@@ -21,14 +23,29 @@ export function buildPond(scene) {
   const water = cv(16, 16, (c) => { speck(c, 16, 16, ['#2f7fb5', '#2b78ad', '#3388bf', '#2a74a8'], rng(82)); fill(c, '#4fa3d6', 2, 3, 4, 1); fill(c, '#4fa3d6', 9, 9, 5, 1); fill(c, '#4fa3d6', 5, 13, 3, 1); fill(c, '#5cb3e2', 12, 2, 2, 1); });
   const ripple = cv(16, 16, (c) => { c.clearRect(0, 0, 16, 16); fill(c, 'rgba(220,245,255,.55)', 1, 5, 3, 1); fill(c, 'rgba(220,245,255,.45)', 10, 1, 4, 1); fill(c, 'rgba(220,245,255,.5)', 6, 11, 4, 1); fill(c, 'rgba(220,245,255,.35)', 13, 14, 2, 1); });
   const wTex = toTex(water), rTex = toTex(ripple);
-  const quads = (y, scale) => {
+  const quads = (y, scale, list = cells) => {
     const pos = [], uv = [], idx = [];
-    cells.forEach(([x, z], i) => { pos.push(x, y, z, x + 1, y, z, x + 1, y, z + 1, x, y, z + 1); uv.push(x / scale, -z / scale, (x + 1) / scale, -z / scale, (x + 1) / scale, -(z + 1) / scale, x / scale, -(z + 1) / scale); const o = i * 4; idx.push(o, o + 2, o + 1, o, o + 3, o + 2); });
+    list.forEach(([x, z], i) => { pos.push(x, y, z, x + 1, y, z, x + 1, y, z + 1, x, y, z + 1); uv.push(x / scale, -z / scale, (x + 1) / scale, -z / scale, (x + 1) / scale, -(z + 1) / scale, x / scale, -(z + 1) / scale); const o = i * 4; idx.push(o, o + 2, o + 1, o, o + 3, o + 2); });
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals(); return geo;
   };
   const waterMat = lam({ map: wTex, color: lin('#ffffff') }), rippleMat = new THREE.MeshBasicMaterial({ map: rTex, transparent: true, depthWrite: false, opacity: 0.8 });
-  const wMesh = new THREE.Mesh(quads(WATER_Y, 1), waterMat); wMesh.receiveShadow = true; scene.add(wMesh);
-  const rMesh = new THREE.Mesh(quads(WATER_Y + 0.01, 1.6), rippleMat); rMesh.renderOrder = 2; scene.add(rMesh);
+  // the fishing hole: the two cells where the line goes in (the only open water at Christmas)
+  const HOLE = { x: 11.1, z: 11.5 }, hole = cells.filter(([x, z]) => Math.abs(x + 0.5 - HOLE.x) < 1.1 && Math.abs(z + 0.5 - HOLE.z) < 0.6);
+  const open = ICE ? hole : cells;
+  const wMesh = new THREE.Mesh(quads(WATER_Y, 1, open), waterMat); wMesh.receiveShadow = true; scene.add(wMesh);
+  const rMesh = new THREE.Mesh(quads(WATER_Y + 0.01, 1.6, open), rippleMat); rMesh.renderOrder = 2; scene.add(rMesh);
+  if (ICE) {
+    // ice: pale blue-white with a few cracks and frosted specks, and a thick lip round the hole
+    const ice = cv(16, 16, (c) => { speck(c, 16, 16, ['#cfe6f4', '#d9eef8', '#c4def0', '#e4f3fb'], rng(85)); fill(c, '#f6fbff', 3, 2, 3, 1); fill(c, '#f6fbff', 10, 11, 4, 1); fill(c, '#a9c9e0', 1, 8, 6, 1); fill(c, '#a9c9e0', 6, 9, 1, 3); fill(c, '#a9c9e0', 11, 3, 1, 4); fill(c, '#ffffff', 13, 6, 1, 1); });
+    const iceMat = lam({ map: toTex(ice) }); iceMat.userData.noSnow = true;
+    const frozen = cells.filter((c) => !hole.includes(c));
+    const iMesh = new THREE.Mesh(quads(WATER_Y + 0.06, 1, frozen), iceMat); iMesh.receiveShadow = true; scene.add(iMesh);
+    const lip = flat('#eef6fb');
+    for (const [x, z] of hole) for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, nz = z + dz; if (hole.some(([a, b]) => a === nx && b === nz) || !cells.some(([a, b]) => a === nx && b === nz)) continue;
+      B(g, dx ? 0.14 : 1, 0.14, dz ? 0.14 : 1, lip, x + 0.5 + dx * 0.43, WATER_Y + 0.07, z + 0.5 + dz * 0.43, true);
+    }
+  }
   // the pond bed under the edges, so no gap shows between the water and the rim
   for (const [x, z] of cells) B(g, 1, 0.5, 1, flat('#3a3226'), x + 0.5, WATER_Y - 0.26, z + 0.5, true);
 
@@ -100,11 +117,12 @@ export function buildPond(scene) {
     const l = new THREE.Group(); l.position.set(x, WATER_Y + 0.02, z); g.add(l); l.userData.keep = true;
     B(l, 0.6, 0.03, 0.6, flat('#4f9a44'), 0, 0, 0, true); B(l, 0.2, 0.031, 0.2, flat('#2f7fb5'), 0.2, 0, 0.2, true);
     if (i % 2 === 0) { B(l, 0.16, 0.12, 0.16, flat('#f6b0c8'), -0.08, 0.08, -0.06, true); B(l, 0.08, 0.06, 0.08, flat('#ffd84a'), -0.08, 0.15, -0.06, true); }
+    if (ICE) l.visible = false; // (frozen in)
     lilies.push({ l, s: i * 1.7 });
   });
   const fish = new THREE.Group(); fish.visible = false; g.add(fish); fish.userData.keep = true;
   B(fish, 0.36, 0.14, 0.12, flat('#ff8a3a'), 0, 0, 0, true); B(fish, 0.12, 0.16, 0.04, flat('#e06a2a'), -0.22, 0, 0, true); B(fish, 0.04, 0.04, 0.13, flat('#141418'), 0.12, 0.03, 0, true);
-  let fishT = -1, fishAt = 4, fishFrom = [0, 0], fishDir = 1;
+  let fishT = -1, fishAt = ICE ? Infinity : 4, fishFrom = [0, 0], fishDir = 1;
   // splash: a few white blocks that pop up and fall back
   const splashMat = new THREE.MeshBasicMaterial({ color: lin('#e8f6ff'), transparent: true, opacity: 0.9 });
   const drops = []; for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), splashMat); m.visible = false; m.userData.keep = true; g.add(m); drops.push({ m, vx: 0, vy: 0, vz: 0 }); }
@@ -155,7 +173,7 @@ export function buildPond(scene) {
       if (cast && cast.step !== 'hold' && cast.step !== 'out') return;
       const again = !!cast;
       rodRest.visible = false; rod.visible = line.visible = true; bobber.visible = again; caught.visible = again && caught.visible;
-      cast = { step: again ? 'wind' : 'lift', t: 0, P, at: [spot.x + 2.0 + Math.random() * 0.6, dock.z + (Math.random() - 0.5) * 1.2], bite: 1.3 + Math.random() * 1.0, done,
+      cast = { step: again ? 'wind' : 'lift', t: 0, P, at: ICE ? [HOLE.x + (Math.random() - 0.5) * 0.5, HOLE.z + (Math.random() - 0.5) * 0.3] : [spot.x + 2.0 + Math.random() * 0.6, dock.z + (Math.random() - 0.5) * 1.2], bite: 1.3 + Math.random() * 1.0, done,
         rzS: again ? cast.rzS : { v: -1.2, vel: 0 }, scS: again ? cast.scS : { v: 0.55, vel: 0 } };
     },
     // the card has closed: put the rod away

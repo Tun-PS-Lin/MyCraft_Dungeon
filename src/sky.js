@@ -7,6 +7,9 @@ import * as THREE from 'three';
 import { POND } from './config.js';
 import { cv, rng } from './textures.js';
 import { inPondWater } from './collision.js';
+import { FESTIVAL } from './festival.js';
+import { HALL } from './config.js';
+const SNOW = FESTIVAL === 'christmas'; // snow lies on the village at Christmas
 
 const CLOUD_Y = 38;      // height of the cloud layer (above the highest game camera)
 const CELL = 2.5;        // one cloud block, in world units
@@ -37,22 +40,58 @@ export function createSky(scene) {
   const U = { cloudMap: { value: tex }, cloudOff: { value: off }, cloudAmt: { value: 0 }, cloudScale: { value: S }, cloudSun: { value: new THREE.Vector3(0, 1, 0) } };
 
   // cloud shadows: a small addition to the lit materials, darkening whatever lies under a cloud
-  // (seen along the sun's direction, so the shadows line up with the clouds above)
+  // (seen along the sun's direction, so the shadows line up with the clouds above).
+  // At Christmas the same addition lays snow: on every upward face, in patches (a blocky noise
+  // map in world space), but not inside the town hall, and not on anything that moves about.
+  if (SNOW) {
+    const r = rng(77), G = 8, grid = Array.from({ length: G * G }, () => r());
+    const at = (x, y) => grid[((y % G + G) % G) * G + ((x % G + G) % G)];
+    const sn = cv(64, 64, (g) => { const img = g.createImageData(64, 64);
+      for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) { const u = (x / 64) * G, v = (y / 64) * G, xi = Math.floor(u), yi = Math.floor(v), fx = u - xi, fy = v - yi;
+        const a = at(xi, yi) + (at(xi + 1, yi) - at(xi, yi)) * fx, b = at(xi, yi + 1) + (at(xi + 1, yi + 1) - at(xi, yi + 1)) * fx, n = a + (b - a) * fy;
+        const k = (y * 64 + x) * 4; img.data[k] = img.data[k + 1] = img.data[k + 2] = 255; img.data[k + 3] = Math.round(Math.min(1, n * 0.8 + r() * 0.2) * 255); }
+      g.putImageData(img, 0, 0); });
+    const st = new THREE.CanvasTexture(sn); st.wrapS = st.wrapT = THREE.RepeatWrapping; st.magFilter = THREE.NearestFilter; st.minFilter = THREE.LinearFilter; st.generateMipmaps = false;
+    Object.assign(U, { snowMap: { value: st }, uSnow: { value: 0.6 }, uNoSnow: { value: new THREE.Vector4(HALL.x0 + 0.7, HALL.x1 - 0.7, HALL.z0 + 0.7, HALL.z1 - 0.7) }, uNoSnowY: { value: HALL.wallH + 0.2 } });
+  }
   const patched = new WeakSet();
-  function patch(mat) {
+  function patch(mat, still) {
     if (!mat || patched.has(mat) || !(mat.isMeshLambertMaterial || mat.isMeshStandardMaterial || mat.isMeshPhongMaterial)) return;
     patched.add(mat);
+    const snow = SNOW && !still && !mat.userData.noSnow;
     mat.onBeforeCompile = function (sh) {
       Object.assign(sh.uniforms, U);
-      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCloudW;')
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCloudW;' + (snow ? '\nvarying float vSnowUp;' : ''))
         .replace('#include <project_vertex>', '#include <project_vertex>\n{ vec4 cw = vec4( transformed, 1.0 );\n#ifdef USE_INSTANCING\ncw = instanceMatrix * cw;\n#endif\nvCloudW = ( modelMatrix * cw ).xyz; }');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vCloudW;\nuniform sampler2D cloudMap;\nuniform vec2 cloudOff;\nuniform float cloudAmt;\nuniform float cloudScale;\nuniform vec3 cloudSun;')
+      if (snow) sh.vertexShader = sh.vertexShader.replace('#include <defaultnormal_vertex>', '#include <defaultnormal_vertex>\n{ vec3 sn = objectNormal;\n#ifdef USE_INSTANCING\nsn = mat3( instanceMatrix ) * sn;\n#endif\nvSnowUp = normalize( mat3( modelMatrix ) * sn ).y; }');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vCloudW;\nuniform sampler2D cloudMap;\nuniform vec2 cloudOff;\nuniform float cloudAmt;\nuniform float cloudScale;\nuniform vec3 cloudSun;'
+          + (snow ? '\nvarying float vSnowUp;\nuniform sampler2D snowMap;\nuniform float uSnow;\nuniform vec4 uNoSnow;\nuniform float uNoSnowY;' : ''))
         .replace('#include <tonemapping_fragment>', 'if ( cloudAmt > 0.001 ) { vec2 cxz = vCloudW.xz + cloudSun.xz * ( ( ' + CLOUD_Y.toFixed(1) + ' - vCloudW.y ) / max( cloudSun.y, 0.2 ) );\n gl_FragColor.rgb *= 1.0 - cloudAmt * texture2D( cloudMap, cxz * cloudScale + cloudOff ).a; }\n#include <tonemapping_fragment>');
+      if (snow) sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+        if ( uSnow > 0.001 ) {
+          vec2 sw = vCloudW.xz;
+          bool indoor = sw.x > uNoSnow.x && sw.x < uNoSnow.y && sw.y > uNoSnow.z && sw.y < uNoSnow.w && vCloudW.y < uNoSnowY;
+          float up = smoothstep( 0.55, 0.85, vSnowUp );
+          float n = texture2D( snowMap, sw * 0.0625 ).a;
+          float cover = clamp( ( n - ( 1.0 - uSnow ) ) * 3.5, 0.0, 1.0 );
+          if ( !indoor ) diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.9, 0.94, 1.0 ), up * cover );
+        }`);
     };
-    mat.customProgramCacheKey = () => 'clouds';
+    mat.customProgramCacheKey = () => (snow ? 'clouds-snow' : 'clouds');
     mat.needsUpdate = true;
   }
-  function patchAll(root) { root.traverse((o) => { if (!o.material) return; if (Array.isArray(o.material)) o.material.forEach(patch); else patch(o.material); }); }
+  // things that move about (people, animals, laundry) get cloud shadows but never snow: a copy of
+  // their material without it, so a shared material elsewhere keeps its snow
+  const stillCopy = new Map();
+  function patchAll(root) {
+    root.traverse((o) => {
+      if (!o.material || Array.isArray(o.material)) { if (Array.isArray(o.material)) o.material.forEach((m) => patch(m)); return; }
+      let moving = false; for (let a = o; a; a = a.parent) if (a.userData && a.userData.moving) { moving = true; break; }
+      if (SNOW && moving && (o.material.isMeshLambertMaterial || o.material.isMeshStandardMaterial)) {
+        let c = stillCopy.get(o.material.uuid); if (!c) { c = o.material.clone(); stillCopy.set(o.material.uuid, c); patch(c, true); } o.material = c;
+      } else patch(o.material);
+    });
+  }
 
   // the clouds themselves: chunky white blocks, one per full cell of the map, high above the
   // village. They are only seen from the top of the opening flight, which starts above them.
@@ -128,6 +167,6 @@ export function createSky(scene) {
       sgeo.attributes.color.needsUpdate = true;
     }
   }
-  const api = { patch, patchAll, update, strength: null, uniforms: U }; // strength: set to test the shadows
+  const api = { patch, patchAll, update, strength: null, uniforms: U, snow: (v) => { if (U.uSnow) U.uSnow.value = v; } }; // strength: set to test the shadows
   return api;
 }

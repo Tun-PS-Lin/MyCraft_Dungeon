@@ -209,7 +209,7 @@ const lit = (c) => glowCache[c] || (glowCache[c] = new THREE.MeshBasicMaterial({
 export function createFigure(design, opts = {}) {
   const ctx = {}, tex = {}, mat = {};
   for (const k in SIZE) { const c = document.createElement('canvas'); c.width = SIZE[k][0]; c.height = SIZE[k][1]; ctx[k] = c.getContext('2d'); tex[k] = toTex(c, false); mat[k] = new THREE.MeshLambertMaterial({ map: tex[k] }); }
-  const group = new THREE.Group(), rig = new THREE.Group(); group.add(rig);
+  const group = new THREE.Group(), rig = new THREE.Group(); group.add(rig); group.userData.moving = true; // (no snow settles on people)
   const part = (w, h, d, m, py, px, off) => {
     const pivot = new THREE.Group(); pivot.position.set(px * PXU, py * PXU, 0);
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w * PXU, h * PXU, d * PXU), m); mesh.position.y = off * PXU; mesh.receiveShadow = !!opts.shadows; mesh.userData.skin = true; pivot.add(mesh); rig.add(pivot); return pivot;

@@ -8,6 +8,8 @@ import { B, M, wool, patterned, glow, flat, glass, emblem, bake } from './textur
 import { collide } from './collision.js';
 import { addLamp } from './lights.js';
 import { drawShow, SHOW_W, SHOW_H } from './show.js';
+import { FESTIVAL } from './festival.js';
+import { centerpiece } from './festive.js';
 
 const WHITE = '#f4f1e6';
 
@@ -266,11 +268,17 @@ const BUILD = {
     col(3.05, 4.05, 0.8, 1.6, 1.8); col(-4, -3, -0.6, 1.6, 1.3); col(3.4, 3.8, 2.4, 2.8, 3.2);
     // the running lights
     const BULB = bulbA.color.clone(); let was = -1;
-    // the screen plays only while the cinema is near the middle of the view, at up to 30 frames a second
+    // a seat to watch from (front row, on the left, so the view of the screen stays clear) and,
+    // for the camera, a spot out in front under the marquee, facing the screen; and where the screen is
+    { const sc = s.scale || 1, [sx, sz] = s.world(-1.65, -0.35), [ex, ez] = s.world(0, 2.4), [lx, lz] = s.world(0, -1.78), [bx, bz] = s.world(0.9, 5.4);
+      s.seat = { x: sx, z: sz, y: 0.12, // the figure's feet; seated, its hips come down onto the cushion
+         yaw: Math.atan2(lx - sx, lz - sz), out: [ex, ez], screen: [lx, 0.1 + 1.85 * sc, lz], eye: [bx, 0.1 + 2.9 * sc, bz] }; }
+    // the screen plays only while the cinema is near the middle of the view, at up to 30 frames a
+    // second (every frame while someone is sitting watching it)
     let shown = -1;
     s.update = (time, focus) => {
       const near = !focus || Math.hypot(focus.x - s.pos[0], focus.z - s.pos[1]) < 24;
-      if (near && time - shown > 1 / 30) { shown = time; drawShow(x, time); tex.needsUpdate = true; }
+      if (near && (s.watching || time - shown > 1 / 30)) { shown = time; drawShow(x, time); tex.needsUpdate = true; }
       const on = Math.floor(time * 3.5) % 2; if (on === was) return; was = on; bulbA.color.copy(BULB).multiplyScalar(on ? 1 : 0.3); bulbB.color.copy(BULB).multiplyScalar(on ? 0.3 : 1);
     };
   },
@@ -322,6 +330,22 @@ export function buildStalls(scene) {
     const box = (x0, x1, z0, z1) => { const a = world(x0, z0), b = world(x1, z1); return { x0: Math.min(a[0], b[0]), x1: Math.max(a[0], b[0]), z0: Math.min(a[1], b[1]), z1: Math.max(a[1], b[1]) }; };
     const col = (x0, x1, z0, z1, h) => { const r = box(x0, x1, z0, z1); collide(r.x0, r.x1, r.z0, r.z1, h * sc + 0.1); };
     g.position.set(p.pos[0], 0.1, p.pos[1]); g.rotation.y = th; g.scale.setScalar(sc); g.userData.id = p.id;
+    s.world = world;
+    // in festival time the About Me signpost gives way to the festival's centrepiece (festive.js),
+    // with the same board hung on it
+    if (p.about && FESTIVAL) {
+      const makeBoard = (w, h) => {
+        const c = document.createElement('canvas'); c.width = 520; c.height = 260;
+        const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
+        const paint = () => { signText(c); tex.needsUpdate = true; }; paint();
+        if (document.fonts && document.fonts.load) document.fonts.load('700 40px "Pixelify Sans"').then(paint).catch(() => {});
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: tex })); m.userData.keep = true; return m;
+      };
+      const cp = centerpiece(g, FESTIVAL, makeBoard), k = 1.2; s.festive = cp; s.labelY = cp.labelY;
+      g.scale.setScalar(k); s.rect = box(cp.rect[0] * k, cp.rect[1] * k, cp.rect[2] * k, cp.rect[3] * k);
+      collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 7); s.front = world(0, cp.rect[3] * k + 0.6);
+      bake(g); scene.add(g); s.group = g; return s;
+    }
     BUILD[p.id](g, s, col);
     if (p.about) { g.scale.setScalar(1.2); s.rect = box(-1.8, 1.8, -0.5, 0.6); collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 3.2); s.front = world(0, 2.3); bake(g); scene.add(g); s.group = g; return s; }
     // night lighting: a lantern hung on each front post, a pool of light in front, and a glow over and behind the stall

@@ -199,7 +199,8 @@ export function buildWorld(scene, renderer) {
     };
     draw(); redrawSlab = draw;
     if (document.fonts && document.fonts.load) { document.fonts.load('700 40px "Pixelify Sans"').then(draw).catch(() => {}); document.fonts.load('700 40px "Noto Sans Myanmar"', 'မြန်').then(draw).catch(() => {}); }
-    const top = new THREE.Mesh(new THREE.PlaneGeometry(SLAB.w, SLAB.d, 16, 10), new THREE.MeshLambertMaterial({ map: tex }));
+    const slabMat = new THREE.MeshLambertMaterial({ map: tex }); slabMat.userData.noSnow = true; // (kept clear of snow, so it stays readable)
+    const top = new THREE.Mesh(new THREE.PlaneGeometry(SLAB.w, SLAB.d, 16, 10), slabMat);
     top.rotation.x = -Math.PI / 2; top.position.y = SLAB.y + SLAB.h + 0.004; top.receiveShadow = true; scene.add(top);
     // glowing corner studs; at night they light the slab
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const x = sx * (SLAB.w / 2 - 0.2), z = sz * (SLAB.d / 2 - 0.2); B(scene, 0.22, 0.14, 0.22, lampGlow, x, SLAB.y + SLAB.h + 0.07, z, true); }

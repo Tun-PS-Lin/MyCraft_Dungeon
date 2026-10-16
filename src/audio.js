@@ -55,9 +55,9 @@ function whoosh(vol = 0.05) {
 const SYNTH = {
   step: () => thud(0.07, 700 + Math.random() * 500, 0.09),                                        // paving
   stepWood: () => { thud(0.06, 480 + Math.random() * 120, 0.12); tone(150 + Math.random() * 30, 105, 0.06, 'triangle', 0.03); }, // planks: a hollow knock
-  stepGrass: () => thud(0.11, 2600 + Math.random() * 900, 0.035),                                   // grass: a soft brush
+  stepGrass: () => thud(0.11, 2600 + Math.random() * 900, 0.035), // grass: a soft brush
+  stepPuddle: () => { thud(0.12, 1500 + Math.random() * 600, 0.09); tone(520 + Math.random() * 120, 260, 0.08, 'sine', 0.025); }, // a wet slap
   whoosh: () => whoosh(),
-  patter: () => thud(0.025, 3200 + Math.random() * 3800, 0.008 + Math.random() * 0.012), // one raindrop
   flutter: () => { for (let i = 0; i < 7; i++) setTimeout(() => thud(0.035, 1500 + Math.random() * 900, 0.05 + Math.random() * 0.03), i * (45 + Math.random() * 35)); },
   squawk: () => { tone(1300, 780, 0.12, 'sawtooth', 0.05, 0, 1600); tone(1150, 720, 0.15, 'sawtooth', 0.045, 0.15, 1500); },
   whistle: () => { tone(1400, 2300, 0.16, 'sine', 0.045); tone(2300, 1650, 0.24, 'sine', 0.045, 0.2); },
@@ -80,7 +80,7 @@ const SYNTH = {
   bark: () => { tone(430, 250, 0.09, 'square', 0.07, 0, 700); tone(470, 260, 0.1, 'square', 0.07, 0.16, 700); },
   achieve: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.22, 'triangle', 0.08, i * 0.1)); },
 };
-const VOLUME = { step: 0.5, stepWood: 0.5, stepGrass: 0.45, bird: 0.4, cricket: 0.4 };
+const VOLUME = { step: 0.5, stepWood: 0.5, stepGrass: 0.45, stepPuddle: 0.5, bird: 0.4, cricket: 0.4 };
 
 /* ambient beds: long, quiet loops that fade in and out with where you are.
    fire: the Hideout's hearth (the pond and town hall beds were taken out: they sounded like wind and carpet) */
@@ -169,7 +169,11 @@ const gain = () => Math.min(1, MUSIC_VOLUME * level / 10 * (level > 10 ? 1 + (le
 function playCurrent() {
   stopAll(); const rec = RECORDS.find((q) => q.id === current); if (!rec || !musicOn) { changed(); return; }
   if (rec.file) {
-    if (!el) { el = new Audio(); el.loop = true; el.preload = 'auto'; }
+    if (!el) {
+      el = new Audio(); el.preload = 'auto';
+      // when a song ends the next CD goes on, round all of them in turn
+      el.addEventListener('ended', () => { if (musicOn && RECORDS.length > 1) music.step(1); else if (musicOn) { el.currentTime = 0; el.play().catch(() => {}); } });
+    }
     const src = BASE + 'assets/sounds/' + rec.file; if (el.dataset.src !== src) { el.src = src; el.dataset.src = src; }
     el.volume = gain(); el.play().catch(() => { began = false; });
   } else if (rec.synth) synth = startSynth(rec.synth);

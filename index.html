@@ -62,6 +62,9 @@
   <div id="navContact" class="navlist"></div>
   <h2 data-t="weather"></h2>
   <div id="weatherPick" class="wx-seg" role="group" aria-label="Weather"><button type="button" data-wx="auto" data-t="wxAuto"></button><button type="button" data-wx="clear" data-t="wxClear"></button><button type="button" data-wx="rain" data-t="wxRain"></button><button type="button" data-wx="mist" data-t="wxMist"></button></div>
+  <h2 data-t="festival"></h2>
+  <div id="festPick" class="wx-seg fest-seg" role="group" aria-label="Festival"><button type="button" data-fest="auto" data-t="wxAuto"></button><button type="button" data-fest="off" data-t="fOff"></button><button type="button" data-fest="christmas" data-t="fXmas"></button><button type="button" data-fest="valentine" data-t="fVal"></button><button type="button" data-fest="easter" data-t="fEaster"></button></div>
+  <small id="festNote" class="fest-note"></small>
   <h2 data-t="access"></h2>
   <div id="access">
     <div class="acc-row"><span data-t="textSize"></span>
@@ -135,7 +138,10 @@
     <div class="card-head"><canvas id="cardArt" width="32" height="32"></canvas><h1 id="cardTitle"></h1></div>
     <p id="cardDesc"></p>
     <div id="cardEmail" hidden><span id="emailText"></span><button id="emailCopy" type="button">Copy</button></div>
-    <button id="cardWatch" type="button" hidden><span>▶ Watch the showing</span><small>A demo of the opening, in the cinema</small></button>
+    <div class="card-acts" id="cardActs" hidden>
+      <button id="cardWatch" type="button"><span>▶ Watch</span><small>Full screen</small></button>
+      <button id="cardSeat" type="button"><span>Take a seat</span><small>Watch from the stalls</small></button>
+    </div>
     <a id="cardGo" target="_blank" rel="noopener"><span></span><small></small></a>
   </div>
 </div>
@@ -160,6 +166,8 @@
     document.documentElement.classList.add('broken'); s.textContent = 'The village could not start on this device.';
     if (w && why) { w.textContent = why; w.hidden = false; }
   };
+  // after a festival change, the title card says what is happening
+  try { var lt = sessionStorage.getItem('pv-loading'); if (lt) { sessionStorage.removeItem('pv-loading'); document.getElementById('introState').textContent = lt; } } catch (e) { /* ignore */ }
   addEventListener('error', function (e) {
     var f = e.filename || '';
     if (f && f.indexOf(location.origin) !== 0) return;
