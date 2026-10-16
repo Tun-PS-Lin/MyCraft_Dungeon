@@ -5,6 +5,7 @@ import { LANGUAGE_TOGGLE } from './config.js';
 const UI = {
   en: {
     introSub: 'Portfolio village', settings: 'Settings',
+    weather: 'Weather', wxAuto: 'Auto', wxClear: 'Clear', wxRain: 'Rain', wxMist: 'Mist',
     access: 'Accessibility', textSize: 'Text size', contrast: 'High contrast', calm: 'Reduce motion', flight: 'Opening flight',
     break: 'On a break', coming: 'On the way', here: 'At the table', lastRun: 'Last run', activity: 'Activity', sampleLog: 'Sample activity, generated in your browser.', today: 'Today', yesterday: 'Yesterday', notYet: 'Nothing yet this visit', minsAgo: '{n} min ago', justNow: 'Just now', openBoard: 'Open the agent board', boardTitle: 'Agent board', boardKicker: 'The town hall', deskOf: 'At the desk', palette: 'Palette', boardHint: 'Pick an agent to see what they do and what they last did.',
     schedule: 'Runs', delivers: 'Delivers', where: 'Right now', whereDesk: 'At the desk', whereHall: 'In the town hall', whereOut: 'Out in the village', whereWay: 'Walking over', whereHere: 'Waiting at the meeting table', whereStall: 'Over at {name}',
@@ -26,6 +27,7 @@ const UI = {
   },
   my: {
     introSub: 'ပို့ဖိုလီယို ရွာလေး', settings: 'ဆက်တင်များ',
+    weather: 'ရာသီဥတု', wxAuto: 'အလိုအလျောက်', wxClear: 'သာယာ', wxRain: 'မိုးရွာ', wxMist: 'မြူ',
     access: 'အသုံးပြုရ လွယ်ကူစေရန်', textSize: 'စာလုံး အရွယ်အစား', contrast: 'အရောင် ပိုထင်ရှားစေရန်', calm: 'လှုပ်ရှားမှု လျှော့ရန်', flight: 'အဖွင့် ပျံသန်းမှု',
     mapTitle: 'ရွာမြေပုံ', projects: 'ပရောဂျက်များ', village: 'ရွာ', hello: 'နှုတ်ဆက်ရန်', townHall: '{name} (မြို့တော်ခန်းမ)',
     progress: 'ဆိုင် {t} ခုအနက် {n} ခု လည်ပတ်ပြီး', progHint: 'အဖော်တစ်ကောင် ရရန် ဆိုင်အားလုံးကို ဖွင့်ကြည့်ပါ', progWon: 'ဝံပုလွေအဖော် ရရှိပြီ',

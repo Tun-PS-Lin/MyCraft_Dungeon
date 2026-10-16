@@ -7,6 +7,7 @@ import { createFigure, OUTFITS } from './figures.js';
 import { B, M, wool, patterned, glow, flat, glass, emblem, bake } from './textures.js';
 import { collide } from './collision.js';
 import { addLamp } from './lights.js';
+import { drawShow, SHOW_W, SHOW_H } from './show.js';
 
 const WHITE = '#f4f1e6';
 
@@ -221,16 +222,11 @@ const BUILD = {
     // a short stepped roof over the screen only, so you can see in from above; the marquee stands at the front
     B(g, 6.3, 0.24, 1.5, red, 0, 3.42, -1.45); B(g, 6.1, 0.24, 1.0, redDark, 0, 3.66, -1.65); B(g, 6.4, 0.1, 1.6, gold, 0, 3.28, -1.4);
     B(g, 6.4, 0.12, 0.12, gold, 0, 3.55, -0.68);
-    // the screen at the back, framed in black, with a still from the series on it
+    // the screen at the back, framed in black, playing the showing (see show.js)
     B(g, 5.2, 2.9, 0.2, black, 0, 1.75, -1.9);
-    const sc = document.createElement('canvas'); sc.width = 256; sc.height = 128; const x = sc.getContext('2d');
-    { const gr = x.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, '#1d2350'); gr.addColorStop(0.55, '#c2557a'); gr.addColorStop(1, '#ffb35a'); x.fillStyle = gr; x.fillRect(0, 0, 256, 128);
-      x.fillStyle = '#ffe2a0'; x.beginPath(); x.arc(128, 92, 26, 0, Math.PI * 2); x.fill(); // the sun rising
-      // a golden pagoda in silhouette
-      x.fillStyle = '#3a1630'; x.fillRect(100, 96, 56, 32); x.beginPath(); x.moveTo(104, 98); x.quadraticCurveTo(128, 88, 152, 98); x.fill(); x.beginPath(); x.moveTo(112, 92); x.quadraticCurveTo(128, 50, 144, 92); x.fill(); x.fillRect(126, 30, 4, 24);
-      x.fillStyle = '#e4b93a'; x.font = '700 26px "Pixelify Sans","Courier New",monospace'; x.textAlign = 'center'; x.fillText('38', 40, 40); x.font = '700 11px "Pixelify Sans","Courier New",monospace'; x.fillText('BLESSINGS', 40, 56);
-      for (let i = 0; i < 40; i++) { x.fillStyle = 'rgba(255,255,255,.6)'; x.fillRect((i * 53) % 256, (i * 29) % 60, 1, 1); } }
-    const tex = new THREE.CanvasTexture(sc); tex.encoding = THREE.sRGBEncoding; tex.magFilter = THREE.NearestFilter;
+    const sc = document.createElement('canvas'); sc.width = SHOW_W; sc.height = SHOW_H; const x = sc.getContext('2d');
+    drawShow(x, 1.6);
+    const tex = new THREE.CanvasTexture(sc); tex.encoding = THREE.sRGBEncoding; tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 2.2), new THREE.MeshBasicMaterial({ map: tex })); screen.position.set(0, 1.85, -1.78); screen.userData.keep = true; g.add(screen);
     // velvet curtains, gathered at each side of the screen, and a swag along the top
     for (const sx of [-1, 1]) for (let k = 0; k < 4; k++) B(g, 0.2, 2.9, 0.22, k % 2 ? redDark : red, sx * (2.5 - k * 0.18), 1.7, -1.62 + k * 0.03);
@@ -270,7 +266,13 @@ const BUILD = {
     col(3.05, 4.05, 0.8, 1.6, 1.8); col(-4, -3, -0.6, 1.6, 1.3); col(3.4, 3.8, 2.4, 2.8, 3.2);
     // the running lights
     const BULB = bulbA.color.clone(); let was = -1;
-    s.update = (time) => { const on = Math.floor(time * 3.5) % 2; if (on === was) return; was = on; bulbA.color.copy(BULB).multiplyScalar(on ? 1 : 0.3); bulbB.color.copy(BULB).multiplyScalar(on ? 0.3 : 1); };
+    // the screen plays only while the cinema is near the middle of the view, at up to 30 frames a second
+    let shown = -1;
+    s.update = (time, focus) => {
+      const near = !focus || Math.hypot(focus.x - s.pos[0], focus.z - s.pos[1]) < 24;
+      if (near && time - shown > 1 / 30) { shown = time; drawShow(x, time); tex.needsUpdate = true; }
+      const on = Math.floor(time * 3.5) % 2; if (on === was) return; was = on; bulbA.color.copy(BULB).multiplyScalar(on ? 1 : 0.3); bulbB.color.copy(BULB).multiplyScalar(on ? 0.3 : 1);
+    };
   },
 };
 

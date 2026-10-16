@@ -46,7 +46,7 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.95; scene.add(shadow);
   const cube = new THREE.Group(); scene.add(cube);
   // the frame: twelve slim gold bars and small corner blocks
-  const gold = new THREE.MeshStandardMaterial({ color: lin('#d9c18c'), roughness: 0.24, metalness: 0.92, envMapIntensity: 1.35, emissive: lin('#3a2c10'), emissiveIntensity: 0.35 });
+  const gold = new THREE.MeshStandardMaterial({ color: lin('#b08d48'), roughness: 0.3, metalness: 0.92, envMapIntensity: 1.2, emissive: lin('#2a1d08'), emissiveIntensity: 0.3 }); // a deeper gold, for contrast
   const barGeo = new THREE.BoxGeometry(1, 1, 1);
   for (let a = 0; a < 3; a++) for (const s1 of [-1, 1]) for (const s2 of [-1, 1]) {
     const o = [0, 1, 2].filter((k) => k !== a), size = [BAR, BAR, BAR], pos = [0, 0, 0];
@@ -58,6 +58,15 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
   // shared overlays: a faint inner shadow at the window's edge, and the glow for the window in front
   const edgeTex = canvasTex(canvas(256, 256, (g) => { for (let i = 0; i < 10; i++) { g.strokeStyle = `rgba(6,8,18,${0.13 * (1 - i / 10)})`; g.lineWidth = 2; g.strokeRect(i * 2 + 1, i * 2 + 1, 254 - i * 4, 254 - i * 4); } }), false);
   const glowTex = canvasTex(canvas(256, 256, (g) => { for (let i = 0; i < 22; i++) { g.strokeStyle = `rgba(255,230,170,${0.07 * (1 - i / 22)})`; g.lineWidth = 2; g.strokeRect(i * 2 + 1, i * 2 + 1, 254 - i * 4, 254 - i * 4); } }), false);
+  // the red glow round the edges of the face you are looking at: a soft band drawn where the gold
+  // frame runs, on a sheet a little wider than the face so the light spills past the bars
+  const RIM = 0.16, RS = 2 * HALF + 2 * RIM;
+  const rimTex = canvasTex(canvas(256, 256, (g) => {
+    const inset = (RIM / RS) * 256, w = 256 - 2 * inset;
+    g.shadowColor = 'rgba(255,20,30,1)'; g.strokeStyle = 'rgba(230,30,40,.75)';
+    for (const [blur, lw] of [[26, 4], [12, 2]]) { g.shadowBlur = blur; g.lineWidth = lw; g.strokeRect(inset, inset, w, w); }
+  }), false);
+  const rimGeo = new THREE.PlaneGeometry(RS, RS);
   const glassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.06, roughness: 0.05, metalness: 0, envMapIntensity: 2.4, depthWrite: false });
   const loader = new THREE.TextureLoader();
   const faces = [], hits = [];
@@ -85,8 +94,10 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
     const edge = new THREE.Mesh(new THREE.PlaneGeometry(FACE, FACE), new THREE.MeshBasicMaterial({ map: edgeTex, transparent: true, depthWrite: false })); edge.position.z = -0.004; face.add(edge);
     const glass = new THREE.Mesh(new THREE.PlaneGeometry(FACE, FACE), glassMat); glass.position.z = -0.002; face.add(glass);
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(FACE, FACE), new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); glow.position.z = -0.001; face.add(glow);
+    const rim = new THREE.Mesh(rimGeo, new THREE.MeshBasicMaterial({ map: rimTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    rim.position.z = 0.012; rim.renderOrder = 2; rim.visible = false; face.add(rim);
     pic.userData.face = i; hits.push(pic);
-    faces.push({ n, mat, open: !!p, glow, g: sp(0), lit: p ? mat : null });
+    faces.push({ n, mat, open: !!p, glow, g: sp(0), lit: p ? mat : null, rim, r: sp(0) });
   });
   const isOpen = (i) => i >= 0 && i < 6 && !!projects[i];
 
@@ -145,6 +156,12 @@ export function createProjectCube(host, projects, { onFace, onOpen, onSealed }) 
       if (f.lit) f.lit.color.setScalar(0.5 + 0.5 * Math.max(0, d));
       if (f.open && d > bd) { bd = d; best = i; }
       spring(f.g, f.open ? (i === hover ? 1 : i === best ? 0.6 : 0.1) : 0, 8, dt); f.glow.material.opacity = f.g.v * (0.85 + Math.sin(time * 2 + i) * 0.15);
+    });
+    // the face you are looking at most squarely gets the red rim; it fades across as the cube turns
+    let seen = -1, sd = 0.55; faces.forEach((f, i) => { const d = tmpV.copy(f.n).applyQuaternion(q).z; if (d > sd) { sd = d; seen = i; } });
+    faces.forEach((f, i) => {
+      spring(f.r, i === seen ? 1 : 0, 7, dt);
+      f.rim.visible = f.r.v > 0.004; f.rim.material.opacity = f.r.v * (0.42 + Math.sin(time * 1.6) * 0.06);
     });
     if (best >= 0 && best !== current && !target) { current = best; if (onFace) onFace(best); }
   }

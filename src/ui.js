@@ -81,6 +81,7 @@ export function createUI(canvas, handlers) {
     const p = STALLS.find((q) => q.id === openId); if (!p) return;
     $('cardTitle').textContent = tr(p, 'title'); $('cardDesc').textContent = tr(p, 'desc');
     const go = $('cardGo'), email = $('cardEmail');
+    $('cardWatch').hidden = !p.show;
     if (p.about) { go.className = 'about'; go.href = '#'; go.removeAttribute('target'); go.removeAttribute('aria-disabled'); go.querySelector('span').textContent = tr(p, 'cta'); go.querySelector('small').textContent = tr(p, 'sub'); email.hidden = true; return; }
     email.hidden = !p.email; if (p.email) { $('emailText').textContent = p.email; $('emailCopy').textContent = t('copy'); }
     if (p.url) {
@@ -104,6 +105,7 @@ export function createUI(canvas, handlers) {
   }
   function closeCard() { if (!openId) return; openId = null; scrim.classList.remove('show'); sound.play('close'); focusGame(); }
   $('cardClose').onclick = closeCard;
+  $('cardWatch').onclick = () => { closeCard(); if (handlers.watchShow) handlers.watchShow(); };
   // the About Me signpost's button opens the village map rather than a link
   $('cardGo').addEventListener('click', (e) => { const p = STALLS.find((q) => q.id === openId); if (p && p.about) { e.preventDefault(); closeCard(); openMenu(); } });
   // fetch every popup picture ahead of time, once the page has settled

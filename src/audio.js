@@ -57,6 +57,7 @@ const SYNTH = {
   stepWood: () => { thud(0.06, 480 + Math.random() * 120, 0.12); tone(150 + Math.random() * 30, 105, 0.06, 'triangle', 0.03); }, // planks: a hollow knock
   stepGrass: () => thud(0.11, 2600 + Math.random() * 900, 0.035),                                   // grass: a soft brush
   whoosh: () => whoosh(),
+  patter: () => thud(0.025, 3200 + Math.random() * 3800, 0.008 + Math.random() * 0.012), // one raindrop
   flutter: () => { for (let i = 0; i < 7; i++) setTimeout(() => thud(0.035, 1500 + Math.random() * 900, 0.05 + Math.random() * 0.03), i * (45 + Math.random() * 35)); },
   squawk: () => { tone(1300, 780, 0.12, 'sawtooth', 0.05, 0, 1600); tone(1150, 720, 0.15, 'sawtooth', 0.045, 0.15, 1500); },
   whistle: () => { tone(1400, 2300, 0.16, 'sine', 0.045); tone(2300, 1650, 0.24, 'sine', 0.045, 0.2); },
@@ -82,20 +83,17 @@ const SYNTH = {
 const VOLUME = { step: 0.5, stepWood: 0.5, stepGrass: 0.45, bird: 0.4, cricket: 0.4 };
 
 /* ambient beds: long, quiet loops that fade in and out with where you are.
-   water: soft lapping by the pond; hall: a low murmur in the town hall; fire: the Hideout's hearth */
+   fire: the Hideout's hearth (the pond and town hall beds were taken out: they sounded like wind and carpet) */
 const beds = {};
-const BED_MAX = { water: 0.07, hall: 0.03, fire: 0.06 };
+const BED_MAX = { fire: 0.06 };
 function makeBed(a, name) {
+  // brown-ish noise, low-passed and flickering: the hearth
   const len = a.sampleRate * 2, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
-  let last = 0; for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = name === 'hall' ? w : (last + 0.04 * w) / 1.04; d[i] = name === 'hall' ? w : last * 3.5; } // brown-ish noise for water and fire
+  let last = 0; for (let i = 0; i < len; i++) { last = (last + 0.04 * (Math.random() * 2 - 1)) / 1.04; d[i] = last * 3.5; }
   const src = a.createBufferSource(); src.buffer = buf; src.loop = true;
   const f = a.createBiquadFilter(), mod = a.createGain(), out = a.createGain(); out.gain.value = 0;
-  if (name === 'water') { f.type = 'lowpass'; f.frequency.value = 700; }
-  else if (name === 'hall') { f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = 0.8; }
-  else { f.type = 'lowpass'; f.frequency.value = 260; }
-  mod.gain.value = name === 'fire' ? 0.85 : 0.6;
-  // slow swells for the water, a talking rhythm for the murmur, a flicker for the fire
-  for (const [hz, amt] of name === 'water' ? [[0.19, 0.3], [0.07, 0.15]] : name === 'hall' ? [[2.7, 0.25], [4.3, 0.2], [0.5, 0.15]] : [[0.9, 0.1], [6.5, 0.05]]) {
+  f.type = 'lowpass'; f.frequency.value = 260; mod.gain.value = 0.85;
+  for (const [hz, amt] of [[0.9, 0.1], [6.5, 0.05]]) {
     const o = a.createOscillator(), og = a.createGain(); o.frequency.value = hz; og.gain.value = amt; o.connect(og); og.connect(mod.gain); o.start();
   }
   src.connect(f); f.connect(mod); mod.connect(out); out.connect(a.destination); src.start(0, Math.random() * 2);
@@ -103,7 +101,7 @@ function makeBed(a, name) {
 }
 
 export const sound = {
-  // levels: { water, hall, fire }, each 0..1
+  // levels: { fire }, 0..1
   ambient(levels) {
     if (!ctx) return;
     for (const name in BED_MAX) {

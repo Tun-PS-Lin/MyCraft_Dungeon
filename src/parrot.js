@@ -37,6 +37,8 @@ export function createParrot(scene, player) {
 
   const SH = new THREE.Vector3(5.4 * U, 24.2 * U, -0.6 * U); // on the left shoulder, in the figure's own space
   const anchor = new THREE.Vector3(), pos = new THREE.Vector3(), vel = new THREE.Vector3(), aim = new THREE.Vector3(), tmp = new THREE.Vector3();
+  const path = { p0: new THREE.Vector3(), p1: new THREE.Vector3(), p2: new THREE.Vector3(), p3: new THREE.Vector3(), dur: 1.5, moving: false };
+  const bez = (o, u) => { const a = 1 - u; return o.set(0, 0, 0).addScaledVector(path.p0, a * a * a).addScaledVector(path.p1, 3 * a * a * u).addScaledVector(path.p2, 3 * a * u * u).addScaledVector(path.p3, u * u * u); };
   const seat = new THREE.Vector3(), pond = new THREE.Vector3(); let fetchDone = null, fetchPhase = 0, carry = false;
   let state = 'off', t = 0, yaw = 0, yawV = 0, flap = 0, flapAmt = 0, pitch = 0, look = 0, lookT = 0, lookAt = 2;
   const P = player.state;
@@ -49,8 +51,21 @@ export function createParrot(scene, player) {
   return {
     on: () => state !== 'off', root, state: () => state,
     busy: () => state === 'go' || state === 'sit' || state === 'fetch',
+    // in the air (the village is then drawn every frame, even behind a card)
+    flying: () => state === 'go' || state === 'land' || state === 'fly' || state === 'fetch',
     // fly to a point (say a stall's sign) and sit there until called home
-    visit(p) { if (state === 'off') return; seat.copy(p); state = 'go'; t = 0; if (vel.lengthSq() < 0.01) vel.set(0, 3, 0); },
+    // the flight is one smooth curve, worked out at take-off: up and over, then down onto the seat,
+    // eased so it lifts off and settles gently (and carries on from any speed it already has)
+    visit(p) {
+      if (state === 'off') return;
+      seat.copy(p); state = 'go'; t = 0;
+      const d = pos.distanceTo(seat);
+      path.dur = Math.max(1.1, Math.min(2.2, 0.9 + d * 0.16));
+      path.p0.copy(pos); path.p3.copy(seat);
+      path.p1.copy(pos).addScaledVector(vel, path.dur / 3); path.p1.y += 0.6 + d * 0.22;
+      path.p2.copy(seat); path.p2.y += 0.5 + d * 0.12;
+      path.moving = vel.length() > 0.5;
+    },
     home() { if (state === 'go' || state === 'sit') { state = 'land'; t = 0; } },
     // fly to the pond, dip down, and come back with something; done() runs once it has landed
     fetch(p, done) { if (state !== 'perch') return false; pond.copy(p); fetchDone = done; fetchPhase = 0; state = 'fetch'; t = 0; vel.set(0, 4, 0); return true; },
@@ -78,9 +93,12 @@ export function createParrot(scene, player) {
         lookT -= dt; if (lookT < 0) { lookT = 1.5 + Math.random() * 3; lookAt = (Math.random() - 0.5) * 1.6; }
         look += (lookAt - look) * Math.min(1, dt * 6);
       } else {
-        if (state === 'go') { // up and over, then down onto the seat
-          const d = pos.distanceTo(seat); aim.copy(seat); aim.y += Math.min(1.2, d * 0.35); chase(Math.min(8, 3.5 + t * 5), dt);
-          if (t > 0.4 && d < 0.05 && vel.length() < 0.5) { state = 'sit'; }
+        if (state === 'go') { // along the curve worked out in visit()
+          const k = Math.min(1, t / path.dur);
+          // smootherstep from rest; if it was already flying, only ease out
+          const u = path.moving ? 1 - (1 - k) * (1 - k) * (1 - k) : k * k * k * (k * (k * 6 - 15) + 10);
+          bez(tmp, u); if (dt > 0) vel.copy(tmp).sub(pos).divideScalar(dt); pos.copy(tmp);
+          if (k >= 1) { state = 'sit'; vel.set(0, 0, 0); pos.copy(seat); }
         } else if (state === 'fetch') {
           if (fetchPhase === 0) { aim.copy(pond); aim.y += 1.1; chase(4.5, dt); if (pos.distanceTo(aim) < 0.3 || t > 4) { fetchPhase = 1; t = 0; } }
           else if (fetchPhase === 1) { aim.copy(pond); aim.y += t < 0.45 ? 0.05 : 1.0; chase(7, dt); if (t > 0.9) { fetchPhase = 2; carry = true; state = 'land'; t = 0; } }
@@ -96,7 +114,8 @@ export function createParrot(scene, player) {
           if (rolling && t > 0.2) { state = 'fly'; t = 0; } // rolled again before landing: up it goes
         }
         const sp = Math.hypot(vel.x, vel.z);
-        turnTo(sp > 0.3 ? Math.atan2(vel.x, vel.z) : P.yaw, 9, dt);
+        // face where it's flying; once it slows over the sign, turn to face out as it will sit
+        turnTo(sp > 0.3 ? Math.atan2(vel.x, vel.z) : state === 'go' ? 0 : P.yaw, 9, dt);
         flapAmt += (((state === 'land' && pos.distanceTo(anchor) < 0.5) || (state === 'go' && pos.distanceTo(seat) < 0.5) ? 0.45 : 1) - flapAmt) * Math.min(1, dt * 6);
         pitch += (Math.max(-0.5, Math.min(0.5, -vel.y * 0.08 + sp * 0.06)) - pitch) * Math.min(1, dt * 6);
         look += (0 - look) * Math.min(1, dt * 6);

@@ -13,6 +13,8 @@ export const LIST = [
     { id: 'outfit', text: 'Try on a new outfit', go: 'outfits' },
     { id: 'roll', text: touch ? 'Do a dash roll (tap Jump twice)' : 'Do a dash roll (Space twice)' },
     { id: 'night', text: 'See the village at night', go: 'night' },
+    { id: 'cinema', text: 'Watch the showing at the AI Cinema', go: 'cinema' },
+    { id: 'rain', text: 'Get caught in the rain', go: 'rain' },
   ] },
   { group: 'The town hall', items: [
     { id: 'board', text: 'Read the agent board', go: 'board' },

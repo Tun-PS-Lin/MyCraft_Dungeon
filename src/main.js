@@ -30,6 +30,8 @@ import { inject as analytics } from '@vercel/analytics';
 import { access, bindAccess } from './access.js';
 import { createLife } from './life.js';
 import { createSky } from './sky.js';
+import { createShowViewer } from './show.js';
+import { createWeather } from './weather.js';
 
 // Page views for Vercel Web Analytics (turn it on in the Vercel project, under Analytics).
 // No cookies are set; on any host other than Vercel this quietly does nothing.
@@ -150,6 +152,8 @@ let pendingReward = false; // shown once the popup that completed the set is clo
 
 /* ── interface ── */
 let wardrobePrev = null;
+// the AI Cinema's showing, large (opened from the cinema's card)
+const showViewer = createShowViewer({ onOpen: () => sound.play('open'), onClose: () => { sound.play('close'); canvas.focus({ preventScroll: true }); } });
 const ui = createUI(canvas, {
   goTo,
   pickOutfit: (id) => player.setOutfit(id, false),
@@ -161,6 +165,7 @@ const ui = createUI(canvas, {
   callAgent: (id) => { agents.call(id); discover('call'); },
   agentPortrait,
   discovered: (id) => discover(id),
+  watchShow: () => { showViewer.show(); discover('cinema'); },
   toggleTheme: () => { nightTarget = nightTarget ? 0 : 1; try { sessionStorage.setItem('pv-theme', nightTarget ? 'dark' : 'light'); } catch (e) { /* ignore */ } return nightTarget === 1; },
 });
 ui.setProgress(visited, wolfUnlocked);
@@ -178,6 +183,7 @@ const disc = createDiscoveries({ toast: (o) => ui.toast(o), focusGame, stallCoun
     if (to === 'nextStall') { const s = STALLS.find((q) => !q.about && !visited.has(q.id)); if (s) goTo(s.id); }
     else if (to === 'nextAgent') { const a = AGENTS.find((q) => !disc.collected('agents').has(q.id)); if (a) goTo('agent:' + a.id); }
     else if (to === 'night') { if (!nightTarget) document.getElementById('themeBtn').click(); }
+    else if (to === 'rain') weather.visit('rain');
     else goTo(to);
   } });
 function discover(id) { disc.mark(id); }
@@ -229,7 +235,7 @@ function goFish() {
   P.vx = P.vz = 0; setTimeout(() => sound.play('cast'), pond.holding() ? 300 : 860); // the whoosh lands with the throw
   pond.fish(P, () => { sound.play('splash'); const id = pondUI.next(); pondUI.show(id); disc.add('facts', id); if (disc.has('facts') && !parrot.on()) parrotDue = true; });
 }
-const paused = () => ui.paused() || hx.isOpen() || travelling || pondUI.isOpen() || pond.fishing() || disc.isOpen() || minimap.isBig();
+const paused = () => showViewer.isOpen() || ui.paused() || hx.isOpen() || travelling || pondUI.isOpen() || pond.fishing() || disc.isOpen() || minimap.isBig();
 ui.addPlace('cave', 'The Hideout', '#ffd060', () => goTo('hideout'));
 ui.addPlace('pond', 'Fishing Pond', '#62c8ff', () => goTo('pond'));
 for (const p of hideout.props) ui.addPlace('hx:' + p.id, p.label, p.color, () => goTo('hx:' + p.id));
@@ -379,7 +385,7 @@ const rollDir = [0, 1];
 function pressJump() { if (time - lastJumpPress < 0.3) { rollQueued = true; lastJumpPress = -9; } else { jumpQueued = true; lastJumpPress = time; } }
 window.addEventListener('keydown', (e) => {
   const k = e.code;
-  if (k === 'Escape') { if (minimap.isBig()) { minimap.close(); return; } if (disc.isOpen()) { disc.close(); return; } if (pondUI.isOpen()) { pondUI.hide(); return; } if (!ui.escape()) hx.hide(); return; }
+  if (k === 'Escape') { if (minimap.isBig()) { minimap.close(); return; } if (disc.isOpen()) { disc.close(); return; } if (showViewer.isOpen()) { showViewer.hide(); return; } if (pondUI.isOpen()) { pondUI.hide(); return; } if (!ui.escape()) hx.hide(); return; }
   // M opens the big map, C the checklist (when nothing else is open)
   if ((k === 'KeyM' || k === 'KeyC') && !e.repeat && !e.metaKey && !e.ctrlKey && !(e.target && /INPUT|TEXTAREA/.test(e.target.tagName))) {
     if (k === 'KeyM' && (minimap.isBig() || (!paused() && !disc.isOpen()))) { minimap.toggle(); return; }
@@ -522,6 +528,9 @@ function update(dt) {
   if (night !== nightTarget) night += Math.sign(nightTarget - night) * Math.min(Math.abs(nightTarget - night), dt / 3.4); // a slow sweep through dusk
   torch.position.set(P.x, P.visY + 2.2, P.z + 0.6);
   applyMood(time, indoors);
+  // clouds and rain dim the daylight and grey it a little (outdoors; underground only the window light)
+  { const w = weather.levels(), dull = Math.max(w.c * 0.55, w.r) * (underground ? 0.5 : 1);
+    sun.intensity *= 1 - 0.62 * dull; hemi.intensity *= 1 + 0.08 * dull; hemi.color.lerp(WX.grey, 0.35 * dull); } // overcast: less sun, so softer shadows
   { const rest = updateLightPool(focus); fillLevel += (rest - fillLevel) * Math.min(1, dt * 3); lampFill.intensity = Math.min(0.35, fillLevel * FILL_K); }
   if (night > 0.9 && !underground && !disc.has('night')) discover('night');
   player.setHold(pond.hold());
@@ -538,7 +547,7 @@ function update(dt) {
   if (parrotDue && !pondUI.isOpen() && !pond.active()) { parrotDue = false; store.set('pv-parrot', 'yes'); parrot.enable('arrive'); ui.toast({ title: 'Parrot Friend', text: 'You caught every fact. A parrot now rides on your shoulder (try a dash roll).', icon: PARROT_ICON }); sound.play('achieve'); }
   cave.update(time); hideout.update(time, ease(night), music.isOn());
   if (!underground) pond.update(time, dt, ease(night));
-  if (!underground) for (const st of stalls) if (st.update) st.update(time);
+  if (!underground) for (const st of stalls) if (st.update) st.update(time, focus);
   if (pond.holding() && !pondUI.isOpen()) pond.release(); // the card closed: put the rod away
   // listening mode
   const byDeck = underground && music.isOn() && rectDistance(hideout.musicRect, P.x, P.z) < 2.8;
@@ -550,8 +559,6 @@ function update(dt) {
   if (sound.started()) {
     const near = (d, a, b) => Math.max(0, Math.min(1, 1 - (d - a) / (b - a)));
     sound.ambient({
-      water: underground ? 0 : near(Math.hypot((P.x - POND.x) / 1.4, P.z - POND.z), 2.5, 11),
-      hall: underground ? 0 : indoors * 0.9 + (1 - indoors) * 0.25 * near(Math.hypot(P.x - (HALL.x0 + HALL.x1) / 2, P.z - HALL.z1), 2, 9),
       fire: underground ? near(Math.hypot(P.x - hideout.fireAt[0], P.z - hideout.fireAt[1]), 1.5, 9) : 0,
     });
   }
@@ -598,6 +605,9 @@ function update(dt) {
   camera.position.copy(camPos); camera.lookAt(camLook);
   // haze begins a little beyond the player and thickens toward the far trees, at any zoom
   const reach = camPos.distanceTo(camLook); scene.fog.near = reach + (underground ? 6 : 13); scene.fog.far = reach + (underground ? 26 : 54);
+  // mist (and a little with rain) pulls the haze in close and turns it pale
+  if (!underground) { const w = weather.levels(), m = Math.max(w.m, w.r * 0.35) * (1 - indoors * 0.7);
+    if (m > 0.005) { scene.fog.near = mix(scene.fog.near, reach * 0.62, m); scene.fog.far = mix(scene.fog.far, reach + 16, m); backdrop.lerp(night > 0.5 ? WX.mistNight : WX.mistDay, m * 0.75); scene.fog.color.copy(backdrop); } }
 
   // what E would do right now: the nearest stall (measured to its edge) or agent
   near = null; let bd = TUNING.interactRange, nearKey = null;
@@ -619,9 +629,15 @@ function update(dt) {
   agents.update(dt, time, P, ui.chatId());
   chickens.update(dt, P, () => sound.play('cluck'));
   if (!underground) life.update(dt, time, P, speed, rollT >= 0, ease(night) > 0.6, () => sound.play('flutter'));
+  { const w = weather.update(dt, time, focus, { hidden: underground, indoors, calm: access.calm(), height: renderer.domElement.height, fov: camera.fov, night: ease(night) });
+    // cloud shadows: clearer on bright broken-cloud days, gone under full overcast or rain
+    sky.strength = Math.max(0, 0.18 + 0.22 * w.c - 0.4 * w.r - 0.3 * w.m);
+    if (w.r > 0.6 && !underground && !indoors && !disc.has('rain')) discover('rain');
+    // the patter of rain: many tiny soft taps, quieter indoors
+    if (sound.started() && !underground && w.r > 0.05) { patter += dt * 22 * w.r * (1 - indoors * 0.6); while (patter > 1) { patter -= 1; sound.play('patter'); } } }
   sky.update(dt, time, ease(night), indoors, underground, sun, camera);
   wolf.update(dt, time, P);
-  ambience.update(time, ease(night), underground ? 1 : indoors);
+  ambience.update(time, ease(night), underground ? 1 : Math.max(indoors, weather.levels().r));
   chirpT -= dt; if (chirpT < 0) { chirpT = 4 + Math.random() * 7; if (sound.started() && indoors < 0.5 && !underground) sound.play(night > 0.5 ? 'cricket' : 'bird'); }
 
   // labels
@@ -664,16 +680,25 @@ function step(now) {
   { const on = disc.isOpen() || minimap.isBig(); if (on !== hudOpen) { hudOpen = on; document.body.classList.toggle('hudopen', on); } }
   // (and never while fishing, or just after the fact card opens or closes)
   if (pondUI.isOpen() !== pondWas) { pondWas = pondUI.isOpen(); pondCalm = 0.9; } pondCalm -= Math.min(raw, 0.1);
-  idle = paused() && !travelling && !ui.wardrobeOpen() && closeUp === 0 && listen === 0 && !(pond.active() && !pondUI.isOpen()) && pondCalm <= 0 ? idle + 1 : 0;
+  idle = paused() && !travelling && !parrot.flying() && !ui.wardrobeOpen() && closeUp === 0 && listen === 0 && !(pond.active() && !pondUI.isOpen()) && pondCalm <= 0 ? idle + 1 : 0;
   // behind the library's books and the gallery's cube (which have their own 3D stage) the village
   // is dimmed and still, so after a few frames it isn't redrawn at all: the menu gets the GPU
-  const stage3d = hx.isOpen() && (hx.which() === 'gallery' || hx.which() === 'library');
+  const stage3d = showViewer.isOpen() || (hx.isOpen() && (hx.which() === 'gallery' || hx.which() === 'library'));
   if (bakeFrames > 0 || (stage3d ? idle < 4 : idle % 3 === 0)) renderer.render(scene, camera);
 }
 
 /* ── the sky: drifting cloud shadows by day, the moon and stars in the pond at night ── */
 const sky = createSky(scene);
 for (const o of scene.children) if (o !== hideoutRoot) sky.patchAll(o);
+
+/* ── weather: clear, cloudy, rain and mist (see weather.js); chosen in the menu, Auto by default ── */
+const weather = createWeather(scene, { phone });
+const WX = { grey: new THREE.Color('#8f98a8'), mistDay: new THREE.Color('#c9cdd2').convertSRGBToLinear(), mistNight: new THREE.Color('#1c2230').convertSRGBToLinear() };
+{ const pick = document.getElementById('weatherPick');
+  const paint = () => pick.querySelectorAll('[data-wx]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.wx === weather.mode())));
+  pick.querySelectorAll('[data-wx]').forEach((b) => { b.onclick = () => { sound.play('menu'); weather.setMode(b.dataset.wx); }; });
+  weather.onChange(paint); paint(); }
+let patter = 0;
 
 function start(saved) {
   if (saved && typeof saved.x === 'number' && !blocked(saved.x, saved.z, floorAt(saved.x, saved.z))) { P.x = saved.x; P.z = saved.z; P.y = P.visY = floorAt(P.x, P.z); P.yaw = saved.yaw || 0; focus.set(P.x, 0, P.z - 1.5); }
@@ -688,7 +713,7 @@ function start(saved) {
     // the first key or tap lifts the title at once and hurries the flight to a smooth finish (about a second)
     for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); if (fly) fly.rate = Math.max(1, (fly.dur - fly.t) / 1.1); }, { once: true });
   }
-  window.__village = { camera, sky, life, setNight: (v) => { night = nightTarget = v; }, flying: () => !!fly, night: () => night, parrot, disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, fill: () => fillLevel, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
+  window.__village = { camera, sky, life, weather, showViewer, setNight: (v) => { night = nightTarget = v; }, flying: () => !!fly, night: () => night, parrot, disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, fill: () => fillLevel, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 start({});

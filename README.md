@@ -40,7 +40,8 @@ nothing to install.
 A first visit opens with a slow flight round the whole village, down through the clouds, before the camera settles behind you.
 The village gets on with its own day: cloud shadows drift across the square, laundry sways on the
 washing lines, pigeons burst up and circle when you run at them, and at night the moon and stars
-show in the pond.
+show in the pond. The weather turns on its own, from clear to cloudy to rain (with splashes and a soft
+patter) to morning mist, or you can pick one in the menu under **Weather**.
 A few small things to find: an **About Me** signpost above the movement guide, a day and night
 switch that sweeps through a sunset or sunrise, sounds that change with where you stand, a dash roll (tap <kbd>Space</kbd> twice), a meeting table you can call the agents to, and a
 wolf that starts following you once you have opened every stall.
@@ -123,7 +124,9 @@ Each stall opens a card with a screenshot, a short story and a link.
 </table>
 
 The newest stall, **AI Cinema**, sits down by the ridge, just left of the cave: a marquee of running lights, red velvet
-curtains and a projector. It is home to an AI animated series about *38 Mingalar Blessings* (link coming soon).
+curtains and a projector, with a short demo of the series playing on its screen. It is home to an AI animated
+series about *38 Mingalar Blessings* (link coming soon); its card has a **Watch the showing** button that plays
+the demo full size. The demo is drawn in code in `src/show.js`, ready to be swapped for real clips.
 
 <br>
 
@@ -261,6 +264,7 @@ export const SOUND_FILES = {
 | `menu` | menu opening and closing | one |
 | `cluck` | startled chicken | 2 to 3 variants |
 | `flutter` | the pigeons taking off | one or two |
+| `patter` | a single raindrop (many play together in the rain) | 3 to 4 tiny taps |
 | `bird`, `cricket` | occasional bird call by day, cricket by night | 2 to 3 variants |
 | `villager` | an agent greeting you | 2 to 3 short grunts |
 | `bark` | the wolf | one |
@@ -304,6 +308,8 @@ src/player.js       the player's state and shadow
 src/critters.js     chickens and the wolf
 src/life.js         the washing lines and the pigeons
 src/sky.js          cloud shadows, the clouds seen from the opening flight, the moon and stars in the pond
+src/weather.js      clear, cloudy, rain and mist: the rain, the splashes and the Auto cycle
+src/show.js         the AI Cinema's demo showing and the viewer that plays it large
 src/access.js       the accessibility settings (text size, contrast, motion, opening flight)
 src/nav.js          path finding for walk-to
 src/ambience.js     fireflies and drifting leaves

@@ -90,6 +90,7 @@ export const STALLS = [
     color: '#b3242f', glow: '#ffd27a',
     image: '',
     desc: 'An AI animated series about “38 Mingalar Blessings”.',
+    show: true, // the card has a "Watch the showing" button (the demo loop in src/show.js)
     url: '', // add the link here when it is ready
     cta: 'Go to project', sub: 'Open project website',
   },
