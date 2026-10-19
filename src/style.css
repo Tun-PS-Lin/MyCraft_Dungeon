@@ -294,6 +294,8 @@ kbd.gap{margin-left:8px}
 .bst::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
 .bst.working{color:#2f7a3c;background:#e3f1df}
 .bst.working::before{animation:bpulse 1.6s ease-in-out infinite}
+.bst.home{color:#6d655a;background:#ece6da}
+.bst.lunch,.bst.arriving{color:#a3601c;background:#fbeedb}
 @keyframes bpulse{50%{opacity:.35}}
 .babout{margin:2px 0 0;font-size:13px;line-height:1.5;color:var(--ink-2);flex:1}
 .bsw{display:flex;gap:4px;margin-top:4px}
@@ -1336,3 +1338,13 @@ html[data-fest="thadingyut"] #introFest::before{content:'Happy Thadingyut · Fes
 html[data-fest] #travel.fest{background:linear-gradient(180deg,var(--fest-bg),var(--fest-bg2))}
 html[data-fest] #travel.fest strong{color:var(--fest-ink);text-shadow:3px 3px 0 var(--fest-shadow);font-size:clamp(18px,3.4vw,30px);max-width:90vw;text-align:center}
 html[data-fest] #travel.fest::before{content:'';position:absolute;left:50%;top:calc(50% - 110px);width:64px;height:64px;margin-left:-32px;background:var(--fest-icon) center/contain no-repeat;image-rendering:pixelated}
+
+/* ── the observatory telescope view ── */
+#scope{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .6s ease,visibility 0s .6s}
+#scope.show{opacity:1;visibility:visible;transition:opacity .8s ease .35s}
+.scope-ring{position:absolute;inset:0;background:radial-gradient(ellipse 72% 78% at 50% 50%,transparent 64%,rgba(6,8,14,.55) 82%,rgba(6,8,14,.9) 100%)}
+.scope-hint{position:absolute;left:50%;bottom:calc(64px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);margin:0;padding:6px 14px;border-radius:999px;background:rgba(10,12,20,.6);color:#e9edf6;font-size:13px;white-space:nowrap}
+.scope-x{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);pointer-events:auto;padding:8px 18px;background:var(--night);border:3px solid var(--frame);color:var(--ink);font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.scope-x:hover{border-color:var(--gold);color:var(--gold)}
+body.scoping #hud,body.scoping .mm,body.scoping #touch .tbtn,body.scoping #prompt{opacity:0;pointer-events:none;transition:opacity .4s ease}
+@media (max-width:520px){ .scope-hint{white-space:normal;width:86vw;text-align:center} }

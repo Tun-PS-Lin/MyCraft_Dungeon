@@ -16,7 +16,9 @@ export const LIST = [
     { id: 'roll', text: touch ? 'Do a dash roll (tap Jump twice)' : 'Do a dash roll (Space twice)' },
     { id: 'night', text: 'See the village at night', go: 'night' },
     { id: 'cinema', text: 'Watch the showing at the AI Cinema', go: 'cinema' },
-    FESTIVAL === 'thingyan' ? { id: 'rain', text: 'Get splashed at the Thingyan mandat', go: 'about' } : { id: 'rain', text: 'Get caught in ' + FALL, go: 'rain' },
+    { id: 'observatory', text: 'Look through the observatory telescope', go: 'observatory' },
+    { id: 'rooftop', text: 'Find the rooftop lookout', go: 'ladder' },
+    FESTIVAL === 'thingyan' ? { id: 'rain', text: 'Get splashed at the Thingyan waterfall', go: 'about' } : { id: 'rain', text: 'Get caught in ' + FALL, go: 'rain' },
   ] },
   { group: 'The town hall', items: [
     { id: 'board', text: 'Read the agent board', go: 'board' },

@@ -336,7 +336,7 @@ export function buildStalls(scene) {
         const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: tex })); m.userData.keep = true; return m;
       };
       const cp = centerpiece(g, FESTIVAL, makeBoard), k = 1.2; s.festive = cp; s.labelY = cp.labelY;
-      if (cp.wet) s.wetZones = cp.wet.map(([x, z]) => world(x * k, z * k)); // where the mandat's water lands
+      if (cp.wet) s.wetZones = cp.wet.map(([x, z]) => world(x * k, z * k)); // where the waterfall's spray reaches
       g.scale.setScalar(k); s.rect = box(cp.rect[0] * k, cp.rect[1] * k, cp.rect[2] * k, cp.rect[3] * k);
       collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 7); s.front = world(0, cp.rect[3] * k + 0.6);
       bake(g); scene.add(g); s.group = g; return s;
@@ -350,7 +350,8 @@ export function buildStalls(scene) {
     // main footprint: blocks walking through, and is what "near the stall" is measured from
     const hw = p.id === 'outfits' ? 3.15 : 2.85;
     s.rect = box(-hw, hw, -2.05, 2.2);
-    collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 6);
+    // (the two stalls the rooftop walkways run over stop just under the boards: see rooftop.js)
+    collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, p.id === 'alacrity' ? 3.9 : p.id === 'mingalar' ? 4.5 : 6);
     if (p.id === 'alacrity' || p.id === 'contact') col(-4.1, 4.1, -2.4, -2.2, 1.3);
     s.front = world(0, 3.3); // where the walk-to feature stands the player
     bake(g);

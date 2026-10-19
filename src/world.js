@@ -5,6 +5,7 @@ import { t } from './i18n.js';
 import { rng, hash, noise, cv, fill, speck, toTex, tiles, M, B, Batch, boxGeo, glow, PAVER_TINTS, DIRT, GRASS } from './textures.js';
 import { collide, inHallRect, inPondWater } from './collision.js';
 import { addLamp } from './lights.js';
+import { GATE, nearHill, onHill } from './hill.js';
 
 const HALF = 48, SIZE = HALF * 2;
 const GRASS_T = 0, COBBLE = 1, DIRT_T = 2, HALL_T = 3;
@@ -121,6 +122,7 @@ export function buildWorld(scene, renderer) {
   const bush = (x, z) => { leaves.add(x, 0.6, z, 1, 1, 1, leafTint()); if (r() < 0.4) leaves.add(x + (r() - 0.5) * 0.3, 1.4, z + (r() - 0.5) * 0.3, 0.75, 0.75, 0.75, leafTint()); };
   const edge = (x, z, alongX) => {
     if (inHallRect(x, z, 1.2)) return; // the town hall stands on this stretch of the edge
+    if (alongX && z < 0 && x > GATE.x0 && x < GATE.x1) return; // the gap in the north fence, onto the path up the hill
     const gate = alongX && Math.abs(x) < 3.5;
     if (gate || noise(x * 0.22 + 70, z * 0.22 + 31) > 0.47) fence(x, z, alongX); else bush(x, z);
   };
@@ -152,7 +154,7 @@ export function buildWorld(scene, renderer) {
 
   /* forest. Trees are left out wherever they would stand between the camera and the player. */
   const dir = [Math.sin(TUNING.cameraYaw), Math.cos(TUNING.cameraYaw)];
-  const hides = (x, z) => { if (inPit(x, z, 3)) return true; for (let s = 1.5; s <= 11.5; s += 0.5) { const px = x - dir[0] * s, pz = z - dir[1] * s; if (inBounds(px, pz) || inHallRect(px, pz) || inPit(px, pz, 1)) return true; } return false; };
+  const hides = (x, z) => { if (inPit(x, z, 3)) return true; if (nearHill(x, z)) return true; for (let s = 1.5; s <= 11.5; s += 0.5) { const px = x - dir[0] * s, pz = z - dir[1] * s; if (inBounds(px, pz) || inHallRect(px, pz) || inPit(px, pz, 1) || onHill(px, pz)) return true; } return false; };
   const tree = (x, z, base) => {
     const h = 4 + ((r() * 3) | 0), tc = col.setHSL(0.185 + r() * 0.075, 0.5 + r() * 0.14, 0.37 + r() * 0.1).clone();
     const lc = () => tc.clone().offsetHSL(0, 0, (r() - 0.5) * 0.12);

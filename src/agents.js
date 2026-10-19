@@ -26,6 +26,23 @@ const WORK = {
 const SPOTS = [[2, 6], [-4, 3], [6, -3], [11, -5], [12, 6], [3, 11]]; // other places to pause on the way back
 const MAX_OUT = 2; // at most this many agents away from the hall at once
 
+/* The working day follows the visitor's own clock:
+     6:00 – 9:00   they arrive, one by one, up the road from the north gate
+     12:00 – 13:00 lunch: out at the benches round the square
+     22:00 – 6:00  the hall is closed; everyone goes home but Friday, who is on night duty
+   (Calling someone from the board still brings them in, at any hour.) */
+export const DAY = { arrive: [6, 9], lunch: [12, 13], close: 22, night: 'friday' };
+const hourNow = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
+export function dayPhase(h = hourNow()) {
+  if (h >= DAY.close || h < DAY.arrive[0]) return 'night';
+  if (h < DAY.arrive[1]) return 'morning';
+  if (h >= DAY.lunch[0] && h < DAY.lunch[1]) return 'lunch';
+  return 'day';
+}
+const GATE = [0, -13.6], OFF = [0, -16.4];          // the north gate, and just past it (out of sight up the road)
+// where they eat: by the forecourt benches and the pond (a place to stand, and what to look at)
+const LUNCH = [[HALL.doorX - 3.2, HALL.z1 + 3.2, [HALL.doorX - 4.6, HALL.z1 + 1.8]], [HALL.doorX + 3.2, HALL.z1 + 3.2, [HALL.doorX + 4.6, HALL.z1 + 1.8]], [8.0, 6.3, [10.6, 11.6]], [12.0, 6.3, [10.6, 11.6]]];
+
 export function createAgents(scene, hall) {
   const rand = (a, b) => a + Math.random() * (b - a);
   const carpetPoint = () => (Math.random() < 0.55 ? [rand(CARPET.hx[0], CARPET.hx[1]), CARPET.hz] : [CARPET.vx, rand(CARPET.vz[0], CARPET.vz[1])]);
@@ -46,14 +63,38 @@ export function createAgents(scene, hall) {
     // stand a little to one side of the stall front, so the player's own spot stays free
     let visit = null; if (stall) { const f = frontOf(stall, 3.5), side = stall.face === 'south' ? [1.7, 0] : [0, 1.7]; visit = [f[0] + side[0], f[1] + side[1]]; }
     return { ...a, index: i, design, fig, desk, stall, visit, x: start[0], z: start[1], y: HALL.floor, yaw: 0, phase: 0, blend: 0, sit: seated ? 1 : 0,
+      home: false, arriveAt: DAY.arrive[0] + 0.4 + i * 0.55, // (hours) when they come in on a morning
       mode: seated ? 'sit' : 'walk', task: 'work', arrived: false, atStall: false, timer: rand(5, 12), workIn: rand(6, 14), done: 0, lastWork: null, queue: [], trips: 1 + (i % 2), outside: false, blob: makeBlob(scene, 1.1) };
   });
-  const away = () => list.filter((n) => n.task === 'break').length;
+  // at night (or before their time in the morning) an agent who isn't on duty is at home
+  const offDuty = (n, h = hourNow()) => n.id !== DAY.night && (dayPhase(h) === 'night' || (dayPhase(h) === 'morning' && h < n.arriveAt));
+  function goHome(n) { n.home = true; n.mode = 'walk'; n.task = 'home'; n.queue = []; n.x = OFF[0]; n.z = OFF[1]; n.fig.group.visible = false; n.blob.visible = false; }
+  function comeIn(n) {
+    n.home = false; n.fig.group.visible = true; n.blob.visible = true; n.x = OFF[0]; n.z = OFF[1]; n.mode = 'walk'; n.task = 'arrive';
+    n.queue = [GATE, ...path(GATE, n.desk.access), n.desk.side, n.desk.seat, 'sit'];
+    emit(n, 'arrived for the day', 'Morning!');
+  }
+  function leave(n) {
+    const leaving = n.mode === 'sit', from = leaving ? n.desk.access : [n.x, n.z];
+    n.mode = 'walk'; n.task = 'leaving'; n.queue = [...(leaving ? [n.desk.side, n.desk.access] : []), ...path(from, GATE), OFF, { gone: true }];
+    emit(n, 'went home for the night', 'Good night!');
+  }
+  for (const n of list) if (offDuty(n)) goHome(n);
+  let clockT = 0;
+  const away = () => list.filter((n) => n.task === 'break' || n.task === 'lunch').length;
   const home = (n, from) => [...path(from, n.desk.access), n.desk.side, n.desk.seat, 'sit'];
 
   // decide what an idle agent does next
   function plan(n) {
     const here = [n.x, n.z], leaving = n.mode === 'sit', lead = leaving ? [n.desk.side, n.desk.access] : [], from = leaving ? n.desk.access : here;
+    if (offDuty(n)) { leave(n); return; }
+    if (dayPhase() === 'lunch' && !n.lunched) {
+      // lunch on a bench outside, until the hour is up
+      const L = LUNCH[n.index % LUNCH.length], spot = [L[0], L[1], L[2]]; n.lunched = true;
+      n.mode = 'walk'; n.task = 'lunch'; n.queue = [...lead, ...path(from, [spot[0], spot[1]]), { until: () => dayPhase() !== 'lunch', lunch: true, face: spot[2] }, ...home(n, [spot[0], spot[1]])];
+      emit(n, 'went out for lunch', 'Lunch time!'); return;
+    }
+    if (dayPhase() !== 'lunch') n.lunched = false;
     if (leaving) { n.mode = 'walk'; n.trips = 1 + ((Math.random() * 3) | 0); }
     if (leaving && n.visit && Math.random() < 0.45 && away() < MAX_OUT) {
       // a break with a purpose: over to the stall this agent serves, sometimes one more stop, then back
@@ -66,6 +107,7 @@ export function createAgents(scene, hall) {
   // the board calls an agent: it comes to the meeting table, waits, then goes back to work
   function call(id) {
     const n = list.find((q) => q.id === id); if (!n || n.task === 'called') return;
+    if (n.home) { n.home = false; n.fig.group.visible = true; n.blob.visible = true; n.x = OFF[0]; n.z = OFF[1]; n.mode = 'walk'; }
     const spot = hall.table.spot(n.index), leaving = n.mode === 'sit', from = leaving ? n.desk.access : [n.x, n.z];
     n.mode = 'walk'; n.task = 'called'; n.arrived = false; n.atStall = false;
     n.queue = [...(leaving ? [n.desk.side, n.desk.access] : []), ...path(from, spot), { wait: 24, arrive: true }, ...home(n, spot)];
@@ -75,7 +117,18 @@ export function createAgents(scene, hall) {
 
   // talkingTo is the id of the agent whose chat is open, or null
   function update(dt, time, P, talkingTo) {
+    // every few seconds, see whether the clock says someone should come in or go home
+    clockT -= dt;
+    if (clockT <= 0) {
+      clockT = 2; const h = hourNow();
+      for (const n of list) {
+        if (n.home && !offDuty(n, h)) comeIn(n);
+        else if (!n.home && offDuty(n, h) && n.task !== 'leaving' && n.task !== 'called' && n.mode === 'sit' && talkingTo !== n.id) leave(n);
+        else if (!n.home && dayPhase(h) === 'lunch' && n.mode === 'sit' && !n.lunched && talkingTo !== n.id) plan(n);
+      }
+    }
     for (const n of list) {
+      if (n.home) continue;
       const dp = Math.hypot(P.x - n.x, P.z - n.z), near = dp < 1.9 || talkingTo === n.id;
       let moving = false;
       if (n.mode === 'sit') {
@@ -92,9 +145,13 @@ export function createAgents(scene, hall) {
         else if (step === undefined) plan(n);
         else if (step === 'sit') { n.queue.shift(); n.mode = 'sit'; n.arrived = false; n.timer = rand(14, 26); n.workIn = rand(4, 9); if (n.task !== 'work') emit(n, 'is back at the desk', 'Back to work'); n.task = 'work'; }
         else if (!Array.isArray(step)) {
+          if (step.gone) { n.queue.shift(); goHome(n); continue; }
+          if (step.until) { if (step.lunch && !near) face(n, step.face[0], step.face[1], Math.min(1, dt * 3)); if (step.until()) { n.queue.shift(); if (step.lunch) emit(n, 'is back from lunch', 'Back!'); } }
+          else {
           if (step.arrive) { if (!n.arrived) emit(n, 'arrived at the meeting table', 'You called?'); n.arrived = true; face(n, hall.table.at[0], hall.table.at[1], Math.min(1, dt * 5)); }
           if (step.stall) { n.atStall = true; face(n, n.stall.pos[0], n.stall.pos[1], Math.min(1, dt * 4)); }
           step.wait -= dt; if (step.wait <= 0) { n.queue.shift(); n.arrived = false; n.atStall = false; if (n.task === 'called') n.task = 'work'; }
+          }
         } else {
           const dx = step[0] - n.x, dz = step[1] - n.z, dist = Math.hypot(dx, dz), go = (n.outside ? 2.3 : 1.8) * dt;
           if (dist <= go) { n.x = step[0]; n.z = step[1]; n.queue.shift(); }
@@ -110,9 +167,9 @@ export function createAgents(scene, hall) {
     }
   }
   // 'working' | 'break' | 'coming' | 'here'
-  const status = (n) => (n.task === 'called' ? (n.arrived ? 'here' : 'coming') : n.task === 'break' ? 'break' : 'working');
+  const status = (n) => (n.task === 'called' ? (n.arrived ? 'here' : 'coming') : n.home || n.task === 'leaving' ? 'home' : n.task === 'arrive' ? 'arriving' : n.task === 'lunch' ? 'lunch' : n.task === 'break' ? 'break' : 'working');
   // where the agent is: an interface text key, plus a name for the stall case
-  const where = (n) => (n.task === 'called' ? { key: n.arrived ? 'whereHere' : 'whereWay' } : n.atStall ? { key: 'whereStall', name: n.stall.label } : n.outside ? { key: 'whereOut' } : n.mode === 'sit' ? { key: 'whereDesk' } : { key: 'whereHall' });
+  const where = (n) => (n.home ? { key: 'whereHome' } : n.task === 'lunch' ? { key: 'whereLunch' } : n.task === 'called' ? { key: n.arrived ? 'whereHere' : 'whereWay' } : n.atStall ? { key: 'whereStall', name: n.stall.label } : n.outside ? { key: 'whereOut' } : n.mode === 'sit' ? { key: 'whereDesk' } : { key: 'whereHall' });
 
   /* the "last run" line. Scheduled agents work it out from the clock in Bangkok;
      the others report their latest piece of desk work. A real endpoint can override both. */
@@ -129,6 +186,6 @@ export function createAgents(scene, hall) {
     return n.lastWork ? { mins: Math.floor((Date.now() - n.lastWork.at) / 60000), result: n.lastWork.text } : { none: true };
   }
   // nearest agent within talking range that the player can actually see, or null
-  function nearest(P, indoors) { let best = null, bd = TUNING.talkRange; for (const n of list) { if (!n.outside && indoors < 0.5) continue; const d = Math.hypot(P.x - n.x, P.z - n.z); if (d < bd) { bd = d; best = n; } } return best; }
+  function nearest(P, indoors) { let best = null, bd = TUNING.talkRange; for (const n of list) { if (n.home) continue; if (!n.outside && indoors < 0.5) continue; const d = Math.hypot(P.x - n.x, P.z - n.z); if (d < bd) { bd = d; best = n; } } return best; }
   return { list, log, update, nearest, call, status, where, lastRun, onEvent: (f) => listeners.push(f), groups: list.map((n) => n.fig.group) };
 }

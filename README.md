@@ -44,6 +44,19 @@ show in the pond. The weather turns on its own, from clear to cloudy to rain (wi
 that spread across the paving and splash when you step in them) to morning mist, or you can pick one in
 the menu under **Weather**.
 
+**Up the hill.** The north fence between the stalls and the town hall has a gap in it now. A stone
+path climbs from there in shallow steps to a hilltop behind the stalls, where a small domed
+**observatory** stands. Step up to its door and look through the telescope: the view switches to
+the dome's own eye, out over the whole village. Drag (or use the arrow keys or the stick) to look
+round, scroll or pinch to zoom, and press <kbd>Esc</kbd> or **Step back** when you're done. The
+character stays where it is the whole time.
+
+**Over the roofs.** A ladder leans on the east end of the Alacrity Research stall. Climb it (walk
+into it, or press <kbd>E</kbd>) and a plank walkway runs along the back of its roof, over a little
+bridge to the Mingalar News roof, and on to a lookout at the far end with a flag, a spyglass and a
+chest. Finding the lookout is one of the discoveries. Climb back down the same way, or pick
+anywhere on the map and the character climbs down first.
+
 **Festivals.** Around Thingyan (11 to 17 April), Thadingyut (two days either side of its October full moon),
 Christmas (1 December to 6 January), Valentine's Day (7 to 15 February) and Easter (the week either side of
 Easter Sunday) the village dresses up on its own, and the menu's **Festival** row can switch to any of them
@@ -60,7 +73,7 @@ colours, with its own pixel icon, greeting and falling (or rising) particles.
 
 | | Thingyan (water festival) | Thadingyut (festival of lights) |
 |---|---|---|
-| About Me | a bright mandat stage with a fabric roof, padauk garlands and speakers, its two hoses spraying arcs of water onto the square (walk under them to get splashed) | a golden stupa ringed with oil lamps, with paper lanterns on bamboo poles either side |
+| About Me | a mini waterfall tumbling into a stone pool, padauk growing over the rocks, the board on a post beside it (stand in front and the spray splashes you) | a golden stupa ringed with oil lamps, with paper lanterns on bamboo poles either side |
 | The village | Thingyan-coloured bunting, padauk sprigs and silver water bowls on every stall, water barrels, drinking-water pot stands, wet paving with puddles | strings of paper lanterns across the square and over every stall, clay oil lamps along the paving and round the pond |
 | The pond | padauk flowers floating on the water | lotus lamps drifting on the water |
 | What falls | padauk flowers | rain as usual, and sky lanterns rising into the night |
@@ -76,7 +89,7 @@ wolf that starts following you once you have opened every stall.
 <table>
 <tr>
 <td width="50%" valign="top"><img src="docs/img/readme/minimap.jpg" alt="The big map of the village with every place labelled"><br><b>The map.</b> A small map in the top-left corner follows you around. Tap it (or press <kbd>M</kbd>) and it opens into a map of the whole village, or of the Hideout when you are underground. Tap a place to walk there.</td>
-<td width="50%" valign="top"><img src="docs/img/readme/discoveries.jpg" alt="The discoveries checklist"><br><b>Discoveries.</b> Fifteen things to find, from the About Me signpost to the cat in the Hideout. Each one ticks off as you find it, "Show me" walks you to the next, and finding them all earns a badge. Press <kbd>C</kbd> to open the list.</td>
+<td width="50%" valign="top"><img src="docs/img/readme/discoveries.jpg" alt="The discoveries checklist"><br><b>Discoveries.</b> Nineteen things to find, from the About Me signpost to the cat in the Hideout. Each one ticks off as you find it, "Show me" walks you to the next, and finding them all earns a badge. Press <kbd>C</kbd> to open the list.</td>
 </tr>
 </table>
 
@@ -162,6 +175,11 @@ Four villagers work in the hall, one for each project. The **agent board** at th
 has a card for each of them: what they do, whether they are at their desk or on a break, and what
 they did last. Talk to any of them to try what they do.
 
+The hall keeps to **your clock**. The agents come in between 6 and 9 in the morning, walking up the
+road and through the gate one by one, go out for lunch between 12 and 1 (to the benches and the
+pond), and go home at 10 at night. Overnight a **Closed** sign hangs in the doorway and only Friday
+is in, on night duty. Calling someone from the board still brings them in, whatever the time.
+
 <table>
 <tr>
 <td width="50%"><img src="docs/img/readme/demo-bobby.jpg" alt="Bobby ranking news stories"></td>
@@ -198,6 +216,8 @@ they did last. Talk to any of them to try what they do.
 | Zoom a little | Scroll, <kbd>+</kbd> and <kbd>-</kbd> | Pinch |
 | Map and discoveries | <kbd>M</kbd> and <kbd>C</kbd> | Tap the map or the counter under it |
 | Whistle for the parrot | <kbd>F</kbd> | The Whistle button |
+| Climb a ladder | Walk into it, or <kbd>E</kbd> | Walk into it, or the yellow button |
+| Look round the telescope | Drag, or the movement keys; scroll to zoom | Drag, or the stick; pinch to zoom |
 
 The menu in the top-right corner lists every place in the village and walks you there.
 Under **Accessibility** in the same menu you can make the text larger, switch on high contrast,
@@ -325,7 +345,7 @@ src/main.js         renderer, lights, input, camera, game loop
 src/world.js        ground, paving stones, fences, forest, guide slab
 src/stalls.js       the six stalls, their roofs and the About Me signpost
 src/hall.js         the town hall, its fading roof, the desks, the dais and the agent board
-src/agents.js       the agents: desk work, breaks outside, being called to the board
+src/agents.js       the agents: desk work, breaks outside, lunch and going home on your clock, being called to the board
 src/demos.js        the demo each agent shows when you talk to them (sample data only)
 src/figures.js      the blocky people: outfits, painting, posing
 src/player.js       the player's state and shadow
@@ -342,6 +362,9 @@ src/access.js       the accessibility settings (text size, contrast, motion, ope
 src/nav.js          path finding for walk-to
 src/ambience.js     fireflies and drifting leaves
 src/collision.js    the walkable area, steps and jumping onto things
+src/hill.js         the shape of the hill and its stepped path (shared by collision and the builders)
+src/observatory.js  the hill, the observatory, and the telescope view
+src/rooftop.js      the ladder, the rooftop walkways, the bridge and the lookout
 src/textures.js     pixel textures, materials, instancing helpers
 src/ui.js           labels, popup, menu, wardrobe, chat panel, agent board menu, achievement badge
 src/audio.js        sound effects and music (the CD player's controls)

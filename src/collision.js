@@ -3,6 +3,7 @@
 // Inside that area, boxes block if they are taller than a step; lower ones can be
 // walked or jumped onto.
 import { BOUNDS, HALL, FLOOR, CAVE, HIDEOUT, POND } from './config.js';
+import { onHill, hillFloor } from './hill.js';
 
 export const boxes = [];
 export const RADIUS = 0.4;
@@ -35,13 +36,14 @@ const nearWater = (x, z) => inPondWater(x + RADIUS, z) || inPondWater(x - RADIUS
 
 export function blocked(x, z, y) {
   if (nearWater(x, z) && !onWalkway(x, z)) return true;
-  if (!(inSquare(x, z) || insideHall(x, z) || inDoor(x, z) || inCave(x, z) || inRoom(x, z) || inExit(x, z))) return true;
+  if (!(inSquare(x, z) || insideHall(x, z) || inDoor(x, z) || inCave(x, z) || inRoom(x, z) || inExit(x, z) || onHill(x, z))) return true;
   for (const b of boxes) if (over(b, x, z) && b.h - y > STEP) return true;
   return false;
 }
 // The square is one flat level so walking over cobbles, dirt and grass never bobs.
 export function floorAt(x, z) {
   if (inCave(x, z) && z > CAVE.z0) return FLOOR - (z - CAVE.z0) * 0.62; // down the cave stairs
+  if (z < BOUNDS.z0 + 0.6 && onHill(x, z)) return hillFloor(x, z); // the path up the hill, and its top
   return inHallRect(x, z) && z < HALL.z1 - 0.5 ? HALL.floor : FLOOR;
 }
 export function groundAt(x, z, y) {

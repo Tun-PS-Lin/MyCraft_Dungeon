@@ -8,6 +8,8 @@ const UI = {
     festival: 'Festival', fOff: 'Off', fXmas: 'Christmas', fVal: 'Valentine’s', fEaster: 'Easter', wxSnow: 'Snow', wxPetals: 'Petals', wxBlossom: 'Blossom', wxPadauk: 'Padauk', fThingyan: 'Thingyan', fThadingyut: 'Thadingyut',
     weather: 'Weather', wxAuto: 'Auto', wxClear: 'Clear', wxRain: 'Rain', wxMist: 'Mist',
     access: 'Accessibility', textSize: 'Text size', contrast: 'High contrast', calm: 'Reduce motion', flight: 'Opening flight',
+    useScope: 'Look through the telescope', climbUp: 'Climb the ladder', climbDown: 'Climb down', openChest: 'Open the chest',
+    home: 'Gone home', arriving: 'Coming in', lunch: 'At lunch', whereHome: 'At home (back in the morning)', whereLunch: 'Out to lunch', hallClosed: 'Closed for the night',
     break: 'On a break', coming: 'On the way', here: 'At the table', lastRun: 'Last run', activity: 'Activity', sampleLog: 'Sample activity, generated in your browser.', today: 'Today', yesterday: 'Yesterday', notYet: 'Nothing yet this visit', minsAgo: '{n} min ago', justNow: 'Just now', openBoard: 'Open the agent board', boardTitle: 'Agent board', boardKicker: 'The town hall', deskOf: 'At the desk', palette: 'Palette', boardHint: 'Pick an agent to see what they do and what they last did.',
     schedule: 'Runs', delivers: 'Delivers', where: 'Right now', whereDesk: 'At the desk', whereHall: 'In the town hall', whereOut: 'Out in the village', whereWay: 'Walking over', whereHere: 'Waiting at the meeting table', whereStall: 'Over at {name}',
     call: 'Call to the meeting table', called: 'On the way', isHere: 'At the table', boardTalk: 'Walk up to an agent and press E to try their demo.', boardTalkTouch: 'Walk up to an agent and tap Talk to try their demo.',

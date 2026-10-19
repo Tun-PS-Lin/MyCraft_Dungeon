@@ -15,7 +15,7 @@ export function createPlayer(scene) {
   group.scale.setScalar(TUNING.playerScale); scene.add(group);
 
   const shadow = makeBlob(scene, 1.25 * TUNING.playerScale);
-  const state = { rollK: -1, x: 0, y: FLOOR, z: 4.6, vx: 0, vz: 0, vy: 0, yaw: Math.PI, grounded: true, phase: 0, blend: 0, gait: 0, air: 0, squash: 0, visY: FLOOR };
+  const state = { rollK: -1, x: 0, y: FLOOR, z: 4.6, vx: 0, vz: 0, vy: 0, yaw: Math.PI, grounded: true, phase: 0, blend: 0, gait: 0, air: 0, squash: 0, visY: FLOOR, climb: 0, climbK: 0, climbPhase: 0 };
   const mix = (a, b, t) => a + (b - a) * t;
   let hold = { k: 0, rz: 0 };
 
@@ -42,6 +42,15 @@ export function createPlayer(scene) {
     } else {
       fig.pose(s * mix(0.72, 0.98, P.gait) * P.blend, P.air, time, 0, 0, s * 0.1 * P.blend);
       rig.scale.set(1 + P.squash * 0.08, 1 - P.squash * 0.16, 1 + P.squash * 0.08); rig.position.set(0, 0, 0);
+    }
+    // on a ladder: arms up reaching for the rungs, knees lifting in turn
+    P.climbK += (P.climb - P.climbK) * Math.min(1, dt * 10);
+    if (P.climbK > 0.001) {
+      const k = P.climbK, c = Math.sin(P.climbPhase), pr = fig.parts;
+      pr.armL.rotation.x = mix(pr.armL.rotation.x, -2.5 + c * 0.35, k); pr.armR.rotation.x = mix(pr.armR.rotation.x, -2.5 - c * 0.35, k);
+      pr.armL.rotation.z = mix(pr.armL.rotation.z, 0.12, k); pr.armR.rotation.z = mix(pr.armR.rotation.z, -0.12, k);
+      pr.legL.rotation.x = mix(pr.legL.rotation.x, -0.4 - c * 0.4, k); pr.legR.rotation.x = mix(pr.legR.rotation.x, -0.4 + c * 0.4, k);
+      pr.head.rotation.x = mix(pr.head.rotation.x, -0.25, k);
     }
     // holding the fishing rod: the right arm follows the rod's angle, the left comes in to help
     if (hold.k > 0.001) {

@@ -5,7 +5,7 @@ import { AGENTS } from './config.js';
 import { buildWorld, refreshSlab, groundType } from './world.js';
 import { buildStalls } from './stalls.js';
 import { buildHall } from './hall.js';
-import { createAgents } from './agents.js';
+import { createAgents, dayPhase } from './agents.js';
 import { createPlayer } from './player.js';
 import { createChickens, createWolf } from './critters.js';
 import { createAmbience } from './ambience.js';
@@ -31,6 +31,8 @@ import { access, bindAccess } from './access.js';
 import { createLife } from './life.js';
 import { createSky } from './sky.js';
 import { createShowViewer } from './show.js';
+import { buildHill, createScope } from './observatory.js';
+import { buildRooftop, LADDER } from './rooftop.js';
 import { createWeather, PRECIP } from './weather.js';
 import { FESTIVAL, FESTIVALS, festivalChoice, chooseFestival, takeResume } from './festival.js';
 import { decorateVillage, decorateHideout } from './festive.js';
@@ -89,9 +91,25 @@ const lampFill = new THREE.AmbientLight('#ffb36a', 0); scene.add(lampFill); let 
 /* ── world ── */
 const fixed = scene.children.length; // the sky light and the sun above stay where they are
 buildWorld(scene, renderer);
+const obs = buildHill(scene); // the hill behind the north-west stalls, and its observatory
 const stalls = buildStalls(scene);
+const roof = buildRooftop(scene); // the ladder, walkways and lookout over the north-west stalls
 const hall = buildHall(scene);
 const agents = createAgents(scene, hall);
+// a plank hung in the hall's doorway at night: the agents (all but Friday) have gone home
+const closedSign = (() => {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 96; const g = c.getContext('2d');
+  const paint = () => { g.fillStyle = '#8a5a2f'; g.fillRect(0, 0, 256, 96); g.fillStyle = '#6b4422'; for (let y = 0; y < 96; y += 24) g.fillRect(0, y, 256, 3);
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#2a1a0e'; g.font = '700 40px "Pixelify Sans","Courier New",monospace'; g.fillText('CLOSED', 128, 38);
+    g.font = '700 20px "Pixelify Sans","Courier New",monospace'; g.fillText('back at 6:00 · Friday is in', 128, 72); tex.needsUpdate = true; };
+  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; paint();
+  if (document.fonts && document.fonts.load) document.fonts.load('700 40px "Pixelify Sans"').then(paint).catch(() => {});
+  const grp = new THREE.Group(); grp.position.set(HALL.doorX, 2.6, HALL.z1 + 0.62); scene.add(grp);
+  grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.75, 0.08), new THREE.MeshLambertMaterial({ color: '#5a3a1f' })));
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.68), new THREE.MeshLambertMaterial({ map: tex })); face.position.z = 0.045; grp.add(face);
+  for (const sx of [-0.7, 0.7]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.9, 0.03), new THREE.MeshLambertMaterial({ color: '#2a2019' })); r.position.set(sx, 0.8, 0); grp.add(r); }
+  grp.visible = false; return grp;
+})();
 const chickens = createChickens(scene);
 const ambience = createAmbience(scene);
 const cave = buildCave(scene);
@@ -114,7 +132,7 @@ pond.setHand((v) => player.hand(v));
 /* footsteps sound like what you're walking on: planks, paving or grass */
 function stepSound() {
   // stepping in a puddle: a splash of drops and a wet footstep
-  if (!underground && weather.inPuddle(P.x, P.z)) { weather.splashAt(P.x, P.z, P.visY); return 'stepPuddle'; }
+  if (!underground && P.y < 1 && weather.inPuddle(P.x, P.z)) { weather.splashAt(P.x, P.z, P.visY); return 'stepPuddle'; }
   if (underground || insideHall(P.x, P.z)) return 'stepWood';
   const onSlab = Math.abs(P.x) < 3.3 && Math.abs(P.z) < 2.2;
   if (!onSlab && P.y > FLOOR + 0.06) return 'stepWood'; // the bridge, the dock, a stall's platform
@@ -246,9 +264,43 @@ function goFish() {
   P.vx = P.vz = 0; setTimeout(() => sound.play('cast'), pond.holding() ? 300 : 860); // the whoosh lands with the throw
   pond.fish(P, () => { sound.play('splash'); const id = pondUI.next(); pondUI.show(id); disc.add('facts', id); if (disc.has('facts') && !parrot.on()) parrotDue = true; });
 }
+// a panel that covers the whole view (the world behind it can be drawn less often). The side menu,
+// an agent's chat and the discoveries list leave most of the village showing, so they never count.
+const covered = () => showViewer.isOpen() || !!ui.openId() || ui.boardOpen() || hx.isOpen() || pondUI.isOpen() || minimap.isBig();
 const paused = () => showViewer.isOpen() || ui.paused() || hx.isOpen() || travelling || pondUI.isOpen() || pond.fishing() || disc.isOpen() || minimap.isBig();
 ui.addPlace('cave', 'The Hideout', '#ffd060', () => goTo('hideout'));
 ui.addPlace('pond', 'Fishing Pond', '#62c8ff', () => goTo('pond'));
+ui.addPlace('obs', 'Observatory', '#9ec3ff', () => goTo('observatory'));
+/* ── the observatory's telescope: a look-around view from the dome ── */
+const scope = createScope(obs);
+const SCOPE_SKY = { day: new THREE.Color('#a9cbe8').convertSRGBToLinear(), night: new THREE.Color('#141c3a').convertSRGBToLinear() };
+const scopeUI = document.createElement('div'); scopeUI.id = 'scope'; scopeUI.setAttribute('aria-hidden', 'true');
+scopeUI.innerHTML = '<i class="scope-ring"></i><p class="scope-hint">Drag or use the arrow keys to look around · scroll or pinch to zoom</p><button type="button" class="scope-x">Step back</button>';
+document.body.appendChild(scopeUI);
+function enterScope() { if (scope.on()) return; auto = null; P.vx = P.vz = 0; scope.enter(); scopeUI.classList.add('show'); document.body.classList.add('scoping'); sound.play('open'); discover('observatory'); }
+function exitScope() { if (!scope.on()) return; scope.exit(); scopeUI.classList.remove('show'); document.body.classList.remove('scoping'); sound.play('close'); canvas.focus({ preventScroll: true }); }
+scopeUI.querySelector('.scope-x').onclick = exitScope;
+/* ── the rooftop route: climb the ladder at Alacrity's east end ── */
+let climb = null; // { dir: 1 up / -1 down, k: 0 at the foot .. 1 at the top, then, ox, oz, oy }
+const climbPt = { x: 0, y: 0, z: 0, rung: false };
+const onRoof = () => !underground && roof.on(P.x, P.z, P.y);
+function startClimb(dir, then) {
+  if (climb || travelling || scope.on()) return; auto = null; rollT = -1; P.rollK = -1; P.vx = P.vz = P.vy = 0;
+  const k = dir > 0 ? 0 : 1; roof.climbAt(k, climbPt);
+  climb = { dir, k, then, ox: P.x - climbPt.x, oz: P.z - climbPt.z, oy: P.y - climbPt.y, rung: -1 };
+}
+function updateClimb(dt) {
+  const c = climb, px = P.x, pz = P.z; c.k = Math.max(0, Math.min(1, c.k + (c.dir * dt) / 2.3));
+  const fade = Math.exp(-dt * 9); c.ox *= fade; c.oz *= fade; c.oy *= fade; // where they started eases into the ladder's line
+  roof.climbAt(c.k, climbPt); P.x = climbPt.x + c.ox; P.z = climbPt.z + c.oz; P.y = P.visY = climbPt.y + c.oy; P.vy = 0; P.grounded = true;
+  P.vx = climbPt.rung ? 0 : (P.x - px) / Math.max(dt, 1e-3); P.vz = climbPt.rung ? 0 : (P.z - pz) / Math.max(dt, 1e-3); // (so the feet step on the short walks on and off)
+  const face = climbPt.rung || c.dir > 0 ? -Math.PI / 2 : Math.PI / 2; let d = face - P.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); P.yaw += d * Math.min(1, dt * 10);
+  P.climb = climbPt.rung ? 1 : 0; P.climbPhase = c.k * 44;
+  const rung = Math.floor(c.k * 16); if (climbPt.rung && rung !== c.rung) { c.rung = rung; sound.play('stepWood'); }
+  if ((c.dir > 0 && c.k >= 1) || (c.dir < 0 && c.k <= 0)) { climb = null; P.climb = 0; P.vx = P.vz = 0; if (c.dir > 0) sound.play('land'); if (c.then) c.then(); }
+}
+// the chest on the lookout
+function openChest() { sound.play('open'); ui.toast({ title: 'Rooftop chest', text: 'Inside: the first sketch of this village, on squared paper, with “start here” circled by the fountain.', icon: null }); }
 for (const p of hideout.props) ui.addPlace('hx:' + p.id, p.label, p.color, () => goTo('hx:' + p.id));
 // a short fade through dark, then the character is in the other place
 function travel(down, then) {
@@ -307,7 +359,7 @@ function refreshBoard() {
   const sig = agents.list.map((n) => agents.status(n)).join();
   for (const n of agents.list) ui.setAgentStatus(n.id, agents.status(n));
   if (sig === boardSig) return; boardSig = sig;
-  hall.board.draw(agents.list.map((n) => ({ name: n.name, role: tr(n, 'role'), color: n.color, sprite: sprites[n.id], face: faces[n.id], about: n.about, palette: [n.design.top, n.design.top2, n.design.trim, n.design.pants, n.design.hair], status: t(agents.status(n)), live: !n.outside && n.task !== 'break' })), agents.log);
+  hall.board.draw(agents.list.map((n) => ({ name: n.name, role: tr(n, 'role'), color: n.color, sprite: sprites[n.id], face: faces[n.id], about: n.about, palette: [n.design.top, n.design.top2, n.design.trim, n.design.pants, n.design.hair], status: t(agents.status(n)), live: !n.outside && !n.home && n.task !== 'break' && n.task !== 'lunch' })), agents.log);
 }
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { boardSig = ''; });
 function openBoard() { auto = null; ui.openBoard(); }
@@ -315,6 +367,8 @@ function openBoard() { auto = null; ui.openBoard(); }
 /* ── walk-to: the menu sends the character somewhere on foot ── */
 let auto = null; // { path: [[x, z], ...], then: fn }
 function walkTo(x, z, then) { if (underground) { auto = { path: [[x, z]], then }; return true; } // the Hideout is one open room
+  if (climb) return false;
+  if (onRoof()) { auto = { path: [[Math.max(-19.6, Math.min(LADDER.land[0], P.x)), LADDER.z], LADDER.land], then: () => startClimb(-1, () => walkTo(x, z, then)) }; return true; } // down the ladder first
   const path = findPath(P.x, P.z, x, z); if (!path || !path.length) { if (then) then(); return false; } auto = { path, then }; return true; }
 
 // tap (or click) the ground to walk there; a ring marks the spot
@@ -325,6 +379,8 @@ const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitPoint = new TH
 function tapGround() {
   // tapping the water goes fishing
   if (!underground) { ground.constant = -FLOOR; if (ray.ray.intersectPlane(ground, hitPoint) && inPondWater(hitPoint.x, hitPoint.z)) { goTo('pond'); return; } }
+  // up on the roofs, a tap on the boards walks there
+  if (!underground && onRoof()) { ground.constant = -P.y; if (ray.ray.intersectPlane(ground, hitPoint) && roof.on(hitPoint.x, hitPoint.z, P.y)) { auto = { path: [[hitPoint.x, hitPoint.z]] }; marker.position.set(hitPoint.x, P.y + 0.06, hitPoint.z); markerLife = 1; sound.play('near'); return; } }
   // the ray is already aimed by pick(); try the hall floor first when the roof is off, then the square
   for (const y of hall.openness() > 0.5 ? [HALL.floor, FLOOR] : [FLOOR]) {
     ground.constant = -y; if (!ray.ray.intersectPlane(ground, hitPoint)) continue;
@@ -343,6 +399,8 @@ function goTo(id) {
   }
   if (underground) { travel(false, () => goTo(id)); return; } // everything else is up in the village
   if (id === 'hall') { walkTo(hall.entrance[0], hall.entrance[1]); return; }
+  if (id === 'observatory') { if (Math.hypot(P.x - obs.door.x, P.z - obs.door.z) < 1.4) enterScope(); else walkTo(obs.door.x, obs.door.z, enterScope); return; }
+  if (id === 'ladder') { const look = () => { auto = { path: [[-12, LADDER.z], [-19.4, -10.75]] }; }; if (onRoof()) look(); else if (Math.hypot(P.x - LADDER.foot[0], P.z - LADDER.foot[1]) < 1.1) startClimb(1, look); else walkTo(LADDER.foot[0], LADDER.foot[1], () => startClimb(1, look)); return; }
   if (id === 'board') { if (nearBoard()) openBoard(); else walkTo(hall.board.stand[0], hall.board.stand[1], openBoard); return; }
   if (id.startsWith('agent:')) { const n = agents.list.find((q) => 'agent:' + q.id === id); if (n) { if (Math.hypot(P.x - n.x, P.z - n.z) < TUNING.talkRange) talkTo(n); else walkTo(n.x, n.z + 1.3, () => { if (Math.hypot(P.x - n.x, P.z - n.z) < TUNING.talkRange * 1.7) talkTo(n); }); } return; }
   const s = stalls.find((q) => q.id === id); if (!s) return;
@@ -396,6 +454,13 @@ const rollDir = [0, 1];
 function pressJump() { if (time - lastJumpPress < 0.3) { rollQueued = true; lastJumpPress = -9; } else { jumpQueued = true; lastJumpPress = time; } }
 window.addEventListener('keydown', (e) => {
   const k = e.code;
+  // looking through the telescope: the movement keys look round; E or Esc steps back
+  if (scope.on()) {
+    if (k === 'Escape' || (k === 'KeyE' && !e.repeat)) { exitScope(); e.preventDefault(); return; }
+    if (k === 'Equal' || k === 'NumpadAdd') scope.zoom(0.85); if (k === 'Minus' || k === 'NumpadSubtract') scope.zoom(1.18);
+    if (k.startsWith('Arrow') || k === 'Space') e.preventDefault();
+    keys[k] = true; return;
+  }
   if (k === 'Escape') { if (minimap.isBig()) { minimap.close(); return; } if (disc.isOpen()) { disc.close(); return; } if (showViewer.isOpen()) { showViewer.hide(); return; } if (pondUI.isOpen()) { pondUI.hide(); return; } if (!ui.escape()) hx.hide(); return; }
   // M opens the big map, C the checklist (when nothing else is open)
   if ((k === 'KeyM' || k === 'KeyC') && !e.repeat && !e.metaKey && !e.ctrlKey && !(e.target && /INPUT|TEXTAREA/.test(e.target.tagName))) {
@@ -437,7 +502,7 @@ const FLY_C = new THREE.Vector3(2, 0, -3), flyRel = new THREE.Vector3(), flyLook
 const smoother = (k) => k * k * k * (k * (k * 6 - 15) + 10);
 let titleFor = 0; // seconds of drawn frames before the title card lifts, so it never lifts onto a half-built scene
 const setZoom = (z) => { zoomTarget = Math.max(TUNING.zoomMin, Math.min(TUNING.zoomMax, z)); };
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (!paused()) setZoom(zoomTarget * Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0016)); }, { passive: false });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (scope.on()) { scope.zoom(Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0022)); return; } if (!paused()) setZoom(zoomTarget * Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0016)); }, { passive: false });
 window.addEventListener('keydown', (e) => { if (paused()) return; if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(zoomTarget - 0.06); if (e.code === 'Minus' || e.code === 'NumpadSubtract') setZoom(zoomTarget + 0.06); });
 const touches = new Map(); let pinch = 0;
 const spread = () => { const p = [...touches.values()]; return Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]); };
@@ -448,7 +513,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (touches.size === 2) { pinch = spread(); down = null; } else down = [e.clientX, e.clientY];
 });
 canvas.addEventListener('pointerup', (e) => {
-  lift(e); if (!down) return; const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]); down = null; if (moved >= 8 || paused()) return;
+  lift(e); if (scope.on()) { down = null; return; } if (!down) return; const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]); down = null; if (moved >= 8 || paused()) return;
   const hit = pick(e); if (!hit) { tapGround(); return; }
   if (hit.board) { if (nearBoard()) openBoard(); else walkTo(hall.board.stand[0], hall.board.stand[1], openBoard); }
   else if (hit.agent) { const n = hit.agent; if (Math.hypot(P.x - n.x, P.z - n.z) < TUNING.talkRange * 1.7) talkTo(n); else walkTo(n.x, n.z + 1.3); }
@@ -456,6 +521,11 @@ canvas.addEventListener('pointerup', (e) => {
   else if (hit.stall.kind === 'outfits') goTo('outfits'); else openStall(hit.stall);
 });
 canvas.addEventListener('pointermove', (e) => {
+  if (scope.on()) {
+    if (!touches.has(e.pointerId)) return; const was = touches.get(e.pointerId); touches.set(e.pointerId, [e.clientX, e.clientY]);
+    if (touches.size === 2 && pinch) { const s = spread(); if (s > 0) scope.zoom(pinch / s); pinch = s; } else if (touches.size === 1) scope.drag(e.clientX - was[0], e.clientY - was[1], canvas.clientHeight);
+    return;
+  }
   if (touches.has(e.pointerId)) { touches.set(e.pointerId, [e.clientX, e.clientY]); if (touches.size === 2 && pinch) { const s = spread(); if (s > 0) setZoom(zoomTarget * (pinch / s)); pinch = s; return; } }
   if (e.pointerType !== 'mouse') return; const n = performance.now(); if (n - hoverT < 60) return; hoverT = n; canvas.style.cursor = pick(e) ? 'pointer' : 'default'; });
 
@@ -490,7 +560,11 @@ function update(dt) {
   time += dt;
   const busy = paused();
   let ix = 0, iy = 0;
-  if (!busy) { ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x; iy = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + joy.y; }
+  if (scope.on()) {
+    const ax = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x, ay = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + joy.y;
+    if (ax || ay) scope.turn(ax, ay, dt);
+    jumpQueued = false; rollQueued = false;
+  } else if (!busy && !climb) { ix = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x; iy = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + joy.y; }
   let mag = Math.hypot(ix, iy), dx = 0, dz = 0, running = false;
   if (mag > 0.15) {
     auto = null; // any key or stick movement takes back control
@@ -503,6 +577,12 @@ function update(dt) {
     if (dist < 0.3) { const then = auto.then; auto = null; if (then) then(); }
     else { running = auto.path.length > 1 || dist > 6; const sp = Math.min(running ? TUNING.runSpeed : TUNING.walkSpeed, dist / dt); dx = (ddx / dist) * sp; dz = (ddz / dist) * sp; }
   }
+  // walking into the ladder from its foot climbs it; walking into the gap at the top climbs down
+  if (mag > 0.15 && !busy && !climb && !underground && Math.abs(P.z - LADDER.z) < 0.5) {
+    if (P.y < 1 && P.x > LADDER.x && P.x < LADDER.x + 0.9 && dx < -0.5 * Math.abs(dz)) startClimb(1);
+    else if (onRoof() && P.x > LADDER.land[0] - 0.15 && dx > 0.5 * Math.abs(dz)) startClimb(-1);
+  }
+  if (climb) { dx = dz = 0; jumpQueued = rollQueued = false; }
   // the dash roll: a burst in the direction you are steering (or facing) that eases off
   rollCool -= dt;
   if (rollQueued && !busy && rollT < 0 && rollCool <= 0 && !ui.wardrobeOpen()) {
@@ -528,9 +608,15 @@ function update(dt) {
   if (ui.wardrobeOpen()) { let d = TUNING.cameraYaw + Math.sin(time * 0.8) * 0.45 - P.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); P.yaw += d * Math.min(1, dt * 5); }
   if (jumpQueued && P.grounded && !busy && rollT < 0) { P.vy = TUNING.jumpSpeed; P.grounded = false; auto = null; sound.play('jump'); }
   jumpQueued = false;
-  P.vy -= TUNING.gravity * dt; P.y += P.vy * dt;
-  const g = groundAt(P.x, P.z, P.y);
-  if (P.y <= g) { if (!P.grounded && P.vy < -4) { P.squash = 1; sound.play('land'); } P.y = g; P.vy = 0; P.grounded = true; } else P.grounded = false;
+  if (climb) updateClimb(dt);
+  else {
+    P.vy -= TUNING.gravity * dt; P.y += P.vy * dt;
+    const g = groundAt(P.x, P.z, P.y);
+    if (P.y <= g) { if (!P.grounded && P.vy < -4) { P.squash = 1; sound.play('land'); } P.y = g; P.vy = 0; P.grounded = true; } else P.grounded = false;
+  }
+  // the lookout at the end of the rooftop route
+  if (!underground && !disc.has('rooftop') && roof.onLookout(P.x, P.z, P.y)) { discover('rooftop'); ui.toast({ title: 'Rooftop lookout', text: 'The best-kept secret in the village: the whole square from above the stalls.', icon: null }); sound.play('achieve'); }
+  roof.update(time);
   if (player.stride(dt, rollT >= 0 ? 0 : speed, running) && rollT < 0) sound.play(stepSound());
 
   // town hall: the roof lifts away while the player is inside
@@ -613,12 +699,17 @@ function update(dt) {
     camLook.copy(flyLook.copy(FLY_C).lerp(camLook, smoother(Math.min(1, Math.max(0, (u - 0.3) / 0.7)))));
     if (u >= 1) { fly = null; document.body.classList.remove('flying'); }
   }
+  // the telescope: the camera rises into the dome and looks where you point it
+  { const f = scope.update(dt, camPos, camLook, TUNING.cameraFov); if (Math.abs(camera.fov - f) > 0.01) { camera.fov = f; camera.updateProjectionMatrix(); }
+    const e = scope.k(); obs.group.visible = e < 0.5; }
   camera.position.copy(camPos); camera.lookAt(camLook);
   // haze begins a little beyond the player and thickens toward the far trees, at any zoom
   const reach = camPos.distanceTo(camLook); scene.fog.near = reach + (underground ? 6 : 13); scene.fog.far = reach + (underground ? 26 : 54);
   // mist (and a little with rain) pulls the haze in close and turns it pale
   if (!underground) { const w = weather.levels(), m = Math.max(w.m, WET ? w.r * 0.35 : 0) * (1 - indoors * 0.7);
     if (m > 0.005) { scene.fog.near = mix(scene.fog.near, reach * 0.62, m); scene.fog.far = mix(scene.fog.far, reach + 16, m); backdrop.lerp(night > 0.5 ? WX.mistNight : WX.mistDay, m * 0.75); scene.fog.color.copy(backdrop); } }
+  // through the telescope the horizon shows: the far trees fade into a sky colour instead of the dark edge
+  { const e = scope.k(); if (e > 0.001) { scene.fog.near = mix(scene.fog.near, 34, e); scene.fog.far = mix(scene.fog.far, 82, e); backdrop.lerp(SCOPE_SKY.day.clone().lerp(SCOPE_SKY.night, ease(night)), e); scene.fog.color.copy(backdrop); } }
 
   // what E would do right now: the nearest stall (measured to its edge) or agent
   near = null; let bd = TUNING.interactRange, nearKey = null;
@@ -628,16 +719,24 @@ function update(dt) {
   { const n = underground ? null : agents.nearest(P, indoors); if (n) { nearKey = n.id; near = { key: 'talkTo', vars: { name: n.name }, act: () => talkTo(n) }; } }
   // anywhere round the pond (or on its bridge and benches) E walks you out to the end of the dock and casts
   if (!underground && !near && nearPond()) { nearKey = 'pond'; near = { key: 'goFishing', act: () => goTo('pond') }; }
+  if (!underground && Math.hypot(P.x - obs.door.x, P.z - obs.door.z) < 1.6) { nearKey = 'obs'; near = { key: 'useScope', act: enterScope }; }
   if (!underground && Math.hypot(P.x - cave.top[0], P.z - cave.top[1]) < 2.3) { nearKey = 'cave'; near = { key: 'enterCave', act: () => travel(true) }; }
   if (underground) { near = null; nearKey = null; bd = TUNING.interactRange; for (const p of hideout.props) { const d = rectDistance(p.rect, P.x, P.z); if (d < Math.min(bd, p.range || bd)) { bd = d; nearKey = 'hx:' + p.id; near = { key: p.key, act: () => useProp(p.id) }; } } }
   // the board wins when you are right up against it
   if (!underground && indoors > 0.5 && nearBoard() && (!near || near.key !== 'talkTo' || rectDistance(hall.board.rect, P.x, P.z) < 1.1)) { nearKey = 'board'; near = { key: 'openBoard', act: openBoard }; }
   refreshBoard();
-  if (fly || auto || !near || hx.isOpen() || travelling || listen > 0.3 || pondUI.isOpen() || pond.fishing()) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
+  if (!underground && P.y < 1 && Math.hypot(P.x - LADDER.foot[0], P.z - LADDER.foot[1]) < 1.1) { nearKey = 'ladder'; near = { key: 'climbUp', act: () => startClimb(1) }; }
+  if (onRoof()) { // up on the roofs: only the ladder and the chest
+    near = null; nearKey = null;
+    if (Math.hypot(P.x - LADDER.land[0], P.z - LADDER.land[1]) < 1.0) { nearKey = 'ladderDown'; near = { key: 'climbDown', act: () => startClimb(-1) }; }
+    else if (Math.hypot(P.x - roof.chest.x, P.z - roof.chest.z) < 1.3) { nearKey = 'chest'; near = { key: 'openChest', act: openChest }; }
+  }
+  if (scope.on() || climb || fly || auto || !near || hx.isOpen() || travelling || listen > 0.3 || pondUI.isOpen() || pond.fishing()) ui.setPrompt(null); else ui.setPrompt(near.key, near.vars, nearKey);
   if (markerLife > 0) { markerLife = auto ? Math.max(0.35, markerLife - dt * 0.8) : markerLife - dt * 3; marker.material.opacity = Math.max(0, markerLife) * 0.9; marker.scale.setScalar(0.8 + Math.sin(time * 6) * 0.08); marker.rotation.z = time * 1.2; }
   if (pendingReward && !paused()) { pendingReward = false; wolfUnlocked = true; store.set('pv-wolf', 'yes'); wolf.activate(P); ui.setProgress(visited, true); ui.toast(); sound.play('achieve'); setTimeout(() => sound.play('bark'), 700); }
 
   agents.update(dt, time, P, ui.chatId());
+  if ((time | 0) % 3 === 0) closedSign.visible = dayPhase() === 'night';
   chickens.update(dt, P, () => sound.play('cluck'));
   if (!underground) life.update(dt, time, P, speed, rollT >= 0, ease(night) > 0.6, () => sound.play('flutter'));
   { const w = weather.update(dt, time, focus, { hidden: underground, indoors, calm: access.calm(), height: renderer.domElement.height, fov: camera.fov, night: ease(night) });
@@ -650,11 +749,11 @@ function update(dt) {
   if (decor && !underground) decor.update(time, ease(night), indoors, dt);
   if (decorHx && underground) decorHx.update(time);
   if (aboutStall.festive && !underground) aboutStall.festive.update(time, ease(night), decor && decor.scale ? decor.scale() : 0);
-  // Thingyan: walk under the mandat's hoses and you get soaked (and blessed)
+  // Thingyan: stand by the waterfall and the spray splashes you (and blesses you)
   if (aboutStall.wetZones && !underground) {
-    const hit = aboutStall.wetZones.some(([x, z]) => Math.hypot(P.x - x, P.z - z) < 1.25);
+    const hit = aboutStall.wetZones.some(([x, z]) => Math.hypot(P.x - x, P.z - z) < 1.4);
     if (hit) { soakT -= dt; if (soakT <= 0) { soakT = 0.32; weather.splashAt(P.x, P.z, P.visY + 0.9); sound.play('stepPuddle'); }
-      if (!soaked) { soaked = true; ui.toast({ title: 'Happy Thingyan!', text: 'You’ve been splashed at the mandat. The water washes away last year’s bad luck.', icon: null }); discover('rain'); } }
+      if (!soaked) { soaked = true; ui.toast({ title: 'Happy Thingyan!', text: 'Splashed by the waterfall. Thingyan water washes away last year’s bad luck.', icon: null }); discover('rain'); } }
   }
   wolf.update(dt, time, P);
   ambience.update(time, ease(night), underground ? 1 : Math.max(indoors, WET ? weather.levels().r : 0));
@@ -669,6 +768,7 @@ function update(dt) {
   const up = underground ? 0 : 1, quiet = 1 - listen;
   for (const s of stalls) place(s.id, s.pos[0], s.labelY || 5.3, s.pos[1], s.id === nearKey, up);
   place('cave', cave.labelAt[0], cave.labelAt[1], cave.labelAt[2], nearKey === 'cave', up);
+  place('obs', obs.label[0], obs.label[1], obs.label[2], nearKey === 'obs', up * (1 - scope.k()));
   place('pond', pond.labelAt[0], pond.labelAt[1], pond.labelAt[2], nearKey === 'pond', up * (pond.fishing() ? 0 : 1));
   for (const p of hideout.props) place('hx:' + p.id, p.labelAt[0], p.labelAt[1], p.labelAt[2], nearKey === 'hx:' + p.id, (1 - up) * quiet);
   place('hall', hall.labelAt[0], hall.labelAt[1], hall.labelAt[2], false, 1 - indoors);
@@ -700,7 +800,7 @@ function step(now) {
   { const on = disc.isOpen() || minimap.isBig(); if (on !== hudOpen) { hudOpen = on; document.body.classList.toggle('hudopen', on); } }
   // (and never while fishing, or just after the fact card opens or closes)
   if (pondUI.isOpen() !== pondWas) { pondWas = pondUI.isOpen(); pondCalm = 0.9; } pondCalm -= Math.min(raw, 0.1);
-  idle = paused() && !travelling && !parrot.flying() && !ui.wardrobeOpen() && closeUp === 0 && listen === 0 && !(pond.active() && !pondUI.isOpen()) && pondCalm <= 0 ? idle + 1 : 0;
+  idle = covered() && !travelling && !parrot.flying() && !ui.wardrobeOpen() && closeUp === 0 && listen === 0 && !(pond.active() && !pondUI.isOpen()) && pondCalm <= 0 ? idle + 1 : 0;
   // behind the library's books and the gallery's cube (which have their own 3D stage) the village
   // is dimmed and still, so after a few frames it isn't redrawn at all: the menu gets the GPU
   const stage3d = showViewer.isOpen() || (hx.isOpen() && (hx.which() === 'gallery' || hx.which() === 'library'));
@@ -747,7 +847,7 @@ function start(saved) {
     // the first key or tap lifts the title at once and hurries the flight to a smooth finish (about a second)
     for (const ev of ['keydown', 'pointerdown']) window.addEventListener(ev, () => { titleFor = 0; ui.endIntro(); if (fly) fly.rate = Math.max(1, (fly.dur - fly.t) / 1.1); }, { once: true });
   }
-  window.__village = { camera, sky, life, weather, showViewer, setNight: (v) => { night = nightTarget = v; }, flying: () => !!fly, night: () => night, parrot, disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, fill: () => fillLevel, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
+  window.__village = { camera, scope, enterScope, exitScope, obs, roof, startClimb, climbing: () => !!climb, sky, life, weather, showViewer, setNight: (v) => { night = nightTarget = v; }, flying: () => !!fly, night: () => night, parrot, disc, minimap, P, ui, stalls, agents, hall, wolf, blocked, fill: () => fillLevel, groundAt, goTo, renderer, scene, FLOOR, travel, hx, under: () => underground, listening: () => listen, pond, pondUI, goFish }; // handy in the browser console
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 // back from a festival change: put the player where they were, without the opening flight

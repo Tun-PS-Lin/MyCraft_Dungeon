@@ -4,9 +4,8 @@
 //  square and over every stall, clay oil lamps along the paving, a golden lantern stupa in place of
 //  the About Me signpost, lotus lamps floating on the pond, and sky lanterns rising into the night.
 //
-//  Thingyan, the water festival and new year, in April: a mandat (the stage people throw water
-//  from) in place of the signpost, its two hoses spraying arcs of water onto the square (walk
-//  under them to get splashed), golden padauk flowers everywhere and falling from the sky,
+//  Thingyan, the water festival and new year, in April: a mini waterfall with a little pool in
+//  place of the signpost (stand in front of it and the spray reaches you), golden padauk flowers everywhere and falling from the sky,
 //  bright bunting, water barrels, drinking-water pot stands and wet paving.
 //
 // Like the other festivals, everything still is merged into a few meshes per material when the
@@ -167,33 +166,39 @@ export function mmCenterpiece(g, kind, makeBoard) {
     ret.rect = [-2.9, 2.9, -2.2, 1.9]; ret.labelY = 7.2;
     ret.update = (time, night) => { fl.update(time, night); lan.update(time, night); };
   } else {
-    // the mandat: a bright stage with a fabric roof, padauk garlands and two hoses spraying the square
-    const cols = THINGYAN_COLORS.map((c) => wool(c));
-    B(g, 5.0, 1.0, 2.6, M.planks, 0, 0.5, -0.4);
-    for (let i = 0; i < 10; i++) B(g, 0.5, 0.92, 0.04, cols[i % cols.length], -2.25 + i * 0.5, 0.5, 0.92, true); // fabric skirt
-    for (const sx of [-2.35, 2.35]) for (const sz of [-1.55, 0.75]) B(g, 0.2, 3.9, 0.2, flat('#c62f2f'), sx, 1.95, sz);
-    B(g, 5.0, 0.08, 0.08, flat('#d9a93a'), 0, 1.5, 0.82); for (let i = 0; i < 11; i++) B(g, 0.06, 0.5, 0.06, flat('#d9a93a'), -2.25 + i * 0.45, 1.25, 0.82, true);
-    B(g, 5.6, 0.25, 3.2, cols[0], 0, 3.98, -0.4); B(g, 4.6, 0.25, 2.6, cols[1], 0, 4.23, -0.4); B(g, 3.4, 0.25, 2.0, cols[3], 0, 4.48, -0.4); B(g, 1.6, 0.3, 1.0, cols[2], 0, 4.75, -0.4);
-    bunting(g, V(-2.75, 3.82, 1.22), V(2.75, 3.82, 1.22), 12, 0.05, cols, 'flag');
-    for (let i = 0; i < 18; i++) padauk(g, -2.6 + i * 0.306, 3.7 - Math.sin(Math.PI * (i / 17)) * 0.25, 1.15, 0.55);
-    const board = makeBoard(2.0, 1.0); board.position.set(0, 2.65, 1.0); g.add(board); B(g, 2.2, 1.2, 0.1, M.dark, 0, 2.65, 0.93, true);
-    for (const sx of [-0.85, 0.85]) B(g, 0.03, 0.55, 0.03, flat('#e8d3a0'), sx, 3.5, 0.95, true);
-    for (const sx of [-2.0, 2.0]) { B(g, 0.6, 0.9, 0.5, flat('#1b1b20'), sx, 1.45, -1.3); B(g, 0.3, 0.3, 0.04, flat('#555a66'), sx, 1.55, -1.04, true); } // the speakers
-    for (const sx of [-1, 1]) { B(g, 0.1, 0.1, 0.55, flat('#2f7fc4'), sx * 1.6, 1.6, 0.8, true); B(g, 0.14, 0.14, 0.12, flat('#c9ced6'), sx * 1.6, 1.6, 1.08, true); }
-    [[-0.9, 0.7], [0.0, 0.62], [0.9, 0.7]].forEach(([x, z]) => silverBowl(g, x, 1.0, z));
-    for (const sx of [-3.05, 3.05]) waterBarrel(g, sx, 0.5, false); // (the stage's footprint already blocks them)
-    padauk(g, -2.9, 1.25, 0.5, 0.8); padauk(g, 2.9, 1.25, 0.5, 0.8);
-    // the spray, in the stage's own space (so it turns and scales with it)
-    const U = { uTime: { value: 0 }, uScale: { value: 400 }, uFlight: { value: 0.88 }, uOpacity: { value: 0.85 } };
-    const RU = { uTime: U.uTime, uScale: U.uScale, uOpacity: { value: 0.6 } };
-    for (const sx of [-1, 1]) {
-      const noz = V(sx * 1.6, 1.62, 1.16), vel = V(sx * 0.5, 2.6, 3.0);
-      waterSpray(g, noz, vel, 150, U);
-      const t = 0.88; landingRings(g, V(noz.x + vel.x * t, 0.32, noz.z + vel.z * t), 7, RU);
-    }
-    ret.wet = [[-2.05, 3.7], [2.05, 3.7]]; // where it lands, in the stage's space
-    ret.rect = [-3.5, 3.5, -1.8, 1.25]; ret.labelY = 6.3;
-    ret.update = (time, night, scale) => { U.uTime.value = time; if (scale) U.uScale.value = scale; };
+    // a little waterfall: a mossy rock face with water tumbling into a round stone pool, padauk
+    // growing over the top, silver bowls on the rim, and the About Me board on a post beside it
+    const rock = [flat('#7d776d'), flat('#8a857c'), flat('#6e695f')], moss = flat('#5c7a3c'), moss2 = flat('#6a8a44');
+    const RX = 0, RZ = -0.55; // the rock face, at the back
+    [[-1.3, 1.3, 0.9], [-0.55, 2.2, 1.0], [0.25, 2.7, 1.0], [1.05, 2.0, 0.9], [1.6, 1.1, 0.7]].forEach(([x, h, d], i) => {
+      B(g, 0.85, h, d, rock[i % 3], RX + x, h / 2, RZ - 0.15 + (i % 2) * 0.08); B(g, 0.86, 0.14, d * 0.7, i % 2 ? moss : moss2, RX + x, h + 0.04, RZ - 0.1);
+    });
+    for (const [x, y] of [[-0.9, 1.6], [0.6, 2.3], [-0.2, 2.75], [1.3, 1.55]]) padauk(g, RX + x, y, RZ - 0.15, 0.85);
+    // the pool: a ring of stones round a disc of water
+    const PZ = 0.45, PR = 1.05, water = new THREE.Mesh(new THREE.CircleGeometry(PR - 0.12, 20), new THREE.MeshBasicMaterial({ color: lin('#3f9fd6') }));
+    water.rotation.x = -Math.PI / 2; water.position.set(0, 0.42, PZ); water.userData.keep = true; g.add(water);
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; if (Math.sin(a) < -0.55) continue; const m = B(g, 0.42, 0.46 + (i % 2) * 0.08, 0.32, rock[i % 3], Math.cos(a) * PR, 0.24, PZ + Math.sin(a) * PR * 0.85); m.rotation.y = -a; }
+    B(g, 2.2, 0.3, 1.6, rock[2], 0, 0.15, PZ); // the pool's floor
+    // falling water: a strip with streaks that scroll down, a pale foam band where it lands
+    const fc = document.createElement('canvas'); fc.width = 16; fc.height = 64; const fx = fc.getContext('2d');
+    for (let y = 0; y < 64; y++) for (let x = 0; x < 16; x++) { const v = (x * 7 + y * 3 + ((x * 13) % 5) * 9) % 23; fx.fillStyle = v < 3 ? '#ffffff' : v < 9 ? '#bfe6fb' : v < 16 ? '#7cc8f0' : '#4fa8de'; fx.fillRect(x, y, 1, 1); }
+    const ft = new THREE.CanvasTexture(fc); ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.magFilter = THREE.NearestFilter; ft.repeat.set(1, 2.5);
+    const fall = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 2.3), new THREE.MeshBasicMaterial({ map: ft, transparent: true, opacity: 0.92 }));
+    fall.position.set(-0.05, 1.55, RZ + 0.42); fall.userData.keep = true; g.add(fall);
+    B(g, 0.8, 0.12, 0.5, glow('#e8f6ff'), -0.05, 0.47, RZ + 0.62, true);
+    // the board, on a post to the right of the pool
+    const board = makeBoard(1.5, 0.75); board.position.set(1.95, 1.75, 0.56); board.rotation.y = -0.35; g.add(board);
+    const bk = B(g, 1.66, 0.9, 0.1, M.dark, 1.97, 1.75, 0.49, true); bk.rotation.y = -0.35;
+    B(g, 0.16, 1.9, 0.16, M.log, 1.95, 0.95, 0.4);
+    silverBowl(g, -0.75, 0.48, PZ + 0.75, 0.8); silverBowl(g, 0.7, 0.48, PZ + 0.8, 0.8);
+    // spray rising from where the water lands, and rings on the pool
+    const U = { uTime: { value: 0 }, uScale: { value: 400 }, uFlight: { value: 0.45 }, uOpacity: { value: 0.7 } };
+    const RU = { uTime: U.uTime, uScale: U.uScale, uOpacity: { value: 0.55 } };
+    waterSpray(g, V(-0.05, 0.45, RZ + 0.6), V(0, 1.6, 0.6), 70, U);
+    landingRings(g, V(0, 0.44, PZ), 6, RU);
+    ret.wet = [[0, 1.55]]; // just in front of the pool: stand here and the spray reaches you
+    ret.rect = [-1.75, 2.2, -1.25, 1.4]; ret.labelY = 4.6;
+    ret.update = (time, night, scale) => { U.uTime.value = time; if (scale) U.uScale.value = scale; ft.offset.y = (time * 1.4) % 1; };
   }
   return ret;
 }
