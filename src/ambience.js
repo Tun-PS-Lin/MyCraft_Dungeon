@@ -4,7 +4,7 @@ import { BOUNDS, POND } from './config.js';
 import { cv, lin } from './textures.js';
 import { FESTIVAL } from './festival.js';
 // what drifts by day: leaves, or a few flakes of snow, rose petals or blossom in festival time
-const DRIFT = { christmas: '#f4f8ff', valentine: '#ff7f9c', easter: '#ffd0e2' }[FESTIVAL] || '#c9a23a';
+const DRIFT = { christmas: '#f4f8ff', valentine: '#ff7f9c', easter: '#ffd0e2', thingyan: '#ffd23f', thadingyut: '#ffb347' }[FESTIVAL] || '#c9a23a';
 
 const dot = new THREE.CanvasTexture(cv(16, 16, (g) => { const r = g.createRadialGradient(8, 8, 1, 8, 8, 8); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 16, 16); }));
 const square = new THREE.CanvasTexture(cv(4, 4, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 4, 4); }));

@@ -5,8 +5,7 @@ import { LANGUAGE_TOGGLE } from './config.js';
 const UI = {
   en: {
     introSub: 'Portfolio village', settings: 'Settings',
-    standUp: 'Stand up',
-    festival: 'Festival', fOff: 'Off', fXmas: 'Christmas', fVal: 'Valentine’s', fEaster: 'Easter', wxSnow: 'Snow', wxPetals: 'Petals', wxBlossom: 'Blossom',
+    festival: 'Festival', fOff: 'Off', fXmas: 'Christmas', fVal: 'Valentine’s', fEaster: 'Easter', wxSnow: 'Snow', wxPetals: 'Petals', wxBlossom: 'Blossom', wxPadauk: 'Padauk', fThingyan: 'Thingyan', fThadingyut: 'Thadingyut',
     weather: 'Weather', wxAuto: 'Auto', wxClear: 'Clear', wxRain: 'Rain', wxMist: 'Mist',
     access: 'Accessibility', textSize: 'Text size', contrast: 'High contrast', calm: 'Reduce motion', flight: 'Opening flight',
     break: 'On a break', coming: 'On the way', here: 'At the table', lastRun: 'Last run', activity: 'Activity', sampleLog: 'Sample activity, generated in your browser.', today: 'Today', yesterday: 'Yesterday', notYet: 'Nothing yet this visit', minsAgo: '{n} min ago', justNow: 'Just now', openBoard: 'Open the agent board', boardTitle: 'Agent board', boardKicker: 'The town hall', deskOf: 'At the desk', palette: 'Palette', boardHint: 'Pick an agent to see what they do and what they last did.',
@@ -29,8 +28,7 @@ const UI = {
   },
   my: {
     introSub: 'ပို့ဖိုလီယို ရွာလေး', settings: 'ဆက်တင်များ',
-    standUp: 'ထရပ်ရန်',
-    festival: 'ပွဲတော်', fOff: 'ပိတ်', fXmas: 'ခရစ္စမတ်', fVal: 'ချစ်သူများနေ့', fEaster: 'အီစတာ', wxSnow: 'နှင်း', wxPetals: 'ပွင့်ချပ်', wxBlossom: 'ပန်းပွင့်',
+    festival: 'ပွဲတော်', fOff: 'ပိတ်', fXmas: 'ခရစ္စမတ်', fVal: 'ချစ်သူများနေ့', fEaster: 'အီစတာ', wxSnow: 'နှင်း', wxPetals: 'ပွင့်ချပ်', wxBlossom: 'ပန်းပွင့်', wxPadauk: 'ပိတောက်', fThingyan: 'သင်္ကြန်', fThadingyut: 'သီတင်းကျွတ်',
     weather: 'ရာသီဥတု', wxAuto: 'အလိုအလျောက်', wxClear: 'သာယာ', wxRain: 'မိုးရွာ', wxMist: 'မြူ',
     access: 'အသုံးပြုရ လွယ်ကူစေရန်', textSize: 'စာလုံး အရွယ်အစား', contrast: 'အရောင် ပိုထင်ရှားစေရန်', calm: 'လှုပ်ရှားမှု လျှော့ရန်', flight: 'အဖွင့် ပျံသန်းမှု',
     mapTitle: 'ရွာမြေပုံ', projects: 'ပရောဂျက်များ', village: 'ရွာ', hello: 'နှုတ်ဆက်ရန်', townHall: '{name} (မြို့တော်ခန်းမ)',

@@ -106,7 +106,6 @@ export function createUI(canvas, handlers) {
   function closeCard() { if (!openId) return; openId = null; scrim.classList.remove('show'); sound.play('close'); focusGame(); }
   $('cardClose').onclick = closeCard;
   $('cardWatch').onclick = () => { closeCard(); if (handlers.watchShow) handlers.watchShow(); };
-  $('cardSeat').onclick = () => { closeCard(); if (handlers.takeSeat) handlers.takeSeat(); };
   // the About Me signpost's button opens the village map rather than a link
   $('cardGo').addEventListener('click', (e) => { const p = STALLS.find((q) => q.id === openId); if (p && p.about) { e.preventDefault(); closeCard(); openMenu(); } });
   // fetch every popup picture ahead of time, once the page has settled

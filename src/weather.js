@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { FESTIVAL, FESTIVALS } from './festival.js';
 import { cv, rng } from './textures.js';
+function PRECIP_OF() { return FESTIVAL ? FESTIVALS[FESTIVAL].precip : 'rain'; }
 
 // how cloudy (c), how rainy (r) and how misty (m) each kind of weather is
 const KINDS = {
@@ -18,13 +19,15 @@ const KINDS = {
   mist: { c: 0.4, r: 0, m: 1 },
 };
 // the Auto cycle: [kind, seconds]
-const CYCLE = [['clear', 100], ['cloudy', 45], ['rain', 75], ['cloudy', 35], ['clear', 130], ['mist', 55], ['clear', 90], ['rain', 60], ['cloudy', 40]];
+const CYCLE = PRECIP_OF() === 'snow'
+  ? [['rain', 120], ['cloudy', 30], ['rain', 150], ['clear', 50], ['rain', 110], ['mist', 40]] // at Christmas it snows most of the time
+  : [['clear', 100], ['cloudy', 45], ['rain', 75], ['cloudy', 35], ['clear', 130], ['mist', 55], ['clear', 90], ['rain', 60], ['cloudy', 40]];
 const KEY = 'pv-weather';
 const BOX = new THREE.Vector3(46, 22, 38); // the volume kept round the camera
 const DAY_RAIN = new THREE.Color('#8fa3c2'), NIGHT_RAIN = new THREE.Color('#dbe6f6');
 const PUD_DAY = new THREE.Color('#3a4352').convertSRGBToLinear(), PUD_NIGHT = new THREE.Color('#0c1018').convertSRGBToLinear(); // (colours here are linear)
 // what falls: rain, or the festival's own
-export const PRECIP = FESTIVAL ? FESTIVALS[FESTIVAL].precip : 'rain';
+export const PRECIP = PRECIP_OF();
 
 // world-fixed wrap round the camera: a point's place in the box, kept still as the box moves
 const WRAP = `
@@ -52,7 +55,7 @@ const rainFrag = `
   void main() { gl_FragColor = vec4(uColor, uOpacity * vFade * mix(0.1, 1.0, vEnd)); }`;
 // snow, petals and blossom: soft flakes that drift down, swaying (petals also tumble)
 const flakeVert = `
-  uniform float uTime; uniform vec3 uCenter; uniform vec3 uBox; uniform float uScale; uniform float uSpeed; uniform float uSize; uniform float uTumble;
+  uniform float uTime; uniform vec3 uCenter; uniform vec3 uBox; uniform float uScale; uniform float uSpeed; uniform float uSize; uniform float uTumble; uniform float uMaxPx;
   attribute vec3 color; attribute float aSeed;
   varying vec3 vColor; varying float vFade; varying float vTurn;
   ${WRAP}
@@ -63,7 +66,7 @@ const flakeVert = `
     vec4 mv = viewMatrix * vec4(p, 1.0);
     vColor = color; vFade = smoothstep(0.0, 0.05, y) * (1.0 - smoothstep(0.85, 1.0, y));
     vTurn = mix(1.0, abs(sin(s * 2.3)), uTumble);         // petals turn edge-on now and then
-    gl_PointSize = uSize * (0.7 + 0.6 * aSeed) * uScale / -mv.z;
+    gl_PointSize = min(uSize * (0.7 + 0.6 * aSeed) * uScale / -mv.z, uMaxPx); // (flakes close to the camera stay small)
     gl_Position = projectionMatrix * mv;
   }`;
 const flakeFrag = `
@@ -72,9 +75,11 @@ const flakeFrag = `
   void main() {
     vec2 q = gl_PointCoord - 0.5; q.x /= max(0.25, vTurn);
     float d = length(q);
-    float a = uRound > 0.5 ? smoothstep(0.5, 0.2, d) : step(d, 0.5) * step(abs(q.y), 0.32);
+    float a = uRound > 0.5 ? smoothstep(0.5, 0.4, d) : step(d, 0.5) * step(abs(q.y), 0.32);
     if (a < 0.02) discard;
-    gl_FragColor = vec4(vColor, uOpacity * vFade * a);
+    // snowflakes get a soft grey-blue rim, so they still show against snow on the ground
+    vec3 c = uRound > 0.5 ? mix(vColor, vec3(0.62, 0.69, 0.8), smoothstep(0.26, 0.46, d)) : vColor;
+    gl_FragColor = vec4(c, uOpacity * vFade * a);
   }`;
 const ringVert = `
   uniform float uTime; uniform vec3 uCenter; uniform vec3 uBox; uniform float uScale; uniform float uRate;
@@ -112,8 +117,9 @@ const ringFrag = `
   }`;
 
 const FLAKES = {
-  snow: { speed: 0.075, size: 0.16, tumble: 0, round: 1, n: [650, 1300], colors: ['#ffffff', '#f1f6ff', '#e8f0ff'] },
+  snow: { speed: 0.07, size: 0.2, tumble: 0, round: 1, n: [1100, 2400], colors: ['#ffffff', '#f6f9ff', '#e8f0ff'] },
   petals: { speed: 0.05, size: 0.2, tumble: 1, round: 0, n: [240, 460], colors: ['#e8344e', '#ff6f8a', '#ff9db3', '#c81d3a', '#ffd1dc'] },
+  padauk: { speed: 0.055, size: 0.15, tumble: 1, round: 0, n: [260, 520], colors: ['#ffd23f', '#f5c518', '#ffe27a', '#e8a90c'] },
   blossom: { speed: 0.05, size: 0.19, tumble: 1, round: 0, n: [240, 460], colors: ['#ffe4ef', '#ffc2d6', '#fff6fa', '#f9d8ff', '#fff0b8'] },
 };
 
@@ -143,7 +149,7 @@ export function createWeather(scene, { phone, blocked, groundAt, paving }) {
     const pos = new Float32Array(FN * 3), col = new Float32Array(FN * 3), seed = new Float32Array(FN), c = new THREE.Color();
     for (let i = 0; i < FN; i++) { pos.set([Math.random(), Math.random(), Math.random()], i * 3); c.set(F.colors[(Math.random() * F.colors.length) | 0]); col.set([c.r, c.g, c.b], i * 3); seed[i] = Math.random(); }
     fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); fg.setAttribute('color', new THREE.BufferAttribute(col, 3)); fg.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
-    FU = { uTime: time, uCenter: center, uBox: box, uScale: scale, uSpeed: { value: F.speed }, uSize: { value: F.size }, uTumble: { value: F.tumble }, uRound: { value: F.round }, uOpacity: { value: 0 } };
+    FU = { uTime: time, uCenter: center, uBox: box, uScale: scale, uSpeed: { value: F.speed }, uSize: { value: F.size }, uTumble: { value: F.tumble }, uMaxPx: { value: 9 }, uRound: { value: F.round }, uOpacity: { value: 0 } };
     flakes = new THREE.Points(fg, new THREE.ShaderMaterial({ uniforms: FU, vertexShader: flakeVert, fragmentShader: flakeFrag, transparent: true, depthWrite: false }));
     flakes.frustumCulled = false; flakes.visible = false; flakes.renderOrder = 4; scene.add(flakes);
   }
@@ -159,7 +165,9 @@ export function createWeather(scene, { phone, blocked, groundAt, paving }) {
 
   /* puddles: dark, glossy patches on open paving that spread while it rains */
   const puddles = []; let wet = 0, puddleGroup = null, pmat = null, sheen = null, ripples = null; const RU = { uTime: time, uCenter: center, uBox: box, uScale: scale, uRate: { value: 0.9 }, uColor: { value: new THREE.Color('#e6eef8') }, uOpacity: { value: 0 } };
-  if (isRain && blocked) {
+  // (at Thingyan the paving is wet all festival long, from the water play)
+  const WATER_PLAY = FESTIVAL === 'thingyan';
+  if ((isRain || WATER_PLAY) && blocked) {
     const r = rng(404), shapes = [0, 1, 2].map((k) => {
       const c = cv(64, 64, (g) => {
         // a blobby outline: a few overlapping ellipses, in pixel steps
@@ -244,17 +252,17 @@ export function createWeather(scene, { phone, blocked, groundAt, paving }) {
       }
       if (flakes) {
         flakes.visible = a > 0.01;
-        if (flakes.visible) { FU.uOpacity.value = Math.min(1, a * 1.2) * (PRECIP === 'snow' ? 0.95 : 0.9); fg.setDrawRange(0, Math.round(FN * Math.min(1, 0.2 + a * 0.8))); }
+        if (flakes.visible) { FU.uMaxPx.value = Math.max(6, height / 90); FU.uOpacity.value = Math.min(1, a * 1.2) * (PRECIP === 'snow' ? 0.95 : 0.9); fg.setDrawRange(0, Math.round(FN * Math.min(1, 0.2 + a * 0.8))); }
       }
       // the ground gets wet while it rains and dries slowly after
       if (puddleGroup) {
-        wet = Math.max(0, Math.min(1, wet + (lv.r > 0.4 ? dt / 22 : -dt / 70)));
+        wet = Math.max(WATER_PLAY ? 0.8 : 0, Math.min(1, wet + (isRain && lv.r > 0.4 ? dt / 22 : -dt / 70)));
         puddleGroup.visible = !hidden && wet > 0.01;
         if (puddleGroup.visible) {
           const e = wet * wet * (3 - 2 * wet);
           pmat.forEach((m) => { m.opacity = e * 0.72; m.color.copy(PUD_DAY).lerp(PUD_NIGHT, night); });
           sheen.forEach((m) => { m.opacity = e * (0.05 + 0.02 * Math.sin(t * 0.7)) * (1 - night * 0.6); });
-          ripples.visible = lv.r > 0.2; RU.uOpacity.value = Math.min(1, lv.r) * e * 0.8;
+          ripples.visible = isRain && lv.r > 0.2; RU.uOpacity.value = Math.min(1, lv.r) * e * 0.8;
         }
       }
       if (dropT >= 0) {

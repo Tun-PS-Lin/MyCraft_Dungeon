@@ -40,7 +40,7 @@ export function createPlayer(scene) {
       fig.pose(0, 0, time, tuck, 0, 0);
       rig.scale.setScalar(s2); rig.rotation.x = a; rig.position.set(0, c - c * Math.cos(a), -c * Math.sin(a));
     } else {
-      fig.pose(s * mix(0.72, 0.98, P.gait) * P.blend, P.air, time, P.sit || 0, 0, s * 0.1 * P.blend);
+      fig.pose(s * mix(0.72, 0.98, P.gait) * P.blend, P.air, time, 0, 0, s * 0.1 * P.blend);
       rig.scale.set(1 + P.squash * 0.08, 1 - P.squash * 0.16, 1 + P.squash * 0.08); rig.position.set(0, 0, 0);
     }
     // holding the fishing rod: the right arm follows the rod's angle, the left comes in to help
@@ -52,7 +52,7 @@ export function createPlayer(scene) {
     if (P.grounded) P.visY += (P.y - P.visY) * Math.min(1, dt * 18); else P.visY = P.y;
     // a smooth rise and fall twice per stride, and a forward lean that grows with the run
     const bob = (1 - Math.cos(P.phase * 2)) * 0.5 * mix(0.045, 0.085, P.gait) * P.blend;
-    group.position.set(P.x, P.visY + bob - (P.sit || 0) * 0.24 * TUNING.playerScale, P.z);
+    group.position.set(P.x, P.visY + bob, P.z);
     group.rotation.y = P.yaw; if (P.rollK < 0) rig.rotation.x = 0.13 * P.gait * P.blend;
     // In daylight the blob stretches away from the sun so it reads as a cast shadow.
     const lift = Math.max(0, P.visY - groundY), k = Math.max(0.45, 1 - lift * 0.35), stretch = 1 + day * 0.75, off = day * 0.42 * TUNING.playerScale;

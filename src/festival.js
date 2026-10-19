@@ -6,13 +6,30 @@
 //   Christmas    1 December to 6 January
 //   Valentine's  7 to 15 February
 //   Easter       the week before Easter Sunday to the week after
+//   Thingyan     11 to 17 April (the Myanmar water festival and new year)
+//   Thadingyut   two days either side of the full moon of Thadingyut (October), the festival of lights
 
 const KEY = 'pv-festival';
 export const FESTIVALS = {
   christmas: { name: 'Christmas', precip: 'snow', loading: 'Decorating for Christmas…' },
   valentine: { name: 'Valentine’s', precip: 'petals', loading: 'Decorating for Valentine’s…' },
   easter: { name: 'Easter', precip: 'blossom', loading: 'Decorating for Easter…' },
+  thingyan: { name: 'Thingyan', precip: 'padauk', loading: 'Filling the water bowls for Thingyan…' },
+  thadingyut: { name: 'Thadingyut', precip: 'rain', loading: 'Lighting the lanterns for Thadingyut…' },
 };
+// greetings for the loading card
+export const GREETING = { christmas: 'Merry Christmas', valentine: 'Happy Valentine’s Day', easter: 'Happy Easter', thingyan: 'Happy Thingyan', thadingyut: 'Happy Thadingyut · Festival of Lights' };
+
+// the full moon of Thadingyut. Known years from the Myanmar calendar; otherwise the first full moon
+// on or after 1 October (worked out from the mean lunar month, good to about a day)
+const THADINGYUT = { 2024: [9, 17], 2025: [9, 6], 2026: [9, 26], 2027: [9, 15] };
+export function thadingyutFullMoon(y) {
+  if (THADINGYUT[y]) return new Date(y, THADINGYUT[y][0], THADINGYUT[y][1]);
+  const SYN = 29.530588853, NEW = Date.UTC(2000, 0, 6, 18, 14), start = Date.UTC(y, 9, 1);
+  let k = Math.ceil(((start - NEW) / 864e5 - SYN / 2) / SYN), fm = NEW + (k * SYN + SYN / 2) * 864e5;
+  if (fm < start) fm += SYN * 864e5;
+  const d = new Date(fm + 6.5 * 36e5); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); // (in Myanmar time)
+}
 
 // Easter Sunday (Gregorian), by the anonymous Gregorian algorithm
 export function easterSunday(y) {
@@ -25,6 +42,8 @@ export function festivalOn(date = new Date()) {
   const m = date.getMonth(), d = date.getDate();
   if (m === 11 || (m === 0 && d <= 6)) return 'christmas';
   if (m === 1 && d >= 7 && d <= 15) return 'valentine';
+  if (m === 3 && d >= 11 && d <= 17) return 'thingyan';
+  { const fm = thadingyutFullMoon(date.getFullYear()), days = Math.round((new Date(date.getFullYear(), m, d) - fm) / 864e5); if (days >= -2 && days <= 2) return 'thadingyut'; }
   const e = easterSunday(date.getFullYear()), days = Math.round((new Date(date.getFullYear(), m, d) - e) / 864e5);
   if (days >= -7 && days <= 7) return 'easter';
   return null;
@@ -35,6 +54,8 @@ export const festivalChoice = (() => { const v = read(); return v === 'auto' || 
 // the festival this page is built with (null: none)
 export const FESTIVAL = festivalChoice === 'auto' ? festivalOn() : festivalChoice === 'off' ? null : festivalChoice;
 export const festival = FESTIVAL ? FESTIVALS[FESTIVAL] : null;
+// the loading card (index.html) is themed before any of this code loads, from this note
+try { const n = new Date(); localStorage.setItem('pv-fest-auto', JSON.stringify({ id: festivalOn(n), day: n.toDateString() })); } catch (e) { /* ignore */ }
 
 // change the setting: if that changes what the village looks like, reload behind the loading screen
 // (resume: where to put the player back, kept for this tab only)
@@ -45,7 +66,8 @@ export function chooseFestival(choice, resume) {
   const text = next ? FESTIVALS[next].loading : 'Taking the decorations down…';
   try { sessionStorage.setItem('pv-resume', JSON.stringify(resume || {})); sessionStorage.setItem('pv-loading', text); } catch (e) { /* ignore */ }
   const cover = document.getElementById('travel');
-  if (cover) { cover.querySelector('strong').textContent = text; cover.classList.add('show'); }
+  if (window.__festTheme) window.__festTheme(next); // the cover takes the next festival's colours
+  if (cover) { cover.querySelector('strong').textContent = text; cover.classList.add('show', 'fest'); }
   setTimeout(() => location.reload(), 480);
   return true;
 }

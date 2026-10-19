@@ -44,17 +44,27 @@ show in the pond. The weather turns on its own, from clear to cloudy to rain (wi
 that spread across the paving and splash when you step in them) to morning mist, or you can pick one in
 the menu under **Weather**.
 
-**Festivals.** Around Christmas (1 December to 6 January), Valentine's Day (7 to 15 February) and Easter
-(the week either side of Easter Sunday) the village dresses up on its own, and the menu's **Festival** row
-can switch to any of them (or turn them off) whenever you like; the village rebuilds behind the loading card.
+**Festivals.** Around Thingyan (11 to 17 April), Thadingyut (two days either side of its October full moon),
+Christmas (1 December to 6 January), Valentine's Day (7 to 15 February) and Easter (the week either side of
+Easter Sunday) the village dresses up on its own, and the menu's **Festival** row can switch to any of them
+(or turn them off) whenever you like. The village rebuilds behind a loading card dressed in the festival's
+colours, with its own pixel icon, greeting and falling (or rising) particles.
 
 | | Christmas | Valentine's | Easter |
 |---|---|---|---|
 | About Me | a giant lit Christmas tree with the sign hung on it, presents underneath | a big pixel heart outlined in lights, rose bushes and heart balloons | a giant painted egg on a straw nest, a bunny and tulips |
 | The village | snow lying on the paths, roofs and stalls; string lights and wreaths on every stall; snowmen | hearts strung across every stall, rose petals on the paving, pink-tinted lanterns | pastel bunting, tulips, painted eggs hidden in the grass, hopping bunnies |
 | The pond | frozen over, with one hole left to fish through | heart candles floating on the water | a duck and her ducklings paddling round |
-| What falls | snow (instead of rain) | rose petals | blossom |
+| What falls | heavy snow (instead of rain), leaving a white layer over everything | rose petals | blossom |
 | Inside | a tree, stockings and lights in the town hall and the Hideout | heart garlands, roses and candles | bunting, egg baskets and a bunny |
+
+| | Thingyan (water festival) | Thadingyut (festival of lights) |
+|---|---|---|
+| About Me | a bright mandat stage with a fabric roof, padauk garlands and speakers, its two hoses spraying arcs of water onto the square (walk under them to get splashed) | a golden stupa ringed with oil lamps, with paper lanterns on bamboo poles either side |
+| The village | Thingyan-coloured bunting, padauk sprigs and silver water bowls on every stall, water barrels, drinking-water pot stands, wet paving with puddles | strings of paper lanterns across the square and over every stall, clay oil lamps along the paving and round the pond |
+| The pond | padauk flowers floating on the water | lotus lamps drifting on the water |
+| What falls | padauk flowers | rain as usual, and sky lanterns rising into the night |
+| Inside | bunting, padauk in pots and silver bowls | hanging lanterns and rows of oil lamps |
 A few small things to find: an **About Me** signpost above the movement guide, a day and night
 switch that sweeps through a sunset or sunrise, sounds that change with where you stand, a dash roll (tap <kbd>Space</kbd> twice), a meeting table you can call the agents to, and a
 wolf that starts following you once you have opened every stall.
@@ -139,9 +149,8 @@ Each stall opens a card with a screenshot, a short story and a link.
 
 The newest stall, **AI Cinema**, sits down by the ridge, just left of the cave: a marquee of running lights, red velvet
 curtains and a projector, with a short demo of the series playing on its screen. It is home to an AI animated
-series about *38 Mingalar Blessings* (link coming soon). Its card has **Watch**, which plays the demo full size,
-and **Take a seat**, which sits you in the front row with the camera behind you facing the screen (move to stand
-up). The demo is drawn in code in `src/show.js`, ready to be swapped for real clips.
+series about *38 Mingalar Blessings* (link coming soon); its card has a **Watch the showing** button that plays
+the demo full size. The demo is drawn in code in `src/show.js`, ready to be swapped for real clips.
 
 <br>
 
@@ -325,7 +334,9 @@ src/life.js         the washing lines and the pigeons
 src/sky.js          cloud shadows, Christmas snow cover, the clouds seen from the opening flight, the moon and stars in the pond
 src/weather.js      clear, cloudy, rain and mist: rain (or snow, petals, blossom), splashes, puddles, the Auto cycle
 src/festival.js     which festival is on (by date, or chosen in the menu), and switching between them
-src/festive.js      the festival decorations: About Me centrepieces, stalls, hall, pond, square, Hideout
+src/festive.js      the festival decorations for Christmas, Valentine's and Easter
+src/festive-mm.js   the decorations for Thingyan and Thadingyut (water spray, sky lanterns)
+src/festive-kit.js  shared pieces: strings of lights, bunting, pixel shapes
 src/show.js         the AI Cinema's demo showing and the viewer that plays it large
 src/access.js       the accessibility settings (text size, contrast, motion, opening flight)
 src/nav.js          path finding for walk-to

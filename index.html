@@ -1,6 +1,45 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>
+  /* the loading card dresses up for a festival before anything else loads (see src/festival.js,
+     which leaves a note of today's festival in pv-fest-auto for the next visit) */
+  (function () {
+    var C = { y: '#ffd84a', Y: '#fff1b0', g: '#2f7a3c', G: '#45a34f', t: '#7a4a22', R: '#e23b3b', B: '#4a9bff', W: '#ffffff',
+      p: '#ff6f8a', P: '#d6213f', l: '#ffd1dc', o: '#ff9a2e', O: '#ffcf4a', d: '#8a2a1a', k: '#2a1a12', c: '#c9ced6', s: '#9aa3ae', a: '#7fc8ef',
+      e: '#a9dcff', f: '#ffb3c7', h: '#fff1a6', m: '#b8e6c9', v: '#c8b6ff' };
+    var T = {
+      christmas: ['.......y........', '......yYy.......', '.......y........', '.......g........', '......gGg.......', '.....gRgGg......', '......gGg.......', '.....gGgBgg.....', '....gGgggGgg....', '.....gYgGgg.....', '....gGgggRggg...', '...gGgBggggGgg..', '..ggGgggYgggGgg.', '.......tt.......', '.......tt.......', '................'],
+      valentine: ['................', '..PPP.....PPP...', '.PpppP...PpppP..', 'PpplppP.PppppppP', 'PplpppPPPpppppP.', 'PppppppppppppppP', 'PppppppppppppppP', '.PppppppppppppP.', '..PppppppppppP..', '...PpppppppppP..', '....PppppppP....', '.....PpppppP....', '......PpppP.....', '.......PpP......', '........P.......', '................'],
+      easter: ['................', '......ffff......', '.....ffffff.....', '....hhhhhhhh....', '....eeWeeWee....', '...eeeeeeeeee...', '...vvvvvvvvvv...', '...vWvvWvvWvv...', '...mmmmmmmmmm...', '...mmmmmmmmmm...', '....ffWffWff....', '....ffffffff....', '.....hhhhhh.....', '......hhhh......', '................', '................'],
+      thingyan: ['....y.G.y.......', '...yGyGyGy......', '..yGyyGyyGy.....', '...GyGGyGG......', '......G.........', '..cccccccccccc..', '.ccaaaaaaaaaacc.', '.cccccccccccccc.', '..cccccccccccc..', '...cccccccccc...', '....s......s....', '................', '..a....a....a...', '................', '.a....a....a....', '................'],
+      thadingyut: ['.......k........', '.......k........', '.....dddddd.....', '....oooooooo....', '...oOoooooOoo...', '...oOOoooOOoo...', '...ooOOoOOooo...', '...ooooOooooo...', '...oOoooooOoo...', '....oooooooo....', '.....dddddd.....', '.......R........', '......RRR.......', '.......R........', '................', '................'],
+    };
+    function icon(rows) {
+      var r = '';
+      for (var y = 0; y < rows.length; y++) for (var x = 0; x < rows[y].length; x++) { var ch = rows[y][x]; if (C[ch]) r += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + C[ch] + '"/>'; }
+      return 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">' + r + '</svg>') + '")';
+    }
+    window.__festTheme = function (id) {
+      var h = document.documentElement;
+      if (!id || !T[id]) { h.removeAttribute('data-fest'); return; }
+      h.setAttribute('data-fest', id); h.style.setProperty('--fest-icon', icon(T[id]));
+    };
+    var id = null;
+    try {
+      var c = localStorage.getItem('pv-festival') || 'auto', now = new Date(), m = now.getMonth(), d = now.getDate();
+      if (c !== 'auto' && c !== 'off') id = c;
+      else if (c === 'auto') {
+        var a = JSON.parse(localStorage.getItem('pv-fest-auto') || 'null');
+        if (a && a.day === now.toDateString()) id = a.id;
+        else if (m === 11 || (m === 0 && d <= 6)) id = 'christmas';
+        else if (m === 1 && d >= 7 && d <= 15) id = 'valentine';
+        else if (m === 3 && d >= 11 && d <= 17) id = 'thingyan';
+      }
+    } catch (e) { /* storage unavailable */ }
+    window.__festTheme(id);
+  })();
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>MyCraft Dungeon · Tun Pyay Sone Lin</title>
@@ -63,7 +102,7 @@
   <h2 data-t="weather"></h2>
   <div id="weatherPick" class="wx-seg" role="group" aria-label="Weather"><button type="button" data-wx="auto" data-t="wxAuto"></button><button type="button" data-wx="clear" data-t="wxClear"></button><button type="button" data-wx="rain" data-t="wxRain"></button><button type="button" data-wx="mist" data-t="wxMist"></button></div>
   <h2 data-t="festival"></h2>
-  <div id="festPick" class="wx-seg fest-seg" role="group" aria-label="Festival"><button type="button" data-fest="auto" data-t="wxAuto"></button><button type="button" data-fest="off" data-t="fOff"></button><button type="button" data-fest="christmas" data-t="fXmas"></button><button type="button" data-fest="valentine" data-t="fVal"></button><button type="button" data-fest="easter" data-t="fEaster"></button></div>
+  <div id="festPick" class="wx-seg fest-seg" role="group" aria-label="Festival"><button type="button" data-fest="auto" data-t="wxAuto"></button><button type="button" data-fest="off" data-t="fOff"></button><button type="button" data-fest="christmas" data-t="fXmas"></button><button type="button" data-fest="valentine" data-t="fVal"></button><button type="button" data-fest="easter" data-t="fEaster"></button><button type="button" data-fest="thingyan" data-t="fThingyan"></button><button type="button" data-fest="thadingyut" data-t="fThadingyut"></button></div>
   <small id="festNote" class="fest-note"></small>
   <h2 data-t="access"></h2>
   <div id="access">
@@ -139,8 +178,7 @@
     <p id="cardDesc"></p>
     <div id="cardEmail" hidden><span id="emailText"></span><button id="emailCopy" type="button">Copy</button></div>
     <div class="card-acts" id="cardActs" hidden>
-      <button id="cardWatch" type="button"><span>▶ Watch</span><small>Full screen</small></button>
-      <button id="cardSeat" type="button"><span>Take a seat</span><small>Watch from the stalls</small></button>
+      <button id="cardWatch" type="button"><span>▶ Watch the showing</span><small>A demo of the opening, in the cinema</small></button>
     </div>
     <a id="cardGo" target="_blank" rel="noopener"><span></span><small></small></a>
   </div>
@@ -152,8 +190,8 @@
   <button class="tbtn" id="tJump"></button>
 </div>
 <div id="travel" aria-hidden="true"><strong></strong></div>
-<div id="intro"><div><strong id="introName">MyCraft Dungeon</strong><span id="introBy">A portfolio by Tun. L</span>
-  <i id="introLoad" role="progressbar" aria-label="Loading the village"><b></b></i><em id="introState">Building the village…</em><small id="introWhy" hidden></small></div>
+<div id="intro"><div><i id="introIcon" aria-hidden="true"></i><strong id="introName">MyCraft Dungeon</strong><span id="introBy">A portfolio by Tun. L</span>
+  <i id="introLoad" role="progressbar" aria-label="Loading the village"><b></b></i><em id="introState">Building the village…</em><b id="introFest" aria-hidden="true"></b><small id="introWhy" hidden></small></div>
   <a id="introPlain" href="./plain.html">Simple version</a></div>
 <noscript><p class="noscript">This village needs JavaScript. <a href="./plain.html">Open the simple version</a>.</p></noscript>
 <script>

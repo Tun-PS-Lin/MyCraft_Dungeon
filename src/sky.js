@@ -52,7 +52,7 @@ export function createSky(scene) {
         const k = (y * 64 + x) * 4; img.data[k] = img.data[k + 1] = img.data[k + 2] = 255; img.data[k + 3] = Math.round(Math.min(1, n * 0.8 + r() * 0.2) * 255); }
       g.putImageData(img, 0, 0); });
     const st = new THREE.CanvasTexture(sn); st.wrapS = st.wrapT = THREE.RepeatWrapping; st.magFilter = THREE.NearestFilter; st.minFilter = THREE.LinearFilter; st.generateMipmaps = false;
-    Object.assign(U, { snowMap: { value: st }, uSnow: { value: 0.6 }, uNoSnow: { value: new THREE.Vector4(HALL.x0 + 0.7, HALL.x1 - 0.7, HALL.z0 + 0.7, HALL.z1 - 0.7) }, uNoSnowY: { value: HALL.wallH + 0.2 } });
+    Object.assign(U, { snowMap: { value: st }, uSnow: { value: 0.9 }, uNoSnow: { value: new THREE.Vector4(HALL.x0 + 0.7, HALL.x1 - 0.7, HALL.z0 + 0.7, HALL.z1 - 0.7) }, uNoSnowY: { value: HALL.wallH + 0.2 } });
   }
   const patched = new WeakSet();
   function patch(mat, still) {
@@ -71,10 +71,14 @@ export function createSky(scene) {
         if ( uSnow > 0.001 ) {
           vec2 sw = vCloudW.xz;
           bool indoor = sw.x > uNoSnow.x && sw.x < uNoSnow.y && sw.y > uNoSnow.z && sw.y < uNoSnow.w && vCloudW.y < uNoSnowY;
-          float up = smoothstep( 0.55, 0.85, vSnowUp );
-          float n = texture2D( snowMap, sw * 0.0625 ).a;
-          float cover = clamp( ( n - ( 1.0 - uSnow ) ) * 3.5, 0.0, 1.0 );
-          if ( !indoor ) diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.9, 0.94, 1.0 ), up * cover );
+          // a layer over every upward face: broad patches (n) roughened by a fine grain, so only a
+          // few dark gaps show; and drifts banked against the foot of walls, posts and stalls
+          float up = smoothstep( 0.35, 0.75, vSnowUp );
+          float n = texture2D( snowMap, sw * 0.0625 ).a, fine = texture2D( snowMap, sw * 0.53 + 0.31 ).a;
+          float cover = clamp( ( n * 0.6 + fine * 0.4 - ( 1.0 - uSnow ) ) * 4.0, 0.0, 1.0 );
+          float drift = ( 1.0 - up ) * ( 1.0 - smoothstep( 0.2, 0.55, vCloudW.y ) ) * cover;
+          vec3 snowC = mix( vec3( 0.84, 0.89, 0.98 ), vec3( 1.0 ), fine * 0.8 + 0.2 ); // a touch blue in the hollows
+          if ( !indoor ) diffuseColor.rgb = mix( diffuseColor.rgb, snowC, max( up * cover, drift ) );
         }`);
     };
     mat.customProgramCacheKey = () => (snow ? 'clouds-snow' : 'clouds');

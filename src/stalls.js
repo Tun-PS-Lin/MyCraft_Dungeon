@@ -268,17 +268,11 @@ const BUILD = {
     col(3.05, 4.05, 0.8, 1.6, 1.8); col(-4, -3, -0.6, 1.6, 1.3); col(3.4, 3.8, 2.4, 2.8, 3.2);
     // the running lights
     const BULB = bulbA.color.clone(); let was = -1;
-    // a seat to watch from (front row, on the left, so the view of the screen stays clear) and,
-    // for the camera, a spot out in front under the marquee, facing the screen; and where the screen is
-    { const sc = s.scale || 1, [sx, sz] = s.world(-1.65, -0.35), [ex, ez] = s.world(0, 2.4), [lx, lz] = s.world(0, -1.78), [bx, bz] = s.world(0.9, 5.4);
-      s.seat = { x: sx, z: sz, y: 0.12, // the figure's feet; seated, its hips come down onto the cushion
-         yaw: Math.atan2(lx - sx, lz - sz), out: [ex, ez], screen: [lx, 0.1 + 1.85 * sc, lz], eye: [bx, 0.1 + 2.9 * sc, bz] }; }
-    // the screen plays only while the cinema is near the middle of the view, at up to 30 frames a
-    // second (every frame while someone is sitting watching it)
+    // the screen plays only while the cinema is near the middle of the view, at up to 30 frames a second
     let shown = -1;
     s.update = (time, focus) => {
       const near = !focus || Math.hypot(focus.x - s.pos[0], focus.z - s.pos[1]) < 24;
-      if (near && (s.watching || time - shown > 1 / 30)) { shown = time; drawShow(x, time); tex.needsUpdate = true; }
+      if (near && time - shown > 1 / 30) { shown = time; drawShow(x, time); tex.needsUpdate = true; }
       const on = Math.floor(time * 3.5) % 2; if (on === was) return; was = on; bulbA.color.copy(BULB).multiplyScalar(on ? 1 : 0.3); bulbB.color.copy(BULB).multiplyScalar(on ? 0.3 : 1);
     };
   },
@@ -342,6 +336,7 @@ export function buildStalls(scene) {
         const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: tex })); m.userData.keep = true; return m;
       };
       const cp = centerpiece(g, FESTIVAL, makeBoard), k = 1.2; s.festive = cp; s.labelY = cp.labelY;
+      if (cp.wet) s.wetZones = cp.wet.map(([x, z]) => world(x * k, z * k)); // where the mandat's water lands
       g.scale.setScalar(k); s.rect = box(cp.rect[0] * k, cp.rect[1] * k, cp.rect[2] * k, cp.rect[3] * k);
       collide(s.rect.x0, s.rect.x1, s.rect.z0, s.rect.z1, 7); s.front = world(0, cp.rect[3] * k + 0.6);
       bake(g); scene.add(g); s.group = g; return s;

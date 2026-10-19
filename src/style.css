@@ -1273,13 +1273,13 @@ html.contrast :focus-visible{outline:3px solid #ffd84a!important;outline-offset:
 html.calm *,html.calm *::before,html.calm *::after{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important;transition-delay:0s!important;scroll-behavior:auto!important}
 
 /* ── the AI Cinema's showing (src/show.js) ── */
-#cardActs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+#cardActs{margin-bottom:12px}
 #cardActs[hidden]{display:none}
-#cardWatch,#cardSeat{width:100%;box-sizing:border-box;display:block;color:#ffe6a0;background:#2a1418;border:3px solid #b3242f;padding:10px 10px 11px;cursor:pointer;
+#cardWatch{width:100%;box-sizing:border-box;display:block;color:#ffe6a0;background:#2a1418;border:3px solid #b3242f;padding:10px 10px 11px;cursor:pointer;
   box-shadow:inset 0 4px 0 rgba(255,255,255,.06),0 0 0 3px #000;transition:border-color .15s,transform .15s,filter .15s}
-#cardWatch:hover,#cardSeat:hover{border-color:#ffd27a;transform:translateY(-2px)}
-#cardWatch span,#cardSeat span{display:block;font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.08em;text-transform:uppercase}
-#cardWatch small,#cardSeat small{display:block;font-size:13px;color:#e6d5c0;opacity:.9}
+#cardWatch:hover{border-color:#ffd27a;transform:translateY(-2px)}
+#cardWatch span{display:block;font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.08em;text-transform:uppercase}
+#cardWatch small{display:block;font-size:13px;color:#e6d5c0;opacity:.9}
 #show{position:fixed;inset:0;z-index:12;display:grid;place-items:center;padding:calc(var(--edge) + env(safe-area-inset-top,0px)) var(--edge) calc(var(--edge) + env(safe-area-inset-bottom,0px));
   background:rgba(6,4,8,.82);opacity:0;visibility:hidden;transition:opacity .35s ease,visibility 0s .35s}
 #show.open{opacity:1;visibility:visible;transition:opacity .35s ease}
@@ -1301,9 +1301,38 @@ html.calm *,html.calm *::before,html.calm *::after{animation-duration:.01s!impor
 .wx-seg button:hover{border-color:var(--gold);color:var(--gold)}
 .wx-seg button[aria-pressed="true"]{background:var(--gold);color:var(--night);border-color:#000}
 html.big-text .wx-seg button{font-size:calc(15px * var(--ts))}
-/* sitting in the cinema: the name tags and map step aside for the screen */
-#labels{transition:opacity .4s ease}
-body.seated #labels,body.seated #hud,body.seated .mm{opacity:0;pointer-events:none;transition:opacity .4s ease}
 /* festival picker (menu → Festival) */
 .fest-seg{grid-template-columns:repeat(3,1fr)}
 .fest-note{display:block;margin-top:-2px;font-size:13px;line-height:1.45;color:var(--ink-dim)}
+
+/* ── the loading card in festival colours (index.html sets data-fest before anything loads) ── */
+html[data-fest="christmas"]{--fest-bg:#1b3a57;--fest-bg2:#0c1d30;--fest-ink:#f4f8ff;--fest-shadow:#07111d;--fest-sub:#ffd84a;--fest-bar:#e23b3b;--fest-dot:255,255,255;--fest-speed:14s}
+html[data-fest="valentine"]{--fest-bg:#ffe6ed;--fest-bg2:#ffbfd0;--fest-ink:#7a1030;--fest-shadow:#f39ab2;--fest-sub:#d6213f;--fest-bar:#e8344e;--fest-dot:214,33,63;--fest-speed:20s}
+html[data-fest="easter"]{--fest-bg:#fff7da;--fest-bg2:#dff3e2;--fest-ink:#355a3a;--fest-shadow:#c4e3c6;--fest-sub:#ff6f9a;--fest-bar:#7cc58c;--fest-dot:255,143,176;--fest-speed:22s}
+html[data-fest="thingyan"]{--fest-bg:#ffe98f;--fest-bg2:#ffcf3a;--fest-ink:#0f3f6a;--fest-shadow:#e7a800;--fest-sub:#0b78bd;--fest-bar:#21b6d8;--fest-dot:22,140,215;--fest-speed:7s}
+html[data-fest="thadingyut"]{--fest-bg:#211740;--fest-bg2:#0b0818;--fest-ink:#ffe2a8;--fest-shadow:#4a1a08;--fest-sub:#ffb347;--fest-bar:#ff9a2e;--fest-dot:255,170,70;--fest-speed:18s}
+#introIcon,#introFest{display:none}
+html[data-fest] #intro{background:linear-gradient(180deg,var(--fest-bg),var(--fest-bg2))}
+html[data-fest] #intro::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.75;
+  background-image:radial-gradient(rgba(var(--fest-dot),.95) 1.6px,transparent 2.4px),radial-gradient(rgba(var(--fest-dot),.55) 1.2px,transparent 1.8px),radial-gradient(rgba(var(--fest-dot),.35) 2.4px,transparent 3.4px);
+  background-size:110px 110px,170px 170px,260px 260px;background-position:0 0,55px 80px,120px 30px;animation:festFall var(--fest-speed) linear infinite;will-change:background-position}
+html[data-fest="thadingyut"] #intro::before{animation-direction:reverse} /* lanterns rise */
+@keyframes festFall{to{background-position:30px 110px,25px 250px,160px 290px}}
+html[data-fest] #intro > div{position:relative;z-index:1}
+html[data-fest] #introIcon{display:block;width:72px;height:72px;margin-bottom:6px;background:var(--fest-icon) center/contain no-repeat;image-rendering:pixelated;animation:festBob 2.4s ease-in-out infinite}
+@keyframes festBob{50%{transform:translateY(-6px)}}
+html[data-fest] #intro strong{color:var(--fest-ink);text-shadow:5px 5px 0 var(--fest-shadow)}
+html[data-fest] #intro span{color:var(--fest-sub)}
+html[data-fest] #introLoad{background:rgba(255,255,255,.25);border-color:var(--fest-ink)}
+html[data-fest] #introLoad b{background:var(--fest-bar)}
+html[data-fest] #intro em,html[data-fest] #introPlain{color:var(--fest-ink);opacity:.85}
+html[data-fest] #introFest{display:block;margin-top:2px;font-family:var(--display);font-size:clamp(14px,2vw,18px);letter-spacing:.14em;text-transform:uppercase;color:var(--fest-sub)}
+html[data-fest="christmas"] #introFest::before{content:'Merry Christmas'}
+html[data-fest="valentine"] #introFest::before{content:'Happy Valentine’s Day'}
+html[data-fest="easter"] #introFest::before{content:'Happy Easter'}
+html[data-fest="thingyan"] #introFest::before{content:'Happy Thingyan · Happy New Year'}
+html[data-fest="thadingyut"] #introFest::before{content:'Happy Thadingyut · Festival of Lights'}
+/* the cover shown while switching festivals */
+html[data-fest] #travel.fest{background:linear-gradient(180deg,var(--fest-bg),var(--fest-bg2))}
+html[data-fest] #travel.fest strong{color:var(--fest-ink);text-shadow:3px 3px 0 var(--fest-shadow);font-size:clamp(18px,3.4vw,30px);max-width:90vw;text-align:center}
+html[data-fest] #travel.fest::before{content:'';position:absolute;left:50%;top:calc(50% - 110px);width:64px;height:64px;margin-left:-32px;background:var(--fest-icon) center/contain no-repeat;image-rendering:pixelated}
